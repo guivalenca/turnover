@@ -19,6 +19,10 @@ public struct MP4Action: ConversionAction {
     }
 
     public func perform(_ file: SourceFile, writingTo destination: URL) async throws {
-        try await MovieRewrite(file.url, to: destination).run()
+        try await perform(file, writingTo: destination, progress: .ignored)
+    }
+
+    public func perform(_ file: SourceFile, writingTo destination: URL, progress: ConversionProgress) async throws {
+        try await MovieRewrite(file.url, to: destination).run(progress: progress)
     }
 }

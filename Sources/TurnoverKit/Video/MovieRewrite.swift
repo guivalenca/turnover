@@ -11,7 +11,7 @@ struct MovieRewrite {
         self.destination = destination
     }
 
-    func run() async throws {
+    func run(progress: ConversionProgress) async throws {
         let asset = AVURLAsset(url: source)
         guard let video = try await asset.loadTracks(withMediaType: .video).first,
               let videoFormat = try await video.load(.formatDescriptions).first
@@ -37,12 +37,12 @@ struct MovieRewrite {
                     for: videoFormat.dimensions, frameRate: Double(frameRate), sourceDataRate: Double(dataRate)))
         }
         videoInput.transform = try await video.load(.preferredTransform)
-        lanes.append(.init(output: videoOutput, input: videoInput))
+        lanes.append(.init(output: videoOutput, input: videoInput, reportsProgress: true))
 
         if let audio, let audioFormat = try await audio.load(.formatDescriptions).first {
             let audioOutput = AVAssetReaderTrackOutput(track: audio, outputSettings: nil)
             let audioInput = AVAssetWriterInput(mediaType: .audio, outputSettings: nil, sourceFormatHint: audioFormat)
-            lanes.append(.init(output: audioOutput, input: audioInput))
+            lanes.append(.init(output: audioOutput, input: audioInput, reportsProgress: false))
         }
 
         for lane in lanes {
@@ -50,7 +50,8 @@ struct MovieRewrite {
             reader.add(lane.output)
             writer.add(lane.input)
         }
-        try await SamplePump(reader: reader, writer: writer, lanes: lanes).run()
+        let duration = try await asset.load(.duration)
+        try await SamplePump(reader: reader, writer: writer, lanes: lanes, duration: duration, progress: progress).run()
     }
 }
 
@@ -60,19 +61,25 @@ final class SamplePump: @unchecked Sendable {
     struct Lane {
         let output: AVAssetReaderOutput
         let input: AVAssetWriterInput
+        /// Whether this lane's timestamps measure progress. The video lane does: it is the slow one.
+        let reportsProgress: Bool
     }
 
     private let queue = DispatchQueue(label: "Turnover.SamplePump")
     private let reader: AVAssetReader
     private let writer: AVAssetWriter
     private let lanes: [Lane]
+    private let duration: CMTime
+    private let progress: ConversionProgress
     private var running = 0
     private var continuation: CheckedContinuation<Void, any Error>?
 
-    init(reader: AVAssetReader, writer: AVAssetWriter, lanes: [Lane]) {
+    init(reader: AVAssetReader, writer: AVAssetWriter, lanes: [Lane], duration: CMTime, progress: ConversionProgress) {
         self.reader = reader
         self.writer = writer
         self.lanes = lanes
+        self.duration = duration
+        self.progress = progress
     }
 
     func run() async throws {
@@ -103,7 +110,17 @@ final class SamplePump: @unchecked Sendable {
                 return
             }
             guard lane.input.append(sample) else { return fail(writer.error) }
+            if lane.reportsProgress { report(sample) }
         }
+    }
+
+    /// Progress is how much of the movie's duration has been written, up to the end of `sample`.
+    /// Decoded frames have no duration, so for them it is up to the frame's start.
+    private func report(_ sample: CMSampleBuffer) {
+        guard duration.seconds > 0 else { return }
+        var end = sample.presentationTimeStamp
+        if sample.duration.isNumeric { end = end + sample.duration }
+        if end.isNumeric { progress.report(end.seconds / duration.seconds) }
     }
 
     private func finishWriting() {

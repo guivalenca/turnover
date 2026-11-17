@@ -23,8 +23,21 @@ public protocol ConversionAction: Sendable {
     /// Writes `file`, converted, to `destination`: a path in a private temporary folder whose
     /// name already ends in the output extension. Throw `ConversionError` to fail with a reason.
     func perform(_ file: SourceFile, writingTo destination: URL) async throws
+
+    /// The same, for actions slow enough to show progress (videos): report the fraction done to
+    /// `progress` as the work goes on.
+    ///
+    /// When the calling task is cancelled, stop promptly and throw `CancellationError`. Don't
+    /// clean up `destination`: the converter deletes whatever was written.
+    ///
+    /// Quick actions don't implement this; the default runs `perform(_:writingTo:)`.
+    func perform(_ file: SourceFile, writingTo destination: URL, progress: ConversionProgress) async throws
 }
 
 extension ConversionAction {
     public var fileExtension: String { outputType.preferredFilenameExtension ?? "out" }
+
+    public func perform(_ file: SourceFile, writingTo destination: URL, progress: ConversionProgress) async throws {
+        try await perform(file, writingTo: destination)
+    }
 }
