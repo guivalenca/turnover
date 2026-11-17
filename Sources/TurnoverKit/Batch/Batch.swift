@@ -43,7 +43,7 @@ public final class Batch: Identifiable {
 
     /// Calls `handler` when the last job ends, before `waitUntilFinished()` returns, or right away
     /// if the batch has already ended.
-    func whenFinished(_ handler: @escaping @MainActor (Batch) -> Void) {
+    package func whenFinished(_ handler: @escaping @MainActor (Batch) -> Void) {
         if finishDate != nil { handler(self) } else { finishHandlers.append(handler) }
     }
 

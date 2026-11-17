@@ -1,6 +1,7 @@
 import Testing
 import TurnoverKit
 import UserNotifications
+import TurnoverAppCore
 
 /// What the system's notification setting means for Turnover. The window's setup row and the
 /// notifier both read it this way, and ask for the same thing.

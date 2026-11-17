@@ -3,6 +3,7 @@ import Observation
 import os
 import RingModel
 import TurnoverKit
+import TurnoverAppCore
 
 /// The ring's log: `log stream --style compact --predicate 'subsystem == "com.guivalenca.turnover"'`.
 let ringLog = Logger(subsystem: "com.guivalenca.turnover", category: "ring")

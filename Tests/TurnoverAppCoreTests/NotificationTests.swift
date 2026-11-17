@@ -2,6 +2,7 @@ import Foundation
 import Testing
 import TurnoverKit
 import TurnoverTestSupport
+import TurnoverAppCore
 
 /// The notifications `Feedback` posts when a batch ends: one for a batch that took more than
 /// about 3 seconds, one for failures, and one for outputs saved to Downloads. Quick, clean

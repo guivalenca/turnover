@@ -1,4 +1,5 @@
 import Foundation
+import TurnoverKit
 
 /// A notification to post when a batch ends.
 public struct Notice: Sendable, Hashable {

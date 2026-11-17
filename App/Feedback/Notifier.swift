@@ -1,6 +1,7 @@
 import AppKit
 import TurnoverKit
 import UserNotifications
+import TurnoverAppCore
 
 /// Posts `Feedback`'s notices as notifications. Show in Finder (or a click on the notification)
 /// selects the notice's files in Finder.

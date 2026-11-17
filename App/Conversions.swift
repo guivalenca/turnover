@@ -1,5 +1,6 @@
 import AppKit
 import TurnoverKit
+import TurnoverAppCore
 
 /// Runs every conversion the app is asked for and selects the new files in Finder when a batch
 /// ends. There is one for the app, so the runner's limits (at most two videos at a time) hold

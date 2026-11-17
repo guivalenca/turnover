@@ -1,4 +1,5 @@
 import Foundation
+import TurnoverKit
 
 /// Turnover.app's settings, stored in a user defaults domain (the app's own, `.standard`).
 ///

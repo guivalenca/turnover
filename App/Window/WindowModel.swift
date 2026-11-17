@@ -4,6 +4,7 @@ import Observation
 import ServiceManagement
 import TurnoverKit
 import UserNotifications
+import TurnoverAppCore
 
 /// What the Turnover window shows: the setup steps' live status and the two settings.
 ///

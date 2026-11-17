@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 import TurnoverKit
+import TurnoverAppCore
 
 @Suite struct AppSettingsTests {
     /// A defaults domain of its own, as a fresh install has.

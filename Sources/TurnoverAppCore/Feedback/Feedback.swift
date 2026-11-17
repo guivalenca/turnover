@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import TurnoverKit
 
 /// What the app shows about the batches it runs: a menu bar item while a batch takes more than
 /// about a second, and notifications for slow batches, failures and outputs saved to Downloads.

@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import TurnoverKit
+import TurnoverAppCore
 
 /// The menu bar item, present only while `Feedback` says so: the glyph and the overall
 /// percentage, with a menu listing each running conversion with a ✕.

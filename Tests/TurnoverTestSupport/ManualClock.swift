@@ -1,4 +1,4 @@
-import TurnoverKit
+import TurnoverAppCore
 
 /// A `FeedbackClock` that moves only when the test says so. `advance(by:)` runs every action that
 /// comes due, in time order, before it returns, so a test sees their effects at once.
