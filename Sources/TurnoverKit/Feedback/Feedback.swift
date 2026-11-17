@@ -4,6 +4,10 @@ import Observation
 /// What the app shows about the batches it runs: a menu bar item while a batch takes more than
 /// about a second, and notifications for slow batches, failures and outputs saved to Downloads.
 /// Quick batches get nothing. Give it every batch, and observe it from the main actor.
+///
+/// Give it batches of files offered for their targets only (a Finder menu item's or a ring
+/// entry's files): a file the batch skips is then reported as a failure, since the user asked
+/// for it and nothing happened.
 @MainActor @Observable
 public final class Feedback {
     /// How long a batch runs before the menu bar item appears.

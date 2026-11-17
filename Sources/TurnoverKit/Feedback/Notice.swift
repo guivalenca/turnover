@@ -7,7 +7,7 @@ public struct Notice: Sendable, Hashable {
         case converted
         /// Some outputs went to Downloads because their original's folder is read-only.
         case savedToDownloads
-        /// Some files couldn't be converted.
+        /// Some files couldn't be converted: they failed, or turned out not to fit their format.
         case failed
     }
 
@@ -46,9 +46,14 @@ extension Notice {
             notices.append(Notice(kind: .savedToDownloads, title: saved.title, body: saved.reason,
                                   files: inDownloads.map(\.output)))
         }
+        // The app only converts files offered for their format, so a file skipped here is one
+        // whose contents didn't fit after all (a PNG named x.jpg was offered PNG by its
+        // extension, say). That is as much a failure as a damaged file, and never silent.
         let failures = batch.jobs.compactMap { job -> ConversionError? in
-            guard case .failed(let error) = job.state else { return nil }
-            return error
+            switch job.state {
+            case .failed(let error), .skipped(let error): error
+            default: nil
+            }
         }
         if let only = failures.first, failures.count == 1 {
             notices.append(Notice(kind: .failed, title: "Couldn't convert \(only.file.lastPathComponent)",
