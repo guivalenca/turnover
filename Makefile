@@ -50,7 +50,8 @@ install: app
 		pluginkit -m -i $(EXTENSION_ID) | grep -q $(EXTENSION_ID) && break; sleep 1; \
 	done
 	pluginkit -e use -i $(EXTENSION_ID)
-	open -g "$(INSTALLED)"
+	@# A plain launch opens the Turnover window (setup and settings) in front.
+	open "$(INSTALLED)"
 	@echo "Installed $(INSTALLED). Right-click a photo or video in Finder: Turnover ›"
 
 # macOS keeps the extension's empty sandbox container (~/Library/Containers/$(EXTENSION_ID))
@@ -63,6 +64,8 @@ uninstall:
 	-$(LSREGISTER) -u "$(INSTALLED)"
 	rm -rf "$(INSTALLED)"
 	-tccutil reset All $(APP_ID) >/dev/null
+	@# Its settings too, so that a reinstall is a first launch again (Open at login turns on).
+	-@defaults delete $(APP_ID) 2>/dev/null
 	@echo "Uninstalled Turnover."
 
 test:

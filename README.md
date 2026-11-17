@@ -9,7 +9,7 @@ iPhones and Macs save videos as `.mov` and photos as `.heic`. Turnover is a smal
 
 The converted file appears next to the original, which is never touched.
 
-> **Status: work in progress.** The right-click menu works; the ring, settings and notifications are on their way.
+> **Status: work in progress.** The right-click menu and the settings window work; the ring and notifications are on their way.
 
 ## Planned for v1
 
@@ -28,9 +28,9 @@ cd turnover
 make install
 ```
 
-This builds Turnover, copies it to `/Applications`, turns on its Finder extension and starts it. Run it again to upgrade. `make uninstall` removes it.
+This builds Turnover, copies it to `/Applications`, turns on its Finder extension and opens it. Run it again to upgrade. `make uninstall` removes it.
 
-If the Turnover item doesn't show up in Finder, turn on Turnover in **System Settings › General › Login Items & Extensions**, under Extensions.
+Turnover runs in the background, with no Dock icon. Open it again (from Applications or Spotlight) to see its window: the setup checklist, the default JPEG quality, Open at login, and Quit. If the Turnover item doesn't show up in Finder, the window's Finder extension row opens the right page in System Settings.
 
 ## License
 
