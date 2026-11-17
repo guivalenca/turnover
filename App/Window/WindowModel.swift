@@ -12,18 +12,9 @@ import UserNotifications
 @MainActor
 @Observable
 final class WindowModel {
-    enum Notifications {
-        /// Not read yet.
-        case unknown
-        /// The app hasn't asked yet, so System Settings doesn't list it.
-        case notAsked
-        case allowed
-        /// Turned off in System Settings.
-        case off
-    }
-
     private(set) var finderExtensionIsOn = false
-    private(set) var notifications = Notifications.unknown
+    /// Nil until read.
+    private(set) var notifications: NotificationPermission?
     private(set) var opensAtLogin = false
 
     /// The default JPEG quality. Right-click JPEG reads it from `AppSettings` at each conversion.
@@ -57,11 +48,7 @@ final class WindowModel {
     func refresh() async {
         finderExtensionIsOn = FIFinderSyncController.isExtensionEnabled
         opensAtLogin = SMAppService.mainApp.status == .enabled
-        notifications = switch await UNUserNotificationCenter.current().notificationSettings().authorizationStatus {
-        case .notDetermined: .notAsked
-        case .authorized, .provisional: .allowed
-        default: .off
-        }
+        notifications = NotificationPermission(await UNUserNotificationCenter.current().notificationSettings().authorizationStatus)
     }
 
     // MARK: Actions
@@ -78,13 +65,14 @@ final class WindowModel {
         case .notAsked:
             Task {
                 do {
-                    _ = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+                    _ = try await UNUserNotificationCenter.current().requestAuthorization(
+                        options: NotificationPermission.requestedOptions)
                 } catch {
                     log.error("Couldn't ask to send notifications: \(error.localizedDescription, privacy: .public)")
                 }
                 await refresh()
             }
-        case .unknown, .allowed, .off:
+        case nil, .allowed, .off:
             let page = "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(Bundle.main.bundleIdentifier ?? "")"
             NSWorkspace.shared.open(URL(string: page)!)
         }

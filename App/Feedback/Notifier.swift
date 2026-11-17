@@ -48,18 +48,18 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     }
 
     private func isAllowed() async -> Bool {
-        switch await center.notificationSettings().authorizationStatus {
-        case .notDetermined:
+        switch NotificationPermission(await center.notificationSettings().authorizationStatus) {
+        case .notAsked:
             do {
-                return try await center.requestAuthorization(options: [.alert])
+                return try await center.requestAuthorization(options: NotificationPermission.requestedOptions)
             } catch {
                 log.error("Couldn't ask to post notifications: \(error.localizedDescription, privacy: .public)")
                 return false
             }
-        case .denied:
-            return false
-        default:
+        case .allowed:
             return true
+        case .off:
+            return false
         }
     }
 
