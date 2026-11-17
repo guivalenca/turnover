@@ -5,6 +5,7 @@ struct Command {
     /// The formats `--to` accepts, each with the action it runs.
     static let formats: KeyValuePairs<String, any ConversionAction> = [
         "png": PNGAction(),
+        "jpeg": JPEGAction(),
     ]
 
     static let usage = """
