@@ -34,6 +34,7 @@ public final class DiskImage: Sendable {
         if (try? await hdiutil("detach", "-quiet", disk.volume.path)) == nil {
             try await hdiutil("detach", "-quiet", "-force", disk.volume.path)
         }
+        withExtendedLifetime(scratch) {}  // deleted only once the volume is gone
         return try result.get()
     }
 
