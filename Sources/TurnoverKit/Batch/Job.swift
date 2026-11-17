@@ -24,6 +24,9 @@ public final class Job: Identifiable {
     /// The file to convert. It is never modified.
     public let source: URL
     public private(set) var state: State = .waiting
+    /// How much of the conversion is done, from 0 to 1. It never goes backwards and reaches 1
+    /// when the job converts. Images jump from 0 to 1; videos rise frame by frame.
+    public private(set) var progress: Double = 0
 
     /// The batch to tell when the job ends.
     @ObservationIgnored weak var batch: Batch?
@@ -65,10 +68,19 @@ public final class Job: Identifiable {
         self.task = task
     }
 
+    /// Takes a progress report from the conversion, on any thread.
+    nonisolated func report(_ fraction: Double) {
+        Task { @MainActor in
+            guard self.state == .running else { return }
+            self.progress = max(self.progress, fraction)
+        }
+    }
+
     /// Ends the job, unless it has already ended: sets its final state and wakes whoever waits.
     func end(as state: State) {
         guard !isFinished else { return }
         self.state = state
+        if case .converted = state { progress = 1 }
         task = nil
         let waiters = waiters
         self.waiters = []

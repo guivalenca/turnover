@@ -71,7 +71,7 @@ public final class JobRunner {
         lanes[lane]!.running += 1
         let converter = converter
         queued.job.start(Task {
-            let state = await Self.convert(queued.file, with: queued.action, by: converter)
+            let state = await Self.convert(queued.file, with: queued.action, by: converter, progress: queued.job.report)
             lanes[lane]!.running -= 1
             queued.job.end(as: state)
             startQueuedJobs()
@@ -98,10 +98,11 @@ public final class JobRunner {
     }
 
     private nonisolated static func convert(
-        _ file: SourceFile, with action: any ConversionAction, by converter: Converter
+        _ file: SourceFile, with action: any ConversionAction, by converter: Converter,
+        progress: @escaping @Sendable (Double) -> Void
     ) async -> Job.State {
         do {
-            return .converted(try await converter.convert(file, with: action))
+            return .converted(try await converter.convert(file, with: action, progress: progress))
         } catch is CancellationError {
             return .cancelled
         } catch {

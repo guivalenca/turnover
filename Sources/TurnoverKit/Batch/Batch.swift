@@ -18,6 +18,14 @@ public final class Batch: Identifiable {
     /// Whether every job has ended.
     public var isFinished: Bool { jobs.allSatisfy(\.isFinished) }
 
+    /// How much of the batch is done, from 0 to 1: the mean of its jobs' progress, where a job
+    /// that ended counts as done. Skipped files don't count. It never goes backwards.
+    public var progress: Double {
+        let counted = jobs.filter { if case .skipped = $0.state { false } else { true } }
+        guard !counted.isEmpty else { return isFinished ? 1 : 0 }
+        return counted.map { $0.isFinished ? 1 : $0.progress }.reduce(0, +) / Double(counted.count)
+    }
+
     /// The new files, in job order.
     public var outputs: [URL] {
         jobs.compactMap { job in
