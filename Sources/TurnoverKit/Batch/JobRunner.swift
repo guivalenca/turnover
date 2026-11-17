@@ -12,8 +12,11 @@ public final class JobRunner {
     @ObservationIgnored private let converter: Converter
     @ObservationIgnored private var lanes: [Lane: LaneState] = [
         .images: LaneState(limit: ProcessInfo.processInfo.activeProcessorCount),
-        .videos: LaneState(limit: 2),
+        .videos: LaneState(limit: videosAtOnce),
     ]
+
+    /// How many videos convert at once. Video estimates pack a selection into this many at once.
+    nonisolated static let videosAtOnce = 2
 
     public init(converter: Converter = Converter()) {
         self.converter = converter
@@ -61,6 +64,7 @@ public final class JobRunner {
 
     // MARK: - Scheduling
 
+    /// Where a job waits for its turn: images and videos have their own limits.
     private enum Lane { case images, videos }
 
     private struct LaneState {

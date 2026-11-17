@@ -13,8 +13,6 @@ struct VideoTime: Sendable {
 
     static let copiedBytesPerSecond = 275e6
     static let encodedPixelsPerSecond = 550e6
-    /// The batch runner converts at most this many videos at once.
-    static let simultaneousVideos = 2
 
     /// Nil when the video can't be planned (it is damaged, or has no video track).
     init?(of file: SourceFile) async {
@@ -41,12 +39,12 @@ struct VideoTime: Sendable {
     /// copied and the whole batch takes under a second.
     static func estimate(_ videos: [VideoTime]) -> Estimate? {
         guard !videos.isEmpty else { return nil }
-        // Longest first, each into the lane that frees up first.
-        var lanes = [Double](repeating: 0, count: simultaneousVideos)
+        // Longest first, each into the runner's video slot that frees up first.
+        var slots = [Double](repeating: 0, count: JobRunner.videosAtOnce)
         for video in videos.sorted(by: { $0.seconds > $1.seconds }) {
-            lanes[lanes.indices.min { lanes[$0] < lanes[$1] }!] += video.seconds
+            slots[slots.indices.min { slots[$0] < slots[$1] }!] += video.seconds
         }
-        let total = lanes.max()!
+        let total = slots.max()!
         return videos.allSatisfy(\.isCopy) && total < 1 ? .instant : .duration(total)
     }
 }

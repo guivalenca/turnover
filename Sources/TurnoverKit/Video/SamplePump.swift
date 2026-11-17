@@ -2,21 +2,22 @@
 import Foundation
 import Synchronization
 
-/// Moves samples from reader outputs to writer inputs, one lane per track, until every lane runs
-/// dry, something fails or the task is cancelled. All of its state lives on one serial queue,
+/// Moves samples from reader outputs to writer inputs, one stream per track, until every stream
+/// runs dry, something fails or the task is cancelled. All of its state lives on one serial queue,
 /// except the cancellation flag, which is checked between samples.
 final class SamplePump: @unchecked Sendable {
-    struct Lane {
+    /// One track's samples, from the reader's output to the writer's input.
+    struct Stream {
         let output: AVAssetReaderOutput
         let input: AVAssetWriterInput
-        /// Whether this lane's timestamps measure progress. The video lane does: it is the slow one.
+        /// Whether this stream's timestamps measure progress. The video stream does: it is the slow one.
         let reportsProgress: Bool
     }
 
     private let queue = DispatchQueue(label: "Turnover.SamplePump")
     private let reader: AVAssetReader
     private let writer: AVAssetWriter
-    private let lanes: [Lane]
+    private let streams: [Stream]
     private let duration: CMTime
     private let progress: ConversionProgress
     private var running = 0
@@ -28,10 +29,10 @@ final class SamplePump: @unchecked Sendable {
         let underlying: (any Error)?
     }
 
-    init(reader: AVAssetReader, writer: AVAssetWriter, lanes: [Lane], duration: CMTime, progress: ConversionProgress) {
+    init(reader: AVAssetReader, writer: AVAssetWriter, streams: [Stream], duration: CMTime, progress: ConversionProgress) {
         self.reader = reader
         self.writer = writer
-        self.lanes = lanes
+        self.streams = streams
         self.duration = duration
         self.progress = progress
     }
@@ -57,25 +58,25 @@ final class SamplePump: @unchecked Sendable {
         guard reader.startReading() else { return fail(ReadingFailed(underlying: reader.error)) }
         guard writer.startWriting() else { return fail(writer.error) }
         writer.startSession(atSourceTime: .zero)
-        running = lanes.count
-        for index in lanes.indices {
-            lanes[index].input.requestMediaDataWhenReady(on: queue) { self.pump(self.lanes[index]) }
+        running = streams.count
+        for index in streams.indices {
+            streams[index].input.requestMediaDataWhenReady(on: queue) { self.pump(self.streams[index]) }
         }
     }
 
-    private func pump(_ lane: Lane) {
+    private func pump(_ stream: Stream) {
         guard continuation != nil else { return }
-        while lane.input.isReadyForMoreMediaData {
+        while stream.input.isReadyForMoreMediaData {
             if stopIfCancelled() { return }
-            guard let sample = lane.output.copyNextSampleBuffer() else {
+            guard let sample = stream.output.copyNextSampleBuffer() else {
                 if reader.status == .failed { return fail(ReadingFailed(underlying: reader.error)) }
-                lane.input.markAsFinished()
+                stream.input.markAsFinished()
                 running -= 1
                 if running == 0 { finishWriting() }
                 return
             }
-            guard lane.input.append(sample) else { return fail(writer.error) }
-            if lane.reportsProgress { report(sample) }
+            guard stream.input.append(sample) else { return fail(writer.error) }
+            if stream.reportsProgress { report(sample) }
         }
     }
 
