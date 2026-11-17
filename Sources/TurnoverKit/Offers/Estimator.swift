@@ -29,22 +29,9 @@ public final class LiveOffers {
     init(_ files: [URL], jpegQuality: JPEGQuality) {
         let inspection = Offers.Inspection(files)
         offers = Offers(files, inspection, jpegQuality: jpegQuality, estimates: nil)
-        work = Task.detached(priority: .utility) { [weak self] in
-            var images: [URL: ImageSizes] = [:]
-            for file in inspection.files where file.kind == .image {
-                var sizes: [ImageOutput: ImageSizes.Size] = [:]
-                try? ImageSizes.measureExactly(file, ImageOutput.of(file)) { output, bytes in
-                    sizes[output] = ImageSizes.Size(bytes: bytes, isExact: true)
-                }
-                if !sizes.isEmpty { images[file.url] = ImageSizes(pixels: 0, sizes: sizes) }
-            }
-            var videos: [URL: VideoTime] = [:]
-            for file in inspection.files where file.kind == .video {
-                videos[file.url] = await VideoTime(of: file.url)
-            }
-            let offers = Offers(files, inspection, jpegQuality: jpegQuality,
-                                estimates: Offers.Estimates(images: images, videos: videos))
-            await self?.publish(offers)
+        let refinement = Refinement(files: files, inspection: inspection, jpegQuality: jpegQuality)
+        work = Task.detached(priority: .utility) { [self] in
+            await refinement.run { offers in await self.publish(offers) }
         }
     }
 

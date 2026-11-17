@@ -70,12 +70,7 @@ public struct Offers: Sendable, Hashable {
     public init(estimating files: [URL], jpegQuality: JPEGQuality = .default) async {
         let inspection = Inspection(files)
         async let images = ImageSizes.of(inspection.files.filter { $0.kind == .image })
-        async let videos = withTaskGroup(of: (URL, VideoTime?).self) { group in
-            for file in inspection.files where file.kind == .video {
-                group.addTask { (file.url, await VideoTime(of: file.url)) }
-            }
-            return await group.reduce(into: [URL: VideoTime]()) { $0[$1.0] = $1.1 }
-        }
+        async let videos = VideoTime.of(inspection.files.filter { $0.kind == .video })
         self.init(files, inspection, jpegQuality: jpegQuality,
                   estimates: Estimates(images: await images, videos: await videos))
     }

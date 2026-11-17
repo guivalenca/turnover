@@ -183,17 +183,3 @@ struct ImageSizes: Sendable {
     }
 }
 
-extension ImageSizes {
-    /// Decodes `file` exactly as a conversion does and encodes each of `outputs` in memory,
-    /// calling `measured` with each exact size as soon as it is known. Throws
-    /// `ConversionError.damaged` when the file can't be decoded.
-    static func measureExactly(_ file: SourceFile, _ outputs: [ImageOutput],
-                               measured: (ImageOutput, Int) -> Void) throws {
-        let decoded = try ImageConversion.Decoded(file.url)
-        for output in outputs {
-            guard let bytes = ImageConversion.encodedSize(of: decoded, as: output.type, quality: output.encoderQuality)
-            else { throw ConversionError.damaged(file.url) }
-            measured(output, bytes)
-        }
-    }
-}

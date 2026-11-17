@@ -53,3 +53,41 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
     guard let estimate, estimate.isExact, let bytes = estimate.bytes else { return false }
     return abs(bytes - real) * 200 <= real
 }
+
+/// The ring never waits for the exact sizes: a quick guess comes first, marked approximate.
+@MainActor
+@Suite(.timeLimit(.minutes(1))) struct QuickThenExact {
+    let folder = try! ScratchFolder()
+
+    @Test func aQuickApproximateGuessComesBeforeTheExactSize() async throws {
+        let photo = try folder.addMosaic(of: .heicRotated, width: 3000, height: 2000, as: "big.jpg")
+
+        let live = Estimator().estimate([photo])
+        let png = Recording { live.offers.targets.first?.estimate }
+        await live.waitUntilFinished()
+
+        let estimates = png.values.compactMap { $0 }
+        #expect(estimates.first?.isExact == false)
+        #expect(estimates.first?.label.hasPrefix("~") == true)
+        #expect(estimates.last?.isExact == true)
+        #expect(estimates.last?.label.hasPrefix("~") == false)
+    }
+
+    @Test func tenPhotosGetTheirFirstEstimatesWithinTheBudget() async throws {
+        let fixtures: [Fixture] = [.heicRotated, .jpeg, .png, .webp, .heicRotated, .jpeg, .heicRotated, .webp, .png, .heicRotated]
+        let photos = try fixtures.enumerated().map { try folder.add($1, as: "\($0)-\($1.rawValue)") }
+
+        // The fastest of five rounds: the first pays for loading ImageIO, and other tests
+        // compete for the CPU.
+        var times: [Duration] = []
+        for _ in 1...5 {
+            let start = ContinuousClock.now
+            let live = Estimator().estimate(photos)
+            #expect(await eventually { live.offers.targets.allSatisfy { $0.estimate != nil } })
+            times.append(ContinuousClock.now - start)
+            await live.waitUntilFinished()
+        }
+
+        #expect(times.min()! < timeLimit(.milliseconds(50)))
+    }
+}
