@@ -19,7 +19,7 @@ public struct JPEGAction: ConversionAction {
     }
 
     public func perform(_ file: SourceFile, writingTo destination: URL) async throws {
-        try ImageConversion.convert(file.url, to: destination, as: outputType, quality: Double(quality.percent) / 100)
+        try ImageConversion.convert(file.url, to: destination, as: outputType, quality: quality.encoderQuality)
     }
 }
 
@@ -46,4 +46,7 @@ public enum JPEGQuality: String, CaseIterable, Sendable {
         case .small: 60
         }
     }
+
+    /// `percent` as ImageIO takes it, from 0 to 1.
+    var encoderQuality: Double { Double(percent) / 100 }
 }

@@ -40,11 +40,55 @@ public struct Offers: Sendable, Hashable {
         /// The files this format applies to, in selection order. A file never appears in a
         /// target for its own format: a PNG is not offered PNG.
         public let files: [URL]
+        /// For JPEG, the preset the target converts with and `estimate` is for; nil otherwise.
+        public let quality: JPEGQuality?
+        /// For all of `files` together. Nil from `init(for:)`, which doesn't estimate, or when no
+        /// file could be estimated.
+        public let estimate: Estimate?
+        /// For JPEG with estimates, every preset with its own estimate, from Best to Small, for
+        /// the ⌥ fan-out. Empty otherwise.
+        public let presets: [Preset]
+
+        /// The action that converts `files` to this target's format.
+        public var action: any ConversionAction { format.action(quality: quality ?? .default) }
+    }
+
+    /// One JPEG quality and its estimate.
+    public struct Preset: Sendable, Hashable {
+        public let quality: JPEGQuality
+        public let estimate: Estimate
     }
 
     /// Inspects `files` by their contents and works out what is offered. It only sniffs each
     /// file's type, without decoding it, so it is quick enough to build a menu.
     public init(for files: [URL]) {
+        self.init(files, jpegQuality: .default, estimates: nil)
+    }
+
+    /// The same offers, with an estimate for each target: output sizes for images (each JPEG
+    /// preset too, with `jpegQuality` the one JPEG uses), and time for videos.
+    public init(estimating files: [URL], jpegQuality: JPEGQuality = .default) async {
+        let images = await withTaskGroup(of: (URL, ImageSizes?).self) { group in
+            for url in files where (try? SourceFile(url))?.kind == .image {
+                group.addTask { (url, ImageSizes(of: url)) }
+            }
+            return await group.reduce(into: [URL: ImageSizes]()) { $0[$1.0] = $1.1 }
+        }
+        self.init(files, jpegQuality: jpegQuality, estimates: Estimates(images: images))
+    }
+
+    /// What is known about each file's output.
+    struct Estimates {
+        var images: [URL: ImageSizes]
+
+        func estimate(_ format: OutputFormat, quality: JPEGQuality, of files: [URL]) -> Estimate? {
+            let sizes = files.compactMap { images[$0] }
+            guard !sizes.isEmpty else { return nil }
+            return .size(sizes.reduce(0) { $0 + $1.bytes(as: format, quality: quality) })
+        }
+    }
+
+    private init(_ files: [URL], jpegQuality: JPEGQuality, estimates: Estimates?) {
         var inspected: [SourceFile] = []
         var unreadable: [URL: ConversionError] = [:]
         for url in files {
@@ -56,8 +100,14 @@ public struct Offers: Sendable, Hashable {
         groups = [SourceFile.Kind.image, .video].compactMap { kind in
             let members = inspected.filter { $0.kind == kind }
             let targets = actions.compactMap { format, action -> Target? in
-                let fitting = members.filter(action.accepts)
-                return fitting.isEmpty ? nil : Target(format: format, files: fitting.map(\.url))
+                let fitting = members.filter(action.accepts).map(\.url)
+                guard !fitting.isEmpty else { return nil }
+                let quality = format == .jpeg ? jpegQuality : nil
+                let presets = format != .jpeg ? [] : JPEGQuality.allCases.compactMap { preset in
+                    estimates?.estimate(format, quality: preset, of: fitting).map { Preset(quality: preset, estimate: $0) }
+                }
+                return Target(format: format, files: fitting, quality: quality,
+                              estimate: estimates?.estimate(format, quality: jpegQuality, of: fitting), presets: presets)
             }
             return targets.isEmpty ? nil : Group(kind: kind, files: members.map(\.url), targets: targets)
         }
