@@ -2,7 +2,7 @@
 #
 #   make install     build, sign ad hoc, install to /Applications, enable the Finder menu, launch
 #   make uninstall   quit, disable and unregister everything `make install` set up
-#   make app         build build/Turnover.app only (ad hoc signed)
+#   make app         build build/Turnover.app only (ad hoc signed; install removes it again)
 #   make test        run the TurnoverKit and CLI tests
 #   make project     regenerate Turnover.xcodeproj from project.yml (needs `brew install xcodegen`)
 
@@ -38,6 +38,9 @@ install: app
 	@pkill -x TurnoverFinder || true
 	rm -rf "$(INSTALLED)"
 	ditto "$(PRODUCT)" "$(INSTALLED)"
+	@# LaunchServices notices app bundles on disk by itself; leave only the installed copy.
+	-@$(LSREGISTER) -u "$(PRODUCT)" 2>/dev/null
+	rm -rf "$(PRODUCT)"
 	$(LSREGISTER) -f -R -trusted "$(INSTALLED)"
 	pluginkit -a "$(INSTALLED)/$(EXTENSION)"
 	@for attempt in 1 2 3 4 5 6 7 8 9 10; do \
