@@ -16,12 +16,12 @@ struct TurnoverView: View {
                 SetupRow(
                     "Finder extension", detail: "Adds Turnover to the right-click menu",
                     status: model.finderExtensionIsOn ? "On" : nil,
-                    button: "Open Settings…", action: model.openFinderExtensionSettings)
+                    button: "Open Settings…", action: { model.openFinderExtensionSettings() })
                 SetupRow(
                     "Notifications", detail: "Tells you when longer conversions finish",
                     status: model.notifications == .allowed ? "Allowed" : nil,
                     button: model.notifications == .notAsked ? "Allow…" : "Open Settings…",
-                    action: model.turnOnNotifications)
+                    action: { model.turnOnNotifications() })
                 .disabled(model.notifications == .unknown)
             }
 
@@ -36,7 +36,7 @@ struct TurnoverView: View {
                 }
                 // A label with a second line doesn't reach Accessibility by itself.
                 .accessibilityLabel("JPEG quality")
-                Toggle(isOn: Binding(get: { model.opensAtLogin }, set: model.setOpensAtLogin)) {
+                Toggle(isOn: Binding(get: { model.opensAtLogin }, set: { model.setOpensAtLogin($0) })) {
                     Text("Open at login")
                     Text("Turnover needs to be running to show the ring")
                 }
