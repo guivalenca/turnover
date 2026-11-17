@@ -36,7 +36,8 @@ struct ImageSizes: Sendable {
         var measured = await quick(sampled)
         measured.merge(known) { quick, _ in quick }
         let unsampled = unknown.filter { !sampled.contains($0) }
-        return completing(measured, for: images, pixels: pixelCounts(of: unsampled))
+        let pixels = await blocking(.userInitiated) { pixelCounts(of: unsampled) }
+        return completing(measured, for: images, pixels: pixels)
     }
 
     /// Quick sizes for `images`, measured side by side; the ones that can't be decoded are left out.

@@ -106,7 +106,7 @@ public final class JobRunner {
 
     private nonisolated static func route(_ source: URL, to targets: [any ConversionAction]) async -> Route {
         do {
-            let file = try SourceFile(source)
+            let file = try await SourceFile.inspecting(source)
             guard let action = targets.first(where: { $0.accepts(file) }) else {
                 return .end(.skipped(skipReason(file, targets)))
             }

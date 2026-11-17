@@ -34,6 +34,12 @@ public struct SourceFile: Sendable, Hashable {
         }
     }
 
+    /// The same, read on a dispatch queue: inspecting opens and reads the file, which can block
+    /// (a network share, say), and Swift concurrency's few threads are needed meanwhile.
+    static func inspecting(_ url: URL) async throws -> SourceFile {
+        try await blocking(.userInitiated, throwing: { try SourceFile(url) })
+    }
+
     /// Classifies the file at `url` by `declaredType`, the type the file system gives it (mostly
     /// from its extension), without opening it. Close to what inspecting the contents gives, as
     /// long as the extension tells the truth.

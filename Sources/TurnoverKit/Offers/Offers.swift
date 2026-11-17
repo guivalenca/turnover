@@ -114,7 +114,7 @@ public struct Offers: Sendable, Hashable {
     /// The same offers, with an estimate for each target: output sizes for images (each JPEG
     /// preset too, with `jpegQuality` the one JPEG uses), and time for videos.
     public init(estimating files: [URL], jpegQuality: JPEGQuality = .default) async {
-        let inspection = Inspection(files)
+        let inspection = await blocking(.userInitiated) { Inspection(files) }
         async let images = ImageSizes.of(inspection.files.filter { $0.kind == .image })
         async let videos = VideoTime.of(inspection.files.filter { $0.kind == .video })
         self.init(files, inspection, jpegQuality: jpegQuality,

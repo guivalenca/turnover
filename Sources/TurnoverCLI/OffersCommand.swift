@@ -29,7 +29,7 @@ enum OffersCommand {
 
     @MainActor
     private static func refined(_ files: [URL]) async -> Offers {
-        let live = Estimator().estimate(files)
+        let live = await Estimator().estimate(files)
         await live.waitUntilFinished()
         return live.offers
     }

@@ -46,7 +46,7 @@ public struct Converter: Sendable {
         _ source: URL, with action: some ConversionAction,
         progress: @escaping @Sendable (Double) -> Void = { _ in }
     ) async throws -> ConversionResult {
-        try await convert(SourceFile(source), with: action, progress: progress)
+        try await convert(SourceFile.inspecting(source), with: action, progress: progress)
     }
 
     /// The same, for a file already inspected.

@@ -17,11 +17,11 @@ struct VideoTime: Sendable {
     static let simultaneousVideos = 2
 
     /// Nil when the video can't be planned (it is damaged, or has no video track).
-    init?(of url: URL) async {
-        guard let file = try? SourceFile(url), let plan = try? await MP4Action().plan(for: file) else { return nil }
+    init?(of file: SourceFile) async {
+        guard let plan = try? await MP4Action().plan(for: file) else { return nil }
         isCopy = plan.passesVideoThrough
         if isCopy {
-            let bytes = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            let bytes = (try? file.url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
             seconds = Double(bytes) / Self.copiedBytesPerSecond
         } else {
             let pixels = Double(plan.frameWidth * plan.frameHeight) * plan.frameRate * plan.duration
@@ -32,7 +32,7 @@ struct VideoTime: Sendable {
     /// The times of every video in `videos` that can be planned, worked out side by side.
     static func of(_ videos: [SourceFile]) async -> [URL: VideoTime] {
         await withTaskGroup(of: (URL, VideoTime?).self) { group in
-            for video in videos { group.addTask { (video.url, await VideoTime(of: video.url)) } }
+            for video in videos { group.addTask { (video.url, await VideoTime(of: video)) } }
             return await group.reduce(into: [URL: VideoTime]()) { $0[$1.0] = $1.1 }
         }
     }
