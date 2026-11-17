@@ -3,7 +3,8 @@ import TurnoverKit
 extension RingModel {
     /// One format on the ring.
     public struct Entry: Sendable, Hashable {
-        /// The format: "PNG", "JPEG" or "MP4".
+        /// The format ("PNG", "JPEG", "MP4"), or a JPEG quality ⌥ fanned out ("Best", "High",
+        /// "Small").
         public let title: String
         /// Its estimate: "19 MB" (measured), "~19 MB", "Instant", "About 5 s"; "…" until known.
         public var subtitle: String { estimate?.label ?? "…" }
