@@ -6,6 +6,9 @@ import Observation
 /// two at a time.
 @MainActor @Observable
 public final class JobRunner {
+    /// The batches still running, oldest first. A batch leaves the list when its last job ends.
+    public private(set) var batches: [Batch] = []
+
     @ObservationIgnored private let converter: Converter
     @ObservationIgnored private var lanes: [Lane: LaneState] = [
         .images: LaneState(limit: ProcessInfo.processInfo.activeProcessorCount),
@@ -23,6 +26,9 @@ public final class JobRunner {
     public func run(_ files: [URL], to targets: [any ConversionAction]) -> Batch {
         precondition(!targets.isEmpty, "a batch needs at least one target")
         let batch = Batch(jobs: files.map(Job.init(source:)))
+        guard !batch.isFinished else { return batch }  // no files
+        batches.append(batch)
+        batch.onFinish = { [weak self] batch in self?.batches.removeAll { $0 === batch } }
         Task {
             // One file at a time, so jobs start in the order given.
             for job in batch.jobs {

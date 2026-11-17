@@ -7,12 +7,19 @@ import Observation
 public final class Batch: Identifiable {
     /// One job per file, in the order the files were given.
     public let jobs: [Job]
+    /// When the batch was started.
+    public let startDate = Date()
+    /// When its last job ended, or nil while it runs.
+    public private(set) var finishDate: Date?
 
+    /// Called once, when the last job ends, before anyone waiting is woken.
+    @ObservationIgnored var onFinish: (@MainActor (Batch) -> Void)?
     @ObservationIgnored private var waiters: [CheckedContinuation<Void, Never>] = []
 
     init(jobs: [Job]) {
         self.jobs = jobs
         for job in jobs { job.batch = self }
+        if jobs.isEmpty { finishDate = startDate }
     }
 
     /// Whether every job has ended.
@@ -42,7 +49,10 @@ public final class Batch: Identifiable {
 
     /// Called by each job when it ends.
     func jobEnded() {
-        guard isFinished else { return }
+        guard isFinished, finishDate == nil else { return }
+        finishDate = Date()
+        onFinish?(self)
+        onFinish = nil
         let waiters = waiters
         self.waiters = []
         waiters.forEach { $0.resume() }
