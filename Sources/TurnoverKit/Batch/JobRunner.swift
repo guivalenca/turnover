@@ -36,7 +36,7 @@ public final class JobRunner {
         let batch = Batch(jobs: files.map(Job.init(source:)))
         guard !batch.isFinished else { return batch }  // no files
         batches.append(batch)
-        batch.onFinish = { [weak self] batch in self?.batches.removeAll { $0 === batch } }
+        batch.whenFinished { [weak self] batch in self?.batches.removeAll { $0 === batch } }
         Task {
             // One file at a time, so jobs start in the order given.
             for (index, job) in batch.jobs.enumerated() {

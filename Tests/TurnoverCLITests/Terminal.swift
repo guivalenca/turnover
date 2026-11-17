@@ -1,5 +1,6 @@
 import Darwin
 import Foundation
+import TurnoverTestSupport
 
 /// Runs `turnover` with standard error on a pseudo-terminal, as when someone types the command
 /// in Terminal. Standard output stays a pipe. In `errors`, line ends are "\r\n".
@@ -7,12 +8,19 @@ import Foundation
 /// Uses posix_spawn rather than Process so that every descriptor is closed exactly once, here:
 /// other tests run in parallel in this process, and a stray second close would hit whatever file
 /// they opened in the meantime.
-func turnoverInTerminal(_ arguments: String...) throws -> Run {
-    try turnoverInTerminal(arguments)
+///
+/// Waits for it off the concurrency threads (see `offThePool`): a transcode there takes many
+/// seconds on CI.
+func turnoverInTerminal(_ arguments: String...) async throws -> Run {
+    try await turnoverInTerminal(arguments)
 }
 
 /// The same, sending SIGINT (as Ctrl-C does) once what the terminal shows satisfies `interruptWhen`.
-func turnoverInTerminal(_ arguments: [String], interruptWhen: (@Sendable (String) -> Bool)? = nil) throws -> Run {
+func turnoverInTerminal(_ arguments: [String], interruptWhen: (@Sendable (String) -> Bool)? = nil) async throws -> Run {
+    try await offThePool { try runInTerminal(arguments, interruptWhen: interruptWhen) }
+}
+
+private func runInTerminal(_ arguments: [String], interruptWhen: (@Sendable (String) -> Bool)?) throws -> Run {
     var controller: Int32 = -1, terminal: Int32 = -1
     guard openpty(&controller, &terminal, nil, nil, nil) == 0 else { throw POSIXError(.ENXIO) }
     defer { close(controller) }

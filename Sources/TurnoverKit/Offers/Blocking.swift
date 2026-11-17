@@ -8,3 +8,10 @@ func blocking<T: Sendable>(_ qos: DispatchQoS.QoSClass, _ work: @escaping @Senda
         DispatchQueue.global(qos: qos).async { continuation.resume(returning: work()) }
     }
 }
+
+/// The same, for work that can throw.
+func blocking<T: Sendable>(_ qos: DispatchQoS.QoSClass, throwing work: @escaping @Sendable () throws -> T) async throws -> T {
+    try await withCheckedThrowingContinuation { continuation in
+        DispatchQueue.global(qos: qos).async { continuation.resume(with: Result { try work() }) }
+    }
+}

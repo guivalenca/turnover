@@ -7,11 +7,11 @@ import TurnoverTestSupport
 @Suite struct BatchCLI {
     let folder = try! ScratchFolder()
 
-    @Test func skipsAFileTheFormatDoesntFitWithANoteAndExitsZero() throws {
+    @Test func skipsAFileTheFormatDoesntFitWithANoteAndExitsZero() async throws {
         let photo = try folder.add(.heicRotated, as: "a.heic")
         let clip = try folder.add(.movH264, as: "b.mov")
 
-        let run = try turnover(photo.path, clip.path, "--to", "png")
+        let run = try await turnover(photo.path, clip.path, "--to", "png")
 
         #expect(run.status == 0)
         #expect(run.output == folder.url.appendingPathComponent("a.png").path + "\n")
@@ -19,11 +19,11 @@ import TurnoverTestSupport
         #expect(try folder.fileNames() == ["a.heic", "a.png", "b.mov"])
     }
 
-    @Test func printsTheNewFilesInTheOrderGiven() throws {
+    @Test func printsTheNewFilesInTheOrderGiven() async throws {
         let slow = try folder.add(.movHEVCHDR, as: "slow.mov")
         let quick = try folder.add(.movH264, as: "quick.mov")
 
-        let run = try turnover(slow.path, quick.path, "--to", "mp4")
+        let run = try await turnover(slow.path, quick.path, "--to", "mp4")
 
         #expect(run.status == 0)
         #expect(run.output == [slow, quick].map { $0.deletingPathExtension().path + ".mp4\n" }.joined())
@@ -32,11 +32,11 @@ import TurnoverTestSupport
     /// Ctrl-C cancels the batch and turnover exits 130 once every job has stopped and cleaned up.
     /// (The temporary folders can't be checked from here: macOS lets a process see only its own.
     /// The kit's cancellation tests check them.)
-    @Test func ctrlCStopsTheBatchAndLeavesNoPartialFile() throws {
+    @Test func ctrlCStopsTheBatchAndLeavesNoPartialFile() async throws {
         let clips = try (1...4).map { try folder.add(.movHEVCHDR, as: "clip \($0).mov") }
 
         // Interrupt as soon as the first percentage shows: a transcode is under way.
-        let run = try turnoverInTerminal(clips.map(\.path) + ["--to", "mp4"], interruptWhen: { $0.contains("%") })
+        let run = try await turnoverInTerminal(clips.map(\.path) + ["--to", "mp4"], interruptWhen: { $0.contains("%") })
 
         #expect(run.status == 130)
         let finished = run.output.split(separator: "\n").map { URL(fileURLWithPath: String($0)).lastPathComponent }

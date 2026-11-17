@@ -28,6 +28,34 @@ import TurnoverTestSupport
         #expect(turnstile.destinations.allSatisfy { $0.folderIsGone })
     }
 
+    /// The runner converts one image per core at once. Those conversions must not hold the threads
+    /// everything async shares, or a cancelled video stays "running" until a photo is done.
+    @Test func cancellingAVideoDoesntWaitForThePhotosConvertingAlongside() async throws {
+        let clip = try folder.add(.movH264, as: "clip.mov")
+        let turnstile = Turnstile()
+        let runner = JobRunner()
+        let video = runner.run([clip], to: [turnstile.holding(MP4Action())])
+        #expect(await turnstile.waitUntil(running: 1))
+        // As many 12-megapixel photos as the runner converts at once, each in a batch of its own
+        // so that the moment each one ends is known.
+        let first = try await mosaic(in: folder, of: .heicRotated, width: 4000, height: 3000, as: "photo 1.jpg")
+        let photos = try [first] + (2...ProcessInfo.processInfo.activeProcessorCount).map { index in
+            let copy = folder.url.appendingPathComponent("photo \(index).jpg")
+            try FileManager.default.copyItem(at: first, to: copy)
+            return copy
+        }
+        let images = photos.map { runner.run([$0], to: [PNGAction()]) }
+        #expect(await eventually { images.allSatisfy { $0.jobs[0].state == .running } })
+
+        video.jobs[0].cancel()
+
+        await video.waitUntilFinished()
+        #expect(video.jobs[0].state == .cancelled)
+        for batch in images { await batch.waitUntilFinished() }
+        let firstPhotoDone = try #require(images.compactMap(\.finishDate).min())
+        #expect(try #require(video.finishDate) < firstPhotoDone, "the cancel waited for a photo to convert")
+    }
+
     @Test func aJobCancelledWhileWaitingNeverStarts() async throws {
         let clips = try (1...3).map { try folder.add(.movH264, as: "clip \($0).mov") }
         let turnstile = Turnstile()
