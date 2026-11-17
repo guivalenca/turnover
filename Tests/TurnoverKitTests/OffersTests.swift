@@ -55,5 +55,74 @@ import TurnoverTestSupport
         #expect(offers.groups.map(\.kind) == [.image, .video])
         #expect(offers.groups.map(\.files) == [[photo, webp], [movie]])
         #expect(offers.targets.map(\.format) == [.png, .jpeg, .mp4])
+        #expect(offers.skipped == [])
+        #expect(offers.reason == nil)
+    }
+}
+
+/// Files nothing is offered for, and the hint shown when that is the whole selection.
+@Suite struct WhatIsSkipped {
+    let folder = try! ScratchFolder()
+
+    @Test func anMP4OffersNothing() throws {
+        let movie = try folder.add(.mp4H264, as: "clip.mp4")
+
+        let offers = Offers(for: [movie])
+
+        #expect(offers.groups == [])
+        #expect(offers.skipped == [.alreadyInFormat(movie, format: "MP4")])
+        #expect(offers.reason == "clip.mp4: already an MP4")
+    }
+
+    @Test(arguments: [(Fixture.pdf, "PDF document"), (.text, "text")])
+    func aDocumentIsUnsupportedAndTheReasonNamesItsType(fixture: Fixture, type: String) throws {
+        let document = try folder.add(fixture)
+
+        let offers = Offers(for: [document])
+
+        #expect(offers.targets == [])
+        #expect(offers.skipped == [.unsupported(document, typeDescription: type)])
+        #expect(offers.reason == "\(fixture.rawValue): not an image or a video (\(type))")
+    }
+
+    @Test func severalUnconvertibleFilesAreAllReportedAndTheReasonCountsTheRest() throws {
+        let pdf = try folder.add(.pdf)
+        let text = try folder.add(.text)
+        let missing = folder.url.appendingPathComponent("gone.heic")
+
+        let offers = Offers(for: [pdf, text, missing])
+
+        #expect(offers.targets == [])
+        #expect(offers.skipped == [
+            .unsupported(pdf, typeDescription: "PDF document"),
+            .unsupported(text, typeDescription: "text"),
+            .unreadable(missing),
+        ])
+        #expect(offers.reason == "document.pdf: not an image or a video (PDF document), and 2 more files")
+    }
+
+    @Test func unsupportedFilesNextToConvertibleOnesAreReportedWithoutAReason() throws {
+        let photo = try folder.add(.heicRotated, as: "photo.heic")
+        let movie = try folder.add(.movH264, as: "clip.mov")
+        let mp4 = try folder.add(.mp4H264, as: "done.mp4")
+        let pdf = try folder.add(.pdf)
+
+        let offers = Offers(for: [photo, pdf, movie, mp4])
+
+        #expect(offers.targets.map(\.format) == [.png, .jpeg, .mp4])
+        #expect(offers.groups.map(\.files) == [[photo], [movie, mp4]])
+        #expect(offers.targets.last?.files == [movie])
+        #expect(offers.skipped == [
+            .unsupported(pdf, typeDescription: "PDF document"),
+            .alreadyInFormat(mp4, format: "MP4"),
+        ])
+        #expect(offers.reason == nil)
+    }
+
+    @Test func anEmptySelectionOffersNothing() {
+        let offers = Offers(for: [])
+
+        #expect(offers.targets == [])
+        #expect(offers.reason == "No files")
     }
 }

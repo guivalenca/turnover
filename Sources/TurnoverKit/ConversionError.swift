@@ -2,7 +2,7 @@ import Foundation
 
 /// Why a file could not be converted. `errorDescription` is a short reason fit for a terminal
 /// line or a notification.
-public enum ConversionError: Error, Sendable, Equatable {
+public enum ConversionError: Error, Sendable, Hashable {
     /// The file is missing or can't be read.
     case unreadable(URL)
     /// The file looks like an image or video but can't be decoded: truncated or corrupt.
@@ -13,6 +13,19 @@ public enum ConversionError: Error, Sendable, Equatable {
     case alreadyInFormat(URL, format: String)
     /// The action doesn't take this kind of file, e.g. a video asked to become a PNG.
     case notApplicable(URL, format: String)
+}
+
+extension ConversionError {
+    /// Why `action` doesn't take `file`.
+    static func refusal(of file: SourceFile, by action: any ConversionAction) -> ConversionError {
+        if file.kind == .unsupported {
+            return .unsupported(file.url, typeDescription: file.contentType.localizedDescription ?? file.contentType.identifier)
+        }
+        if file.contentType.conforms(to: action.outputType) {
+            return .alreadyInFormat(file.url, format: action.name)
+        }
+        return .notApplicable(file.url, format: action.name)
+    }
 }
 
 extension ConversionError: LocalizedError {
