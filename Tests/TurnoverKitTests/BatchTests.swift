@@ -5,7 +5,7 @@ import TurnoverTestSupport
 
 /// Running many files at once through `JobRunner`: what each file becomes and what the batch reports.
 @MainActor
-@Suite struct Batches {
+@Suite(.timeLimit(.minutes(1))) struct Batches {
     let folder = try! ScratchFolder()
 
     @Test func convertsEachFileWithTheTargetForItsKind() async throws {

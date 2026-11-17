@@ -29,15 +29,22 @@ public struct Converter: Sendable {
         _ source: URL, with action: some ConversionAction,
         progress: @escaping @Sendable (Double) -> Void = { _ in }
     ) async throws -> ConversionResult {
+        try await convert(SourceFile(source), with: action, progress: progress)
+    }
+
+    /// The same, for a file already inspected.
+    func convert(
+        _ file: SourceFile, with action: some ConversionAction,
+        progress: @escaping @Sendable (Double) -> Void = { _ in }
+    ) async throws -> ConversionResult {
         let progress = ConversionProgress(progress)
-        let file = try SourceFile(source)
         guard action.accepts(file) else { throw Self.refusal(of: file, by: action) }
-        let placement = Placement(nextTo: source, fileExtension: action.fileExtension)
+        let placement = Placement(nextTo: file.url, fileExtension: action.fileExtension)
         let output = try await placement.place { temporary in
             try await action.perform(file, writingTo: temporary, progress: progress)
         }
         progress.report(1)
-        return ConversionResult(source: source, output: output)
+        return ConversionResult(source: file.url, output: output)
     }
 
     /// Why `action` doesn't accept `file`.
