@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and test (macOS)
+    # The newest stable macOS image. Its default Xcode is older than a developer Mac usually
+    # has, so keep Package.swift's tools version and the APIs used compatible with it.
+    runs-on: macos-26
+    timeout-minutes: 20
+    env:
+      # Pinned so an image update can't silently change the toolchain. `Xcode_26.6.app` stays
+      # valid when a 26.6.x patch replaces 26.6 (the image keeps the minor-version path).
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          swift --version
+
+      - name: Build
+        run: swift build --build-tests
+
+      - name: Test
+        run: swift test
