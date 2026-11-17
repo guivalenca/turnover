@@ -25,8 +25,8 @@ public struct JPEGAction: ConversionAction {
 
 /// How much a JPEG is compressed. A higher quality gives a larger file.
 ///
-/// The raw values ("best", "high", "small") are what `turnover --quality` takes and what the
-/// settings store, so keep them stable.
+/// The raw values ("best", "high", "small") are what `turnover --quality` takes, and what the
+/// app's settings should store, so keep them stable.
 public enum JPEGQuality: String, CaseIterable, Sendable {
     /// 100%.
     case best

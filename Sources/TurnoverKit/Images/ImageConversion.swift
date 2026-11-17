@@ -20,7 +20,7 @@ enum ImageConversion {
         guard let output = CGImageDestinationCreateWithURL(destination as CFURL, type.identifier as CFString, 1, nil)
         else { throw CocoaError(.fileWriteUnknown, userInfo: [NSURLErrorKey: destination]) }
         var options = metadata(from: properties, for: image)
-        options[kCGImageDestinationLossyCompressionQuality] = quality
+        if let quality { options[kCGImageDestinationLossyCompressionQuality] = quality }
         // Formats without alpha (JPEG) composite transparent areas onto this; ImageIO documents
         // black as the default. Formats with alpha ignore it.
         options[kCGImageDestinationBackgroundColor] = CGColor(gray: 1, alpha: 1)
