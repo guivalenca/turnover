@@ -1,0 +1,247 @@
+<!doctype html>
+<!--
+  PROTOTYPE — throwaway. App icon directions for Turnover.
+  Question: which icon direction? Each concept is shown large, at real small sizes, in a Dock, and as a menu bar glyph.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turnover Icon Directions</title>
+<style>
+:root{--bg:#f5f5f7;--card:#fff;--text:#1d1d1f;--muted:#6e6e73;--hair:rgba(0,0,0,.08);--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 var(--font);padding:28px 28px 60px}
+h1{font-size:26px;margin:0 0 4px;letter-spacing:-.4px}
+.lede{color:var(--muted);margin:0 0 22px;max-width:760px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+@media (max-width:1100px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border-radius:20px;padding:18px;box-shadow:0 0 0 .5px var(--hair),0 8px 30px rgba(0,0,0,.05)}
+.card h2{margin:0;font-size:18px;letter-spacing:-.2px}
+.card h2 span{color:var(--muted);font-weight:500;font-size:14px;margin-left:6px}
+.card p{margin:4px 0 14px;color:var(--muted)}
+.hero{display:grid;grid-template-columns:1fr 1fr;border-radius:14px;overflow:hidden}
+.hero>div{display:flex;align-items:center;justify-content:center;padding:26px 0}
+.hero .light{background:linear-gradient(160deg,#dfe9f7,#f3e6ee)}
+.hero .dark{background:linear-gradient(160deg,#141a33,#2a1630)}
+.icon{display:block;filter:drop-shadow(0 10px 18px rgba(0,0,0,.22)) drop-shadow(0 2px 4px rgba(0,0,0,.12))}
+.sizes{display:flex;align-items:flex-end;gap:18px;margin-top:14px;padding:12px 14px;border-radius:12px;background:#f2f2f5}
+.sizes .lab{font-size:11px;color:var(--muted);text-align:center;margin-top:4px}
+.sizes .s{display:flex;flex-direction:column;align-items:center}
+.sizes .icon{filter:drop-shadow(0 2px 4px rgba(0,0,0,.2))}
+.mb{display:flex;gap:10px;margin-left:auto;align-self:center}
+.mbar{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:6px;font-size:12.5px;font-variant-numeric:tabular-nums}
+.mbar.l{background:rgba(255,255,255,.9);color:#111;box-shadow:0 0 0 .5px var(--hair)}
+.mbar.d{background:#26262b;color:#f2f2f2}
+.mbar svg{width:15px;height:15px}
+.dockwrap{margin-top:22px;border-radius:20px;padding:40px 0 22px;display:flex;flex-direction:column;align-items:center;gap:14px;
+  background:radial-gradient(900px 500px at 20% 0%,#b9d8ff,transparent 60%),radial-gradient(800px 600px at 100% 100%,#ffc9a8,transparent 60%),linear-gradient(160deg,#8fb8f0,#e9a7c4)}
+.dockwrap.dark{background:radial-gradient(900px 500px at 20% 0%,#2a3f78,transparent 60%),radial-gradient(800px 600px at 100% 100%,#5a2a4e,transparent 60%),linear-gradient(160deg,#141a33,#2a1630)}
+.dock{display:flex;gap:12px;padding:10px 14px;border-radius:28px;background:rgba(255,255,255,.28);backdrop-filter:blur(24px) saturate(1.8);-webkit-backdrop-filter:blur(24px) saturate(1.8);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 0 0 .5px rgba(0,0,0,.12),0 12px 40px rgba(0,0,0,.18)}
+.dark .dock{background:rgba(40,40,46,.4);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 0 0 .5px rgba(0,0,0,.5),0 12px 40px rgba(0,0,0,.4)}
+.dock .icon{filter:drop-shadow(0 4px 6px rgba(0,0,0,.25))}
+.dock .other{width:64px;height:64px;border-radius:15px}
+.notif{display:flex;gap:11px;align-items:center;width:340px;padding:11px 13px;border-radius:20px;background:rgba(246,246,248,.86);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 12px 40px rgba(0,0,0,.18);font-size:13px}
+.dark .notif{background:rgba(40,40,44,.82);color:#f2f2f2}
+.notif b{display:block;font-weight:600}
+.notifs{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.key{display:inline-block;width:22px;height:22px;border-radius:6px;background:#1d1d1f;color:#fff;text-align:center;font-weight:700;line-height:22px;margin-right:6px}
+</style>
+</head>
+<body>
+<h1>Turnover: icon directions</h1>
+<p class="lede">Four different directions, each shown large, at the sizes macOS really uses (128 down to 16 px), as the menu bar progress item, and below in the Dock and in a notification. Pick one, mix two, or say what's missing.</p>
+<div class="grid" id="grid"></div>
+<div class="dockwrap" id="dock-light"></div>
+<div class="dockwrap dark" id="dock-dark"></div>
+
+<script>
+// ---------------------------------------------------------------- geometry helpers
+const P = (cx, cy, r, a) => [cx + r * Math.cos(a * Math.PI / 180), cy + r * Math.sin(a * Math.PI / 180)];
+const f = n => n.toFixed(1);
+function squircle(cx = 512, cy = 512, a = 412, n = 5){
+  let d = '';
+  for (let i = 0; i <= 160; i++){
+    const t = i / 160 * 2 * Math.PI, c = Math.cos(t), s = Math.sin(t);
+    const x = cx + a * Math.sign(c) * Math.pow(Math.abs(c), 2 / n), y = cy + a * Math.sign(s) * Math.pow(Math.abs(s), 2 / n);
+    d += (i ? 'L' : 'M') + f(x) + ' ' + f(y);
+  }
+  return d + 'Z';
+}
+const SQ = squircle();
+function arc(cx, cy, r, a0, a1){
+  const [x0, y0] = P(cx, cy, r, a0), [x1, y1] = P(cx, cy, r, a1);
+  return `M${f(x0)} ${f(y0)}A${r} ${r} 0 ${Math.abs(a1 - a0) > 180 ? 1 : 0} ${a1 > a0 ? 1 : 0} ${f(x1)} ${f(y1)}`;
+}
+function sector(cx, cy, r1, r2, a0, a1){
+  const [x1, y1] = P(cx, cy, r2, a0), [x2, y2] = P(cx, cy, r2, a1), [x3, y3] = P(cx, cy, r1, a1), [x4, y4] = P(cx, cy, r1, a0);
+  const l = (a1 - a0) > 180 ? 1 : 0;
+  return `M${f(x1)} ${f(y1)}A${r2} ${r2} 0 ${l} 1 ${f(x2)} ${f(y2)}L${f(x3)} ${f(y3)}A${r1} ${r1} 0 ${l} 0 ${f(x4)} ${f(y4)}Z`;
+}
+// Shared "glass tile" finish: base gradient, top glow, specular rim.
+function tile(id, top, bottom){
+  return `<defs>
+    <linearGradient id="${id}-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${top}"/><stop offset="1" stop-color="${bottom}"/></linearGradient>
+    <radialGradient id="${id}-glow" cx=".3" cy=".1" r=".75"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="${id}-rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".35" stop-color="#fff" stop-opacity=".08"/><stop offset="1" stop-color="#fff" stop-opacity=".18"/></linearGradient>
+    <filter id="${id}-soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="16"/></filter>
+    <clipPath id="${id}-clip"><path d="${SQ}"/></clipPath>
+  </defs>
+  <path d="${SQ}" fill="url(#${id}-bg)"/><path d="${SQ}" fill="url(#${id}-glow)"/>`;
+}
+const rim = id => `<path d="${SQ}" fill="none" stroke="url(#${id}-rim)" stroke-width="5"/>`;
+
+// ---------------------------------------------------------------- concept A: the ring itself
+function iconA(){
+  const id = 'A';
+  return `<svg viewBox="0 0 1024 1024">${tile(id, '#62A8FF', '#2A35CF')}
+  <defs>
+    <linearGradient id="A-band" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".46"/><stop offset="1" stop-color="#fff" stop-opacity=".14"/></linearGradient>
+    <linearGradient id="A-edge" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".45" stop-color="#fff" stop-opacity=".12"/><stop offset="1" stop-color="#fff" stop-opacity=".55"/></linearGradient>
+    <linearGradient id="A-seg" x1="0" y1=".7" x2="1" y2=".1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff"/></linearGradient>
+    <linearGradient id="A-lit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#DCEBFF"/></linearGradient>
+  </defs>
+  <g clip-path="url(#A-clip)">
+    <g opacity=".35" filter="url(#A-soft)" transform="translate(0 18)">${[[-110, -10], [10, 110], [130, 230]].map(([a0, a1]) => `<path d="${sector(512, 512, 158, 262, a0, a1)}" fill="#0b1680" stroke="#0b1680" stroke-width="24" stroke-linejoin="round"/>`).join('')}</g>
+    ${[[10, 110], [130, 230]].map(([a0, a1]) => `<g opacity=".3"><path d="${sector(512, 512, 158, 262, a0, a1)}" fill="#fff" stroke="#fff" stroke-width="24" stroke-linejoin="round"/></g>
+      <path d="${arc(512, 512, 274, a0 - 2, a1 + 2)}" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="3"/>`).join('')}
+    <path d="${sector(512, 512, 158, 262, -110, -10)}" fill="url(#A-lit)" stroke="url(#A-lit)" stroke-width="24" stroke-linejoin="round"/>
+  </g>${rim(id)}</svg>`;
+}
+const glyphA = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="8" cy="8" r="5.4" stroke-width="2.2" opacity=".35"/><path d="${(() => { const [x0, y0] = P(8, 8, 5.4, 160), [x1, y1] = P(8, 8, 5.4, 315); return `M${f(x0)} ${f(y0)}A5.4 5.4 0 0 1 ${f(x1)} ${f(y1)}`; })()}" stroke-width="2.2"/></svg>`;
+
+// ---------------------------------------------------------------- concept B: page turning over
+function iconB(){
+  const id = 'B';
+  const doc = 'M328 212H696A36 36 0 0 1 732 248V602L522 812H328A36 36 0 0 1 292 776V248A36 36 0 0 1 328 212Z';
+  return `<svg viewBox="0 0 1024 1024">${tile(id, '#9A86FF', '#4630D4')}
+  <defs>
+    <linearGradient id="B-page" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#ECEEF6"/></linearGradient>
+    <linearGradient id="B-flap" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFC27A"/><stop offset=".6" stop-color="#FF7A7A"/><stop offset="1" stop-color="#FF4F8F"/></linearGradient>
+    <linearGradient id="B-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A9D6FF"/><stop offset="1" stop-color="#5E93F0"/></linearGradient>
+    <clipPath id="B-photo"><rect x="342" y="266" width="340" height="250" rx="26"/></clipPath>
+    <filter id="B-sh" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="10"/></filter>
+  </defs>
+  <g clip-path="url(#B-clip)">
+    <path d="${doc}" fill="#1a0f70" opacity=".35" filter="url(#B-soft)" transform="translate(0 22)"/>
+    <path d="${doc}" fill="url(#B-page)"/>
+    <g clip-path="url(#B-photo)">
+      <rect x="342" y="266" width="340" height="250" fill="url(#B-sky)"/>
+      <circle cx="610" cy="330" r="30" fill="#FFE9A6"/>
+      <path d="M342 516L442 396L512 462L592 372L682 470V516Z" fill="#2F5FC8"/>
+      <path d="M342 516L420 446L480 492L342 516Z" fill="#264FA8" opacity=".6"/>
+    </g>
+    <rect x="342" y="560" width="190" height="20" rx="10" fill="#D5D9E6"/>
+    <rect x="342" y="604" width="130" height="20" rx="10" fill="#D5D9E6"/>
+    <path d="M732 602L522 812L560 640Z" fill="#1a0f70" opacity=".35" filter="url(#B-sh)"/>
+    <path d="M732 602L522 812Q512 700 552 628Q632 596 732 602Z" fill="url(#B-flap)"/>
+    <path d="M732 602L522 812" stroke="#fff" stroke-opacity=".7" stroke-width="4"/>
+  </g>${rim(id)}</svg>`;
+}
+const glyphB = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4.5 2.5H10.5A1 1 0 0 1 11.5 3.5V9.5L8 13.5H4.5A1 1 0 0 1 3.5 12.5V3.5A1 1 0 0 1 4.5 2.5Z"/><path d="M11.5 9.5L8 13.5Q7.8 11 8.6 10Q10 9.4 11.5 9.5Z" fill="currentColor"/></svg>`;
+
+// ---------------------------------------------------------------- concept C: photo becomes video
+function iconC(){
+  const id = 'C';
+  return `<svg viewBox="0 0 1024 1024">${tile(id, '#3D3D44', '#141417')}
+  <defs>
+    <linearGradient id="C-warm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFC266"/><stop offset="1" stop-color="#FF5F6D"/></linearGradient>
+    <linearGradient id="C-cool" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#64D2FF"/><stop offset="1" stop-color="#2F6BFF"/></linearGradient>
+    <linearGradient id="C-gl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".45"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient>
+  </defs>
+  <g clip-path="url(#C-clip)">
+    <rect x="238" y="250" width="330" height="330" rx="78" fill="#000" opacity=".45" filter="url(#C-soft)" transform="translate(0 18)"/>
+    <rect x="238" y="250" width="330" height="330" rx="78" fill="url(#C-warm)"/>
+    <rect x="238" y="250" width="330" height="330" rx="78" fill="url(#C-gl)"/>
+    <circle cx="470" cy="346" r="34" fill="#fff" opacity=".95"/>
+    <path d="M288 520L376 410L436 468L494 404L540 452V520Z" fill="#fff" opacity=".92"/>
+    <rect x="456" y="444" width="330" height="330" rx="78" fill="#000" opacity=".5" filter="url(#C-soft)" transform="translate(0 18)"/>
+    <rect x="456" y="444" width="330" height="330" rx="78" fill="url(#C-cool)"/>
+    <rect x="456" y="444" width="330" height="330" rx="78" fill="url(#C-gl)"/>
+    <rect x="456" y="444" width="330" height="330" rx="78" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="4"/>
+    <path d="M590 548V670L690 609Z" fill="#fff" stroke="#fff" stroke-width="22" stroke-linejoin="round"/>
+    <path d="M640 236Q790 236 800 372" fill="none" stroke="#fff" stroke-width="34" stroke-linecap="round"/>
+    <path d="M760 340L800 392L840 340" fill="none" stroke="#fff" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M384 790Q234 790 224 654" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="34" stroke-linecap="round"/>
+    <path d="M184 686L224 634L264 686" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>${rim(id)}</svg>`;
+}
+const glyphC = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="2"/><rect x="7" y="7" width="7" height="7" rx="2" fill="currentColor" stroke="none"/><path d="M10.5 2.2Q13.6 2.2 13.8 5.2"/><path d="M12.6 4.3L13.8 5.6L15 4.3"/></svg>`;
+
+// ---------------------------------------------------------------- concept D: an actual (apple) turnover
+function iconD(){
+  const id = 'D';
+  const cx = 512, cy = 620, R = 300;
+  let crimp = '';
+  for (let a = 182; a <= 358; a += 9){ const [x, y] = P(cx, cy, R - 6, a); crimp += `<circle cx="${f(x)}" cy="${f(y)}" r="19"/>`; }
+  const dome = `M${cx - R} ${cy}A${R} ${R} 0 0 1 ${cx + R} ${cy}Q${cx + R} ${cy + 46} ${cx + R - 40} ${cy + 46}H${cx - R + 40}Q${cx - R} ${cy + 46} ${cx - R} ${cy}Z`;
+  return `<svg viewBox="0 0 1024 1024">${tile(id, '#FFF3DF', '#FFC978')}
+  <defs>
+    <radialGradient id="D-crust" cx=".38" cy=".2" r=".95"><stop offset="0" stop-color="#FFE29A"/><stop offset=".45" stop-color="#F5A944"/><stop offset="1" stop-color="#C46A22"/></radialGradient>
+    <linearGradient id="D-edge" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F3B562"/><stop offset="1" stop-color="#C9772E"/></linearGradient>
+    <radialGradient id="D-shine" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".7"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  </defs>
+  <g clip-path="url(#D-clip)">
+    <path d="${arc(cx, cy, R + 70, 206, 322)}" fill="none" stroke="#E08A2E" stroke-opacity=".9" stroke-width="38" stroke-linecap="round"/>
+    ${(() => { // arrowhead aligned with the arc's tangent at its end
+      const a = 322, [x, y] = P(cx, cy, R + 70, a), t = (a + 90) * Math.PI / 180, nx = Math.cos(t), ny = Math.sin(t), ox = -ny, oy = nx;
+      const tip = [x + nx * 34, y + ny * 34], w1 = [x - nx * 20 + ox * 52, y - ny * 20 + oy * 52], w2 = [x - nx * 20 - ox * 52, y - ny * 20 - oy * 52];
+      return `<path d="M${f(w1[0])} ${f(w1[1])}L${f(tip[0])} ${f(tip[1])}L${f(w2[0])} ${f(w2[1])}" fill="none" stroke="#E08A2E" stroke-opacity=".9" stroke-width="38" stroke-linecap="round" stroke-linejoin="round"/>`; })()}
+    <ellipse cx="${cx}" cy="${cy + 78}" rx="${R - 10}" ry="34" fill="#8a4a12" opacity=".35" filter="url(#D-soft)"/>
+    <g fill="url(#D-edge)">${crimp}</g>
+    <path d="${dome}" fill="url(#D-crust)"/>
+    <path d="M${cx - R + 30} ${cy + 18}H${cx + R - 30}" stroke="#B3611F" stroke-opacity=".35" stroke-width="6" stroke-linecap="round"/>
+    <g stroke="#9C4E16" stroke-width="16" stroke-linecap="round" opacity=".75">
+      <path d="M430 480L470 440"/><path d="M500 460L540 420"/><path d="M570 480L610 440"/>
+    </g>
+    <ellipse cx="420" cy="420" rx="110" ry="48" fill="url(#D-shine)" transform="rotate(-24 420 420)"/>
+    <g fill="#fff" opacity=".9"><circle cx="600" cy="520" r="6"/><circle cx="660" cy="560" r="5"/><circle cx="380" cy="540" r="5"/><circle cx="470" cy="590" r="4"/></g>
+  </g>${rim(id)}</svg>`;
+}
+const glyphD = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 11A5.5 5.5 0 0 1 13.5 11Z" fill="currentColor" fill-opacity=".25"/><path d="M3.2 4.6A6.5 6.5 0 0 1 11.8 3.6"/><path d="M10.6 2.4L12 3.7L10.8 5.2"/></svg>`;
+
+// ---------------------------------------------------------------- page
+const CONCEPTS = [
+  {k:'A', name:'Ring', sub:'the app is the logo', why:'A glass ring with one lit segment sweeping around it, the exact gesture you use. Abstract, very Apple, reads well at every size, and leaves room for PDF and anything else later.', icon:iconA(), glyph:glyphA},
+  {k:'B', name:'Page turn', sub:'literal "turn over"', why:'A photo document whose corner is turning over to reveal a different colour underneath: same file, another format. Familiar document metaphor, like Preview or Pages.', icon:iconB(), glyph:glyphB},
+  {k:'C', name:'Photo → video', sub:'classic "convert"', why:'A warm photo tile becoming a cool video tile, with swap arrows. Instantly says "converter", but it is the most generic and literally about images and video only.', icon:iconC(), glyph:glyphC},
+  {k:'D', name:'Apple turnover', sub:'the pun, done properly', why:'A real golden turnover pastry with a crimped edge and a "turn" arrow. Playful and memorable, a wink at the Apple formats, but less serious and busier at small sizes.', icon:iconD(), glyph:glyphD},
+];
+const img = (c, s) => `<span class="icon" style="width:${s}px;height:${s}px">${c.icon.replace('<svg ', `<svg width="${s}" height="${s}" `)}</span>`;
+document.getElementById('grid').innerHTML = CONCEPTS.map(c => `
+  <div class="card">
+    <h2>${c.k} · ${c.name}<span>${c.sub}</span></h2>
+    <p>${c.why}</p>
+    <div class="hero"><div class="light">${img(c, 200)}</div><div class="dark">${img(c, 200)}</div></div>
+    <div class="sizes">
+      ${[128, 64, 32, 16].map(s => `<div class="s">${img(c, s)}<div class="lab">${s}px</div></div>`).join('')}
+      <div class="mb"><span class="mbar l">${c.glyph}62%</span><span class="mbar d">${c.glyph}62%</span></div>
+    </div>
+  </div>`).join('');
+// Make gradient/filter ids unique per <svg> instance (the same concept appears many times on the page).
+let n = 0;
+document.querySelectorAll('.icon svg').forEach(svg => {
+  const suf = '-' + (n++);
+  svg.querySelectorAll('[id]').forEach(el => { const old = el.id; el.id = old + suf;
+    svg.querySelectorAll('*').forEach(x => ['fill','stroke','filter','clip-path'].forEach(attr => {
+      const v = x.getAttribute(attr); if (v && v.includes(`url(#${old})`)) x.setAttribute(attr, v.replace(`url(#${old})`, `url(#${old}${suf})`));
+    }));
+  });
+});
+const others = ['#34c759,#248a3d', '#ff9f0a,#ff6b00', '#5e5ce6,#3634a3', '#ff375f,#c3002f', '#64d2ff,#0a84ff'];
+const dockHTML = () => `<div class="dock">${others.slice(0, 2).map(g => `<span class="other" style="background:linear-gradient(160deg,${g})"></span>`).join('')}${CONCEPTS.map(c => img(c, 64)).join('')}${others.slice(2, 4).map(g => `<span class="other" style="background:linear-gradient(160deg,${g})"></span>`).join('')}</div>
+  <div class="notifs">${CONCEPTS.map(c => `<div class="notif">${img(c, 34)}<div><b>Turnover</b>Converted 2 videos to MP4</div></div>`).join('')}</div>`;
+document.getElementById('dock-light').innerHTML = dockHTML();
+document.getElementById('dock-dark').innerHTML = dockHTML();
+document.querySelectorAll('.dockwrap .icon svg').forEach(svg => {
+  const suf = '-' + (n++);
+  svg.querySelectorAll('[id]').forEach(el => { const old = el.id; el.id = old + suf;
+    svg.querySelectorAll('*').forEach(x => ['fill','stroke','filter','clip-path'].forEach(attr => {
+      const v = x.getAttribute(attr); if (v && v.includes(`url(#${old})`)) x.setAttribute(attr, v.replace(`url(#${old})`, `url(#${old}${suf})`));
+    }));
+  });
+});
+</script>
+</body>
+</html>

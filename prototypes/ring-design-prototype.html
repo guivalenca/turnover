@@ -1,0 +1,915 @@
+<!doctype html>
+<!--
+  PROTOTYPE v2 — throwaway. Not part of the Turnover app.
+  Question: what should the ring LOOK like so it feels native to macOS?
+  Mechanics are decided (drag files, press ⇧ mid-drag, drop on a format). Only the visual style varies:
+    ring  = Glass ring (donut with segments)
+    pills = Floating pills (glass capsules around the cursor)
+    icons = Finder icons (macOS document icons with Finder-style selection)
+  Switch with the bottom bar or [ and ]. ?variant=ring|pills|icons&theme=auto|light|dark
+  Fake files only — nothing on disk is touched.
+-->
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turnover Ring Styles</title>
+<style>
+:root{
+  --accent:#007aff;
+  --label:rgba(0,0,0,.86); --label2:rgba(0,0,0,.5); --label3:rgba(0,0,0,.28);
+  --win-bg:#ffffff; --win-edge:rgba(0,0,0,.18); --sidebar:rgba(236,236,241,.82); --cap:rgba(0,0,0,.05); --hair:rgba(0,0,0,.09);
+  --sel-tile:rgba(0,0,0,.07); --sel-tile-strong:rgba(0,0,0,.11);
+  --glass:rgba(255,255,255,.5); --glass-strong:rgba(255,255,255,.78); --cell:rgba(255,255,255,.9);
+  --glass-edge:inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 .5px rgba(255,255,255,.6);
+  --glass-out:0 0 0 .5px rgba(0,0,0,.12), 0 16px 44px rgba(0,0,0,.18), 0 2px 8px rgba(0,0,0,.08);
+  --menu-bg:rgba(246,246,248,.8);
+  --wall:radial-gradient(1200px 800px at 15% 0%,#b9d8ff 0%,transparent 60%),radial-gradient(1000px 900px at 100% 100%,#ffc9a8 0%,transparent 60%),linear-gradient(160deg,#8fb8f0,#e9a7c4);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  --spring:cubic-bezier(.3,1.4,.6,1);
+}
+[data-theme=dark]{
+  --accent:#0a84ff;
+  --label:rgba(255,255,255,.9); --label2:rgba(255,255,255,.55); --label3:rgba(255,255,255,.28);
+  --win-bg:#1f1f22; --win-edge:rgba(255,255,255,.14); --sidebar:rgba(48,48,54,.78); --cap:rgba(255,255,255,.08); --hair:rgba(255,255,255,.1);
+  --sel-tile:rgba(255,255,255,.1); --sel-tile-strong:rgba(255,255,255,.16);
+  --glass:rgba(44,44,50,.5); --glass-strong:rgba(58,58,66,.8); --cell:rgba(52,52,58,.94);
+  --glass-edge:inset 0 1px 0 rgba(255,255,255,.14), inset 0 0 0 .5px rgba(255,255,255,.1);
+  --glass-out:0 0 0 .5px rgba(0,0,0,.6), 0 16px 44px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.3);
+  --menu-bg:rgba(40,40,44,.82);
+  --wall:radial-gradient(1200px 800px at 15% 0%,#2a3f78 0%,transparent 60%),radial-gradient(1000px 900px at 100% 100%,#5a2a4e 0%,transparent 60%),linear-gradient(160deg,#141a33,#2a1630);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{font:13px/1.35 var(--font);color:var(--label);background:var(--wall);user-select:none;-webkit-user-select:none}
+.glass{background:var(--glass);backdrop-filter:blur(26px) saturate(1.9);-webkit-backdrop-filter:blur(26px) saturate(1.9);box-shadow:var(--glass-edge),var(--glass-out)}
+.glass-strong{background:var(--glass-strong);backdrop-filter:blur(26px) saturate(1.9);-webkit-backdrop-filter:blur(26px) saturate(1.9);box-shadow:var(--glass-edge),var(--glass-out)}
+
+/* ---------- menu bar ---------- */
+#menubar{position:fixed;top:0;left:0;right:0;height:28px;display:flex;justify-content:space-between;align-items:center;padding:0 16px;z-index:40;color:var(--label);
+  background:linear-gradient(rgba(255,255,255,.18),rgba(255,255,255,.06));backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+#menubar .left{display:flex;gap:20px}
+#menubar .left b{font-weight:700}
+#menubar .right{display:flex;gap:10px;align-items:center;font-variant-numeric:tabular-nums}
+#mb-turnover{display:flex;align-items:center;gap:5px;padding:2px 8px;border-radius:6px;cursor:default;animation:fadeScale .25s var(--spring)}
+#mb-turnover:hover,#mb-turnover.open{background:var(--cap)}
+#mb-turnover[hidden]{display:none}
+#mbmenu{position:fixed;top:32px;width:300px;z-index:92;border-radius:12px;padding:6px;background:var(--menu-bg);backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-shadow:var(--glass-out)}
+#mbmenu[hidden]{display:none}
+#mbmenu h6{margin:4px 8px 6px;font-size:11px;color:var(--label2);font-weight:600}
+.job{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;padding:5px 8px;border-radius:7px}
+.job:hover{background:var(--cap)}
+.job .jn{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.job .jx{grid-row:span 2;width:20px;height:20px;border-radius:50%;border:0;background:var(--cap);color:var(--label2);font-size:11px;cursor:pointer}
+.job .jx:hover{background:#ff3b30;color:#fff}
+.job .jb{height:4px;border-radius:2px;background:var(--hair);overflow:hidden}
+.job .jb i{display:block;height:100%;background:var(--accent);border-radius:2px}
+@keyframes fadeScale{from{opacity:0;scale:.8}}
+
+/* ---------- finder ---------- */
+.window{position:absolute;top:46px;left:28px;right:384px;bottom:84px;min-width:480px;background:var(--win-bg);border-radius:18px;
+  box-shadow:0 0 0 .5px var(--win-edge),0 30px 80px rgba(0,0,0,.32);display:flex;overflow:hidden}
+.sidebar{width:172px;flex:none;margin:8px 0 8px 8px;border-radius:12px;background:var(--sidebar);padding:44px 8px 8px;position:relative;color:var(--label)}
+.lights{position:absolute;top:14px;left:14px;display:flex;gap:8px}
+.lights i{width:12px;height:12px;border-radius:50%;background:#ff5f57;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.18)}
+.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+.sidebar h6{margin:12px 8px 4px;font-size:11px;color:var(--label2);font-weight:600}
+.sidebar div.it{padding:5px 8px;border-radius:7px}
+.sidebar div.on{background:var(--sel-tile-strong)}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.toolbar{height:54px;flex:none;display:flex;align-items:center;gap:12px;padding:0 14px 0 12px}
+.toolbar .cap{height:32px;border-radius:16px;background:var(--cap);display:flex;align-items:center;padding:0 12px;gap:16px;color:var(--label2);font-size:15px}
+.toolbar .title{font-weight:700;font-size:15px}
+.toolbar .sp{flex:1}
+#grid{flex:1;overflow:auto;padding:10px 14px;display:grid;grid-template-columns:repeat(auto-fill,112px);grid-auto-rows:122px;gap:4px;align-content:start}
+.item{display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:4px}
+.tw{width:86px;height:70px;display:flex;align-items:center;justify-content:center;border-radius:8px}
+.item.sel .tw{background:var(--sel-tile)}
+.nm{max-width:110px;text-align:center;font-size:12px;line-height:15px}
+.nm span{display:-webkit-inline-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;padding:1px 6px;border-radius:5px;word-break:break-word}
+.item.sel .nm span{background:var(--accent);color:#fff}
+.item.converting .thumb{opacity:.5}
+.item.converting .nm span{color:var(--label2)}
+.item.converting.sel .nm span{color:#fff}
+.item.fresh .tw{animation:fresh 1.3s ease-out}
+@keyframes fresh{0%{box-shadow:0 0 0 0 transparent}25%{box-shadow:0 0 0 5px color-mix(in srgb,var(--accent) 40%,transparent)}100%{box-shadow:0 0 0 14px transparent}}
+.statusbar{height:26px;flex:none;font-size:11px;color:var(--label2);display:flex;align-items:center;justify-content:center;border-top:1px solid var(--hair)}
+
+/* thumbnails */
+.thumb{position:relative;width:64px;height:48px;border:2px solid #fff;border-radius:2px;box-shadow:0 1px 3px rgba(0,0,0,.35);overflow:hidden;background:#ddd;flex:none}
+.thumb.portrait{width:40px;height:56px}
+.thumb.photo{background:linear-gradient(170deg,hsl(var(--h1) 85% 72%),hsl(var(--h2) 62% 40%))}
+.thumb.photo::before{content:"";position:absolute;width:13px;height:13px;border-radius:50%;background:rgba(255,250,220,.9);top:16%;right:18%}
+.thumb.photo::after{content:"";position:absolute;left:0;right:0;bottom:0;height:56%;background:hsl(var(--h2) 45% 22% / .75);clip-path:polygon(0 70%,22% 30%,40% 60%,62% 10%,100% 65%,100% 100%,0 100%)}
+.thumb.screen{background:linear-gradient(#e6e9f0 0 18%,#fff 18%)}
+.thumb.screen::before{content:"";position:absolute;left:8%;top:30%;width:40%;height:55%;background:#d4d9e4;border-radius:2px}
+.thumb.screen::after{content:"";position:absolute;right:8%;top:30%;width:38%;height:8%;background:#c3cad8;box-shadow:0 8px 0 #c3cad8,0 16px 0 #dde2ea}
+.thumb.graphic{background:#fff}
+.thumb.graphic::before{content:"";position:absolute;left:12%;top:18%;width:32%;height:30%;border:2px solid #5b8def;border-radius:3px}
+.thumb.graphic::after{content:"";position:absolute;right:12%;bottom:16%;width:30%;height:34%;border:2px solid #ef8f5b;border-radius:50%}
+.thumb.doc{width:44px;height:56px;background:#fff;border:1px solid #d8d8d8;border-radius:2px 10px 2px 2px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px}
+.thumb.doc span{font-size:9px;font-weight:700;color:#fff;background:#e5483f;padding:1px 4px;border-radius:2px}
+.play{position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:rgba(0,0,0,.45);z-index:2}
+.play::after{content:"";position:absolute;left:7px;top:5px;border-left:6px solid #fff;border-top:4px solid transparent;border-bottom:4px solid transparent}
+.dur{position:absolute;right:2px;bottom:2px;font-size:8px;color:#fff;background:rgba(0,0,0,.55);padding:0 3px;border-radius:2px;z-index:2}
+.prog{position:absolute;left:4px;right:4px;bottom:4px;height:4px;border-radius:2px;background:rgba(255,255,255,.75);z-index:3}
+.prog i{display:block;height:100%;width:0;background:var(--accent);border-radius:2px}
+
+/* macOS-style document icon */
+.doc{position:relative;display:inline-block;width:var(--w);height:calc(var(--w) * 1.27);flex:none;filter:drop-shadow(0 .5px .8px rgba(0,0,0,.35)) drop-shadow(0 1px 3px rgba(0,0,0,.12))}
+.doc i{position:absolute;display:block}
+.doc .pg{inset:0;background:linear-gradient(#fff,#f3f3f6);clip-path:polygon(0 0,68% 0,100% 24%,100% 100%,0 100%);border-radius:calc(var(--w) * .07)}
+.doc .fold{right:0;top:0;width:32%;height:24%;background:linear-gradient(225deg,transparent 48%,#d6d6dd 50%,#ececf1 100%);border-radius:0 0 0 calc(var(--w) * .07)}
+.doc .pv{left:16%;right:16%;top:30%;height:36%;border-radius:calc(var(--w) * .04);overflow:hidden}
+.doc .pv.img{background:linear-gradient(175deg,#9fd0ff 0 52%,#3f7d4f 53%)}
+.doc .pv.img::before{content:"";position:absolute;width:30%;height:42%;border-radius:50%;background:#ffe9a8;top:12%;right:14%}
+.doc .pv.vid{background:#2c2c2e}
+.doc .pv.vid::after{content:"";position:absolute;left:40%;top:28%;border-left:calc(var(--w) * .13) solid #fff;border-top:calc(var(--w) * .08) solid transparent;border-bottom:calc(var(--w) * .08) solid transparent}
+.doc .ex{left:0;right:0;bottom:8%;text-align:center;font:700 calc(var(--w) * .19)/1 var(--font);color:#8e8e93;letter-spacing:.02em}
+.doc.sm .ex{display:none}
+
+/* ---------- ring (shared) ---------- */
+#catcher{position:fixed;inset:0;z-index:60;display:none}
+#catcher.on{display:block}
+#ring{position:fixed;width:560px;height:560px;z-index:70;pointer-events:none;color:var(--label)}
+#ring[hidden]{display:none}
+#ring.show{animation:ringIn .26s var(--spring)}
+@keyframes ringIn{from{opacity:0;scale:.86}}
+#ring .ctr{position:absolute;translate:-50% -50%}
+#ring .pop{animation:pop .3s var(--spring) backwards;animation-delay:var(--d,0ms)}
+@keyframes pop{from{opacity:0;scale:.7}}
+.chips:not(.on){display:none}
+.chips.on{animation:fade .14s ease-out}
+@keyframes fade{from{opacity:0}}
+#ring .head{position:absolute;translate:-50% -50%;padding:4px 11px;border-radius:999px;font-size:12px;white-space:nowrap;color:var(--label2)}
+#ring .head b{color:var(--label);font-weight:600}
+#ring .hint{position:absolute;translate:-50% 0;font-size:11.5px;color:var(--label2);white-space:nowrap;padding:3px 10px;border-radius:999px}
+.dots{display:inline-flex;gap:4px;margin-left:6px;vertical-align:1px}
+.dots i{width:5px;height:5px;border-radius:50%;background:var(--label3)}
+.dots i.done{background:#34c759}.dots i.cur{background:var(--accent)}
+
+/* style: Glass ring */
+.r1-shadow{position:absolute;border-radius:50%;box-shadow:var(--glass-out)}
+.r1-band{position:absolute;border-radius:50%;background:var(--glass);backdrop-filter:blur(26px) saturate(1.9);-webkit-backdrop-filter:blur(26px) saturate(1.9);box-shadow:var(--glass-edge);
+  -webkit-mask:radial-gradient(circle at 50% 50%,transparent 55.5px,#000 56.5px);mask:radial-gradient(circle at 50% 50%,transparent 55.5px,#000 56.5px)}
+.ringsvg{position:absolute;left:0;top:0;width:560px;height:560px;overflow:visible}
+.r1-sep{stroke:var(--hair);stroke-width:1}
+.r1-hl{fill:var(--accent);stroke:var(--accent);stroke-width:6;stroke-linejoin:round;transition:opacity .1s}
+.r1-hl.parent{opacity:.28}
+.r1-cell{fill:var(--cell);stroke:var(--hair);stroke-width:.5}
+.r1-cell.hl{fill:var(--accent);stroke:var(--accent)}
+.r1-opt{display:flex;flex-direction:column;align-items:center;gap:1px;transition:color .1s}
+.r1-opt b{font-size:13px;font-weight:600;margin-top:3px}
+.r1-opt small{font-size:10.5px;color:var(--label2);font-variant-numeric:tabular-nums}
+.r1-opt.hl{color:#fff}.r1-opt.hl small{color:rgba(255,255,255,.8)}
+.r1-chip{display:flex;flex-direction:column;align-items:center;line-height:1.15}
+.r1-chip b{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.r1-chip small{font-size:9.5px;color:var(--label2);font-variant-numeric:tabular-nums}
+.r1-chip.hl{color:#fff}.r1-chip.hl small{color:rgba(255,255,255,.8)}
+.r1-hub{width:88px;height:88px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.r1-hub b{font-size:22px;font-weight:600;line-height:1}
+.r1-hub small{font-size:11px;color:var(--label2);margin-top:3px}
+
+/* style: Floating pills */
+.p-pill{display:flex;align-items:center;gap:10px;height:48px;padding:0 18px 0 12px;border-radius:24px;transition:scale .2s var(--spring),background .1s,box-shadow .1s}
+.p-pill span{display:flex;flex-direction:column;line-height:1.2}
+.p-pill b{font-size:13.5px;font-weight:600}
+.p-pill small{font-size:11px;color:var(--label2);font-variant-numeric:tabular-nums}
+.p-pill.hl{background:var(--accent);color:#fff;scale:1.05;box-shadow:0 0 0 .5px rgba(0,0,0,.1),0 10px 30px color-mix(in srgb,var(--accent) 45%,transparent)}
+.p-pill.hl small{color:rgba(255,255,255,.82)}
+.p-pill.parent{box-shadow:var(--glass-edge),inset 0 0 0 1.5px var(--accent),var(--glass-out)}
+.p-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600}
+
+/* segmented quality control (pills + icons) */
+.seg{position:absolute;display:flex;gap:2px;padding:3px;border-radius:14px}
+.seg .sc{width:62px;height:40px;border-radius:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;transition:background .08s}
+.seg .sc b{font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.seg .sc small{font-size:10px;color:var(--label2);font-variant-numeric:tabular-nums}
+.seg .sc.hl{background:var(--accent);color:#fff}
+.seg .sc.hl small{color:rgba(255,255,255,.82)}
+.seg .sc.def b::after{content:"";display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--accent);margin-left:3px;vertical-align:2px}
+.seg .sc.hl.def b::after{background:#fff}
+
+/* style: Finder icons */
+.i-halo{position:absolute;border-radius:50%}
+.i-opt{display:flex;flex-direction:column;align-items:center;gap:6px}
+.i-tile{width:76px;height:80px;border-radius:10px;display:flex;align-items:center;justify-content:center;transition:background .1s,scale .2s var(--spring)}
+.i-lbl{font-size:12.5px;font-weight:500;padding:1px 7px;border-radius:5px;line-height:16px}
+.i-sub{font-size:10.5px;color:var(--label2);margin-top:-4px;font-variant-numeric:tabular-nums}
+.i-opt.hl .i-tile,.i-opt.parent .i-tile{background:var(--sel-tile-strong);scale:1.06}
+.i-opt.hl .i-lbl,.i-opt.parent .i-lbl{background:var(--accent);color:#fff}
+.i-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600}
+
+/* ---------- drag ghost, menus, toasts ---------- */
+#ghost{position:fixed;z-index:80;pointer-events:none;display:none;opacity:.85}
+#ghost .stack{position:relative;width:76px;height:64px}
+#ghost .count{position:absolute;right:-4px;top:-8px;background:#ff3b30;color:#fff;font-size:11px;font-weight:700;border-radius:999px;padding:1px 6px;box-shadow:0 1px 3px rgba(0,0,0,.3);z-index:5}
+#ctx{position:fixed;z-index:90;min-width:220px;padding:5px;border-radius:11px;background:var(--menu-bg);backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-shadow:var(--glass-out)}
+#ctx[hidden]{display:none}
+#ctx .mi{position:relative;padding:3px 10px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;gap:18px;cursor:default}
+#ctx .mi:hover{background:var(--accent);color:#fff}
+#ctx .mi .dim{opacity:.55;font-size:12px}
+#ctx .mi .lead{display:flex;align-items:center;gap:7px}
+#ctx .sep{height:1px;background:var(--hair);margin:5px 9px}
+#ctx .sub{display:none;position:absolute;left:100%;top:-5px;min-width:210px;padding:5px;border-radius:11px;background:var(--menu-bg);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);box-shadow:var(--glass-out);color:var(--label)}
+#ctx.flip .sub{left:auto;right:100%}
+#ctx .mi:hover>.sub{display:block}
+#toast{position:fixed;left:50%;bottom:78px;translate:-50% 10px;opacity:0;transition:all .2s;z-index:96;padding:7px 14px;border-radius:999px;font-size:12.5px;pointer-events:none;white-space:nowrap}
+#toast.on{opacity:1;translate:-50% 0}
+#notif{position:fixed;top:36px;right:14px;width:344px;z-index:95;display:flex;gap:11px;align-items:center;padding:11px 13px;border-radius:20px;
+  background:var(--menu-bg);backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-shadow:var(--glass-out);
+  translate:380px 0;transition:translate .4s var(--spring)}
+#notif.on{translate:0 0}
+#notif .ntxt{flex:1;display:flex;flex-direction:column;min-width:0;font-size:13px}
+#notif .ntxt b{font-weight:600}
+#notif .when{position:absolute;top:10px;right:14px;font-size:11px;color:var(--label2)}
+#notif button{position:absolute;right:12px;bottom:10px;border:0;border-radius:8px;padding:4px 9px;font:inherit;font-size:12px;cursor:pointer;background:var(--cap);color:var(--label);opacity:0;transition:opacity .15s}
+#notif:hover button{opacity:1}
+
+/* ---------- setup window ---------- */
+#setup{position:fixed;inset:0;z-index:98;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.12)}
+#setup[hidden]{display:none}
+.swin{position:relative;width:440px;border-radius:20px;background:var(--win-bg);box-shadow:0 0 0 .5px var(--win-edge),0 30px 90px rgba(0,0,0,.4);padding:44px 22px 18px;animation:fadeScale .25s var(--spring)}
+.swin .lights i:first-child{cursor:pointer}
+.shead{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:18px}
+.shead h2{margin:10px 0 2px;font-size:20px;font-weight:700}
+.shead p{margin:0;color:var(--label2)}
+.kbd{display:inline-block;min-width:20px;padding:0 5px;border-radius:5px;background:var(--cap);box-shadow:inset 0 -1px 0 var(--hair);font-weight:600;color:var(--label)}
+.sgroup{background:var(--cap);border-radius:12px;margin-bottom:12px}
+.srow{display:flex;align-items:center;gap:11px;padding:10px 12px;min-height:46px}
+.srow + .srow{border-top:1px solid var(--hair)}
+.srow .tx{flex:1;display:flex;flex-direction:column}
+.srow .tx small{color:var(--label2);font-size:11.5px}
+.st{width:20px;height:20px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:#34c759}
+.st.todo{background:transparent;box-shadow:inset 0 0 0 1.5px var(--label3)}
+.state{color:var(--label2);font-size:12.5px}
+.mbtn{border:0;border-radius:7px;padding:4px 11px;font:inherit;font-size:13px;cursor:pointer;color:var(--label);background:var(--win-bg);box-shadow:0 0 0 .5px var(--win-edge),0 1px 2px rgba(0,0,0,.15)}
+[data-theme=dark] .mbtn{background:rgba(255,255,255,.14)}
+.switch{width:38px;height:22px;border-radius:11px;background:var(--label3);position:relative;cursor:pointer;transition:background .15s;flex:none}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .2s var(--spring)}
+.switch.on{background:var(--accent)}
+.switch.on::after{left:18px}
+.sfoot{display:flex;justify-content:space-between;align-items:center;margin-top:4px;color:var(--label2);font-size:11.5px}
+
+/* ---------- prototype chrome (not part of the design) ---------- */
+#info{position:fixed;top:46px;right:20px;width:344px;bottom:84px;overflow:auto;z-index:20;border-radius:16px;padding:14px 16px;font-size:12.5px;line-height:1.5;
+  background:var(--win-bg);box-shadow:0 0 0 .5px var(--win-edge),0 20px 50px rgba(0,0,0,.25);user-select:text;-webkit-user-select:text}
+#info h3{margin:0 0 6px;font-size:15px}
+#info p{margin:0 0 8px;color:var(--label2)}
+#info ol{margin:0 0 8px;padding-left:18px}
+#info li{margin-bottom:4px}
+#info .note{border-top:1px solid var(--hair);padding-top:8px;color:var(--label2)}
+#focuswarn{background:#fff3cd;color:#7a5b00;border-radius:8px;padding:6px 9px;margin-bottom:8px;font-weight:600}
+#focuswarn[hidden]{display:none}
+#hud{margin-top:10px;background:#1c1c1e;color:#e6e6e6;border-radius:9px;padding:8px 10px;font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+#hud b{color:#8fc7ff;font-weight:600;margin-right:4px}
+#switcher{position:fixed;left:50%;bottom:18px;translate:-50% 0;z-index:100;display:flex;align-items:center;gap:5px;padding:6px;border-radius:999px;background:#111;color:#fff;
+  box-shadow:0 10px 30px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.08);font-size:12.5px;white-space:nowrap}
+#switcher button{border:0;background:rgba(255,255,255,.1);color:#fff;border-radius:999px;padding:6px 11px;font:inherit;cursor:pointer}
+#switcher button:hover{background:rgba(255,255,255,.2)}
+#switcher button.on{background:#0a84ff}
+#sw-label{min-width:150px;text-align:center}
+#switcher .div{width:1px;height:20px;background:rgba(255,255,255,.2);margin:0 3px}
+@media (max-width:1150px){ .window{right:28px} #info{display:none} }
+</style>
+</head>
+<body>
+
+<div id="menubar">
+  <div class="left"><b>Finder</b><span>File</span><span>Edit</span><span>View</span><span>Go</span><span>Window</span><span>Help</span></div>
+  <div class="right"><div id="mb-turnover" hidden title="Turnover"><span id="mb-glyph"></span><span id="mb-pct">0%</span></div><span id="clock"></span></div>
+</div>
+<div id="mbmenu" hidden></div>
+
+<div class="window">
+  <aside class="sidebar">
+    <div class="lights"><i></i><i></i><i></i></div>
+    <h6>Favorites</h6><div class="it">Recents</div><div class="it">Applications</div><div class="it">Desktop</div><div class="it">Documents</div><div class="it on">Downloads</div>
+    <h6>Locations</h6><div class="it">iCloud Drive</div><div class="it">Macintosh HD</div>
+  </aside>
+  <div class="main">
+    <div class="toolbar"><div class="cap">‹&nbsp;&nbsp;›</div><div class="title">Downloads</div><div class="sp"></div><div class="cap">▦&nbsp;&nbsp;☰</div></div>
+    <main id="grid"></main>
+    <div class="statusbar" id="statusbar"></div>
+  </div>
+</div>
+
+<div id="info">
+  <div id="focuswarn">Click anywhere on this page once so it receives your key presses.</div>
+  <div id="info-body"></div>
+  <div id="hud"></div>
+</div>
+
+<div id="catcher"></div>
+<div id="ring" hidden></div>
+<div id="ghost"></div>
+<div id="ctx" hidden></div>
+<div id="notif"></div>
+<div id="toast" class="glass-strong"></div>
+<div id="setup" hidden></div>
+
+<div id="switcher">
+  <button id="sw-prev" title="Previous style ( [ )">‹</button>
+  <span id="sw-label"></span>
+  <button id="sw-next" title="Next style ( ] )">›</button>
+  <span class="div"></span>
+  <button id="sw-pin">Pin ring open</button>
+  <span class="div"></span>
+  <button id="th-auto">Auto</button><button id="th-light">Light</button><button id="th-dark">Dark</button>
+  <span class="div"></span>
+  <button id="sw-setup">Setup window</button>
+  <button id="sw-reset">Reset</button>
+</div>
+
+<script>
+// ================================================================ constants
+const $ = s => document.querySelector(s);
+const grid = $('#grid'), ringEl = $('#ring'), catcher = $('#catcher');
+const ANGLES = {1:[-90], 2:[180,0], 3:[-90,30,150], 4:[-90,0,90,180]};
+const CHIP_OFF = [-39,-13,13,39], CHIP_Q = [100,90,75,50];
+const C = 280;
+const STYLES = {ring:'Glass ring', pills:'Floating pills', icons:'Finder icons'};
+const ORDER = ['ring','pills','icons'];
+const GEO = {
+  ring:  {hub:50, out:190, opt:90,  head:-160, hint:184},
+  pills: {hub:22, out:220, opt:116, head:-58,  hint:112},
+  icons: {hub:22, out:210, opt:108, head:-66,  hint:150},
+};
+const APP_ICON = s => `<svg viewBox="0 0 64 64" width="${s}" height="${s}"><defs><linearGradient id="tg${s}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb259"/><stop offset="1" stop-color="#f0743a"/></linearGradient></defs><rect x="2" y="2" width="60" height="60" rx="14" fill="url(#tg${s})"/><path d="M14 43 A18 18 0 0 1 50 43 Z" fill="#fff4e0"/><path d="M14 43 H50" stroke="#e2a15c" stroke-width="3" stroke-linecap="round" stroke-dasharray=".1 5.2"/><path d="M19.5 22 A16 16 0 0 1 43 17.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/><path d="M44.5 10.5 v8 h-8" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const APP_GLYPH = `<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 9.5A5.5 5.5 0 0 1 12.8 5.6"/><path d="M13 2.2v3.6H9.4"/><path d="M2 12.5h12"/></svg>`;
+$('#mb-glyph').innerHTML = APP_GLYPH;
+
+const INITIAL = [
+  {name:'IMG_4821.HEIC', kind:'image', ext:'heic', mp:12, h:[28,345]},
+  {name:'IMG_4822.HEIC', kind:'image', ext:'heic', mp:12, h:[195,225], portrait:true},
+  {name:'IMG_4830.HEIC', kind:'image', ext:'heic', mp:12, h:[90,150]},
+  {name:'IMG_4835.MOV', kind:'video', ext:'mov', codec:'HEVC', dur:42, h:[205,265]},
+  {name:'IMG_4840.MOV', kind:'video', ext:'mov', codec:'HEVC', dur:12, h:[320,275], portrait:true},
+  {name:'Screen Recording 2026-11-12 at 10.41.mov', kind:'video', ext:'mov', codec:'H.264', dur:65, screen:true},
+  {name:'sunset-wallpaper.webp', kind:'image', ext:'webp', mp:8, h:[12,48]},
+  {name:'diagram.png', kind:'image', ext:'png', mp:2, graphic:true},
+  {name:'lease-agreement.pdf', kind:'other', ext:'pdf'},
+];
+
+// ================================================================ state
+const qs = new URLSearchParams(location.search);
+let style = ORDER.includes(qs.get('variant')) ? qs.get('variant') : 'ring';
+let themeMode = ['light','dark','auto'].includes(qs.get('theme')) ? qs.get('theme') : 'auto';
+let files = [], nextId = 100, selected = new Set(), anchor = null, focusId = null;
+let drag = null, ring = null, pendingSingle = null;
+let lastMouse = {x:innerWidth / 2, y:innerHeight / 2};
+let lastEvent = '—', lastResult = '—';
+let jobs = [], batches = [], batchSeq = 0, loopOn = false, mbShown = false, mbHideT = null;
+
+// ================================================================ helpers
+const byId = id => files.find(f => f.id === id);
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+const sum = a => a.reduce((x, y) => x + y, 0);
+const deg = r => r * 180 / Math.PI;
+const angDiff = (a, b) => ((a - b + 540) % 360) - 180;
+const polar = (r, a) => [r * Math.cos(a * Math.PI / 180), r * Math.sin(a * Math.PI / 180)];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtDur = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+const fmtMB = x => x < 10 ? `${x.toFixed(1)} MB` : `${Math.round(x)} MB`;
+const curGroup = () => ring.groups[ring.step];
+function pngMB(f){ return f.graphic ? f.mp * 0.25 : f.mp * 1.6; }
+function jpgMB(f, q){ const k = {100:.62, 90:.28, 75:.17, 50:.10}[q]; return f.graphic ? f.mp * k * 0.6 : f.mp * k; }
+function vidSecs(f){ return f.codec === 'H.264' ? 0.3 : Math.max(1.2, f.dur * 0.11); }
+function mp4Estimate(vs){
+  const lanes = [0, 0];
+  vs.map(vidSecs).sort((a, b) => b - a).forEach(t => { lanes[lanes[0] <= lanes[1] ? 0 : 1] += t; });
+  const t = Math.max(...lanes);
+  return t < 1 ? 'Instant' : `About ${Math.ceil(t)} s`;
+}
+function docIcon(kind, label, w){
+  return `<span class="doc${w < 32 ? ' sm' : ''}" style="--w:${w}px"><i class="pg"></i><i class="fold"></i><i class="pv ${kind === 'video' ? 'vid' : 'img'}"></i><i class="ex">${label}</i></span>`;
+}
+
+// ================================================================ what the ring offers
+function buildGroups(ids){
+  const fs = ids.map(byId).filter(f => f && !f.converting);
+  const imgs = fs.filter(f => f.kind === 'image'), vids = fs.filter(f => f.kind === 'video');
+  const groups = [];
+  if (imgs.length){
+    const opts = [];
+    const pngA = imgs.filter(f => f.ext !== 'png');
+    if (pngA.length) opts.push({key:'png', label:'PNG', kind:'image', applies:pngA.map(f => f.id), sub:fmtMB(sum(pngA.map(pngMB)))});
+    const jpgA = imgs.filter(f => !['jpg','jpeg'].includes(f.ext));
+    if (jpgA.length) opts.push({key:'jpeg', label:'JPEG', kind:'image', applies:jpgA.map(f => f.id), sub:fmtMB(sum(jpgA.map(f => jpgMB(f, 90)))),
+      chips:CHIP_Q.map(q => ({q, size:fmtMB(sum(jpgA.map(f => jpgMB(f, q))))}))});
+    if (opts.length) groups.push({kind:'image', label:plural(imgs.length, 'image'), count:imgs.length, options:opts});
+  }
+  if (vids.length){
+    const a = vids.filter(f => f.ext !== 'mp4');
+    if (a.length) groups.push({kind:'video', label:plural(vids.length, 'video'), count:vids.length,
+      options:[{key:'mp4', label:'MP4', kind:'video', applies:a.map(f => f.id), sub:mp4Estimate(a)}]});
+  }
+  groups.forEach(g => g.options.forEach((o, i) => o.angle = ANGLES[g.options.length][i]));
+  groups.skipped = fs.length - imgs.length - vids.length;
+  return groups;
+}
+
+// ================================================================ finder
+function thumbHTML(f){
+  if (f.kind === 'other') return `<div class="thumb doc"><span>PDF</span></div>`;
+  const type = f.graphic ? 'graphic' : f.screen ? 'screen' : 'photo';
+  const st = f.h ? `--h1:${f.h[0]};--h2:${f.h[1]}` : '';
+  let inner = '';
+  if (f.kind === 'video') inner += `<span class="play"></span><span class="dur">${fmtDur(f.dur)}</span>`;
+  if (f.converting) inner += `<div class="prog"><i style="width:${Math.round((f.progress || 0) * 100)}%"></i></div>`;
+  return `<div class="thumb ${type}${f.portrait ? ' portrait' : ''}" style="${st}">${inner}</div>`;
+}
+function render(){
+  grid.innerHTML = files.map(f => {
+    const cls = ['item'];
+    if (selected.has(f.id)) cls.push('sel');
+    if (f.converting) cls.push('converting');
+    if (f.fresh) cls.push('fresh');
+    return `<div class="${cls.join(' ')}" data-id="${f.id}"><div class="tw">${thumbHTML(f)}</div><div class="nm"><span>${esc(f.name)}</span></div></div>`;
+  }).join('');
+  const n = selected.size;
+  $('#statusbar').textContent = `${files.length} items${n ? `, ${n} selected` : ''}`;
+  hud();
+}
+function rangeTo(id){
+  const ids = files.map(f => f.id);
+  if (anchor == null || !ids.includes(anchor)) anchor = id;
+  const a = ids.indexOf(anchor), b = ids.indexOf(id);
+  const [lo, hi] = a < b ? [a, b] : [b, a];
+  selected = new Set(ids.slice(lo, hi + 1)); focusId = id;
+}
+function arrow(key, shift){
+  const ids = files.map(f => f.id);
+  if (!ids.length) return;
+  const cols = getComputedStyle(grid).gridTemplateColumns.split(' ').length || 1;
+  const i = ids.indexOf(focusId);
+  if (i < 0){ selected = new Set([ids[0]]); anchor = focusId = ids[0]; render(); return; }
+  const d = {ArrowLeft:-1, ArrowRight:1, ArrowUp:-cols, ArrowDown:cols}[key];
+  const id = ids[Math.max(0, Math.min(ids.length - 1, i + d))];
+  if (shift) rangeTo(id); else { selected = new Set([id]); anchor = focusId = id; }
+  render();
+  grid.querySelector(`[data-id="${id}"]`)?.scrollIntoView({block:'nearest'});
+}
+
+// ================================================================ ring: render per style
+function sectorPath(cx, cy, r1, r2, a0, a1){
+  const p = (r, a) => [cx + r * Math.cos(a * Math.PI / 180), cy + r * Math.sin(a * Math.PI / 180)];
+  const large = (a1 - a0) > 180 ? 1 : 0;
+  const [x1, y1] = p(r2, a0), [x2, y2] = p(r2, a1), [x3, y3] = p(r1, a1), [x4, y4] = p(r1, a0);
+  return `M${x1} ${y1}A${r2} ${r2} 0 ${large} 1 ${x2} ${y2}L${x3} ${y3}A${r1} ${r1} 0 ${large} 0 ${x4} ${y4}Z`;
+}
+const at = (x, y) => `left:${C + x}px;top:${C + y}px`;
+function headHTML(g, y){
+  const total = ring.groups.length;
+  const dots = total > 1 ? `<span class="dots">${ring.groups.map((_, i) => `<i class="${i < ring.step ? 'done' : i === ring.step ? 'cur' : ''}"></i>`).join('')}</span>` : '';
+  return `<div class="head glass pop" style="${at(0, y)}"><b>${g.label}</b>${total > 1 ? ` · ${ring.step + 1} of ${total}` : ''}${dots}</div>`;
+}
+function segHTML(o, i, x, y){
+  // native-style segmented control placed under the option
+  const w = 4 * 62 + 3 * 2 + 6;
+  const left = o.angle === 0 ? x - 70 : o.angle === 180 ? x + 70 - w : x - w / 2;
+  return `<div class="chips seg glass" data-for="${i}" style="left:${C + left}px;top:${C + y}px">${o.chips.map((c, k) =>
+    `<div class="sc${c.q === 90 ? ' def' : ''}" data-k="${k}"><b>${c.q}%</b><small>${c.size}</small></div>`).join('')}</div>`;
+}
+const RENDER = {
+  ring(g){
+    const N = g.options.length, RI = 56, RO = 124;
+    let svg = '';
+    if (N > 1) g.options.forEach(o => {
+      const b = o.angle + 180 / N, [x1, y1] = polar(RI + 6, b), [x2, y2] = polar(RO - 6, b);
+      svg += `<line class="r1-sep" x1="${C + x1}" y1="${C + y1}" x2="${C + x2}" y2="${C + y2}"/>`;
+    });
+    svg += `<path id="r1-hl" class="r1-hl" d=""/>`;
+    g.options.forEach((o, i) => { if (o.chips) svg += `<g class="chips" data-for="${i}">${o.chips.map((c, k) =>
+      `<path class="r1-cell" data-k="${k}" d="${sectorPath(C, C, 132, 170, o.angle + CHIP_OFF[k] - 12, o.angle + CHIP_OFF[k] + 12)}"/>`).join('')}</g>`; });
+    let h = `<div class="r1-shadow" style="left:${C - RO}px;top:${C - RO}px;width:${2 * RO}px;height:${2 * RO}px"></div>`;
+    h += `<div class="r1-band" style="left:${C - RO}px;top:${C - RO}px;width:${2 * RO}px;height:${2 * RO}px"></div>`;
+    h += `<svg class="ringsvg" viewBox="0 0 ${2 * C} ${2 * C}">${svg}</svg>`;
+    g.options.forEach((o, i) => { const [x, y] = polar(GEO.ring.opt, o.angle);
+      h += `<div class="r1-opt ctr pop" data-i="${i}" style="${at(x, y)};--d:${i * 40}ms">${docIcon(o.kind, o.label, 22)}<b>${o.label}</b><small>${o.sub}</small></div>`; });
+    g.options.forEach((o, i) => { if (o.chips) h += `<div class="chips" data-for="${i}">${o.chips.map((c, k) => { const [x, y] = polar(151, o.angle + CHIP_OFF[k]);
+      return `<div class="r1-chip ctr" data-k="${k}" style="${at(x, y)}"><b>${c.q}%</b><small>${c.size}</small></div>`; }).join('')}</div>`; });
+    const total = ring.groups.length;
+    h += `<div class="r1-hub glass-strong ctr" style="${at(0, 0)}"><b>${g.count}</b><small>${g.kind === 'image' ? (g.count === 1 ? 'image' : 'images') : (g.count === 1 ? 'video' : 'videos')}</small>${total > 1 ? `<span class="dots" style="margin:4px 0 0">${ring.groups.map((_, i) => `<i class="${i < ring.step ? 'done' : i === ring.step ? 'cur' : ''}"></i>`).join('')}</span>` : ''}</div>`;
+    return h;
+  },
+  pills(g){
+    let h = `<div class="p-dot glass-strong ctr pop" style="${at(0, 0)}">${g.count}</div>`;
+    const top = g.options.some(o => o.angle === -90);
+    h += headHTML(g, top ? -GEO.pills.head : GEO.pills.head);
+    g.options.forEach((o, i) => { const [x, y] = polar(GEO.pills.opt, o.angle);
+      h += `<div class="p-pill glass ctr pop" data-i="${i}" style="${at(x, y)};--d:${i * 40}ms">${docIcon(o.kind, o.label, 24)}<span><b>${o.label}</b><small>${o.sub}</small></span></div>`;
+      if (o.chips) h += segHTML(o, i, x, o.angle === -90 ? y - 92 : y + 34); });
+    return h;
+  },
+  icons(g){
+    let h = `<div class="i-halo glass ctr" style="${at(0, 0)};width:330px;height:330px;background:color-mix(in srgb,var(--glass) 60%,transparent)"></div>`;
+    h += `<div class="i-dot glass-strong ctr pop" style="${at(0, 0)}">${g.count}</div>`;
+    const top = g.options.some(o => o.angle === -90);
+    h += headHTML(g, top ? -GEO.icons.head : GEO.icons.head);
+    g.options.forEach((o, i) => { const [x, y] = polar(GEO.icons.opt, o.angle);
+      h += `<div class="i-opt ctr pop" data-i="${i}" style="${at(x, y + 14)};--d:${i * 40}ms"><div class="i-tile">${docIcon(o.kind, o.label, 50)}</div><div class="i-lbl">${o.label}</div><div class="i-sub">${o.sub}</div></div>`;
+      if (o.chips) h += segHTML(o, i, x, o.angle === -90 ? y - 96 : y + 86); });
+    return h;
+  },
+};
+
+function openRing(mode, ids, at){
+  const groups = buildGroups(ids);
+  if (!groups.length){ toast(groups.skipped ? "Turnover can't convert this file yet" : 'Nothing to convert'); return; }
+  const p = at || lastMouse;
+  ring = {cx:Math.min(Math.max(p.x, 300), innerWidth - 300), cy:Math.min(Math.max(p.y, 240), innerHeight - 210), groups, step:0, mode, pinned:!!at, choices:[], hl:null};
+  catcher.classList.add('on');
+  ringEl.hidden = false;
+  ringEl.classList.remove('show'); void ringEl.offsetWidth; ringEl.classList.add('show');
+  hideCtx();
+  renderRing();
+}
+function closeRing(){ ring = null; ringEl.hidden = true; catcher.classList.remove('on'); hud(); }
+function renderRing(){
+  const g = curGroup();
+  ringEl.style.left = (ring.cx - C) + 'px';
+  ringEl.style.top = (ring.cy - C) + 'px';
+  ringEl.innerHTML = RENDER[style](g) + `<div class="hint glass" style="left:${C}px;top:${C + GEO[style].hint}px"></div>`;
+  renderHL();
+}
+function renderHL(){
+  if (!ring) return;
+  const g = curGroup(), hl = ring.hl;
+  ringEl.querySelectorAll('[data-i]').forEach(el => {
+    const me = !!hl && +el.dataset.i === hl.opt;
+    el.classList.toggle('hl', me && hl.chip == null);
+    el.classList.toggle('parent', me && hl.chip != null);
+  });
+  ringEl.querySelectorAll('.chips').forEach(el => {
+    const on = !!hl && +el.dataset.for === hl.opt;
+    el.classList.toggle('on', on);
+    el.querySelectorAll('[data-k]').forEach(c => c.classList.toggle('hl', on && hl.chip === +c.dataset.k));
+  });
+  const p = ringEl.querySelector('#r1-hl');
+  if (p){
+    if (hl){ const o = g.options[hl.opt], span = g.options.length === 1 ? 359.9 : 360 / g.options.length - 3;
+      p.setAttribute('d', sectorPath(C, C, 59, 121, o.angle - span / 2, o.angle + span / 2)); }
+    else p.setAttribute('d', '');
+    p.classList.toggle('parent', !!hl && hl.chip != null);
+  }
+  ringEl.querySelector('.hint').textContent = hintText();
+  hud();
+}
+function hintText(){
+  const g = curGroup(), o = ring.hl ? g.options[ring.hl.opt] : null;
+  if (ring.mode === 'drag') return o && o.chips ? 'Drop for 90%, or move onto a quality' : 'Drop on a format · Release ⇧ to drag normally';
+  if (ring.pinned) return o && o.chips ? 'Click for 90%, or move onto a quality' : 'Preview · Click a format to try it · Esc to close';
+  return o && o.chips ? 'Click for 90%, or move onto a quality' : `Now the ${g.label}: click a format, or Esc to skip`;
+}
+
+// ================================================================ ring: hit testing
+function nearestOption(g, a){
+  let bi = 0, bd = 1e9;
+  g.options.forEach((o, i) => { const d = Math.abs(angDiff(a, o.angle)); if (d < bd){ bd = d; bi = i; } });
+  return bi;
+}
+function nearestChip(d){
+  let bi = 0, bd = 1e9;
+  CHIP_OFF.forEach((o, i) => { const x = Math.abs(d - o); if (x < bd){ bd = x; bi = i; } });
+  return bi;
+}
+function hit(px, py){
+  const G = GEO[style], dx = px - ring.cx, dy = py - ring.cy, m = Math.hypot(dx, dy), a = deg(Math.atan2(dy, dx)), g = curGroup();
+  if (ring.hl){
+    const o = g.options[ring.hl.opt];
+    if (o.chips){
+      if (style === 'ring'){ if (m >= 128 && m <= 178){ const d = angDiff(a, o.angle); if (Math.abs(d) <= 52) return {opt:ring.hl.opt, chip:nearestChip(d)}; } }
+      else for (const c of ringEl.querySelectorAll('.chips.on [data-k]')){
+        const r = c.getBoundingClientRect();
+        if (px >= r.left - 2 && px <= r.right + 2 && py >= r.top - 6 && py <= r.bottom + 8) return {opt:ring.hl.opt, chip:+c.dataset.k};
+      }
+    }
+  }
+  if (m < G.hub || m > G.out) return null;
+  return {opt:nearestOption(g, a), chip:null};
+}
+function setHL(h){
+  const a = ring.hl;
+  if ((!a && !h) || (a && h && a.opt === h.opt && a.chip === h.chip)) return;
+  ring.hl = h; renderHL();
+}
+const choiceText = (o, chip) => o.label + (o.chips ? ' ' + (chip != null ? CHIP_Q[chip] : 90) + '%' : '');
+
+// ================================================================ ring: choosing
+function pushChoice(){
+  const g = curGroup(), o = g.options[ring.hl.opt];
+  ring.choices.push({kind:g.kind, opt:o, quality:o.key === 'jpeg' ? (ring.hl.chip != null ? CHIP_Q[ring.hl.chip] : 90) : null});
+}
+function commit(){ pushChoice(); advance(); }
+function advance(){
+  ring.step++; ring.hl = null;
+  if (ring.step >= ring.groups.length) return finish();
+  if (ring.mode === 'drag') ring.mode = 'click';
+  renderRing();
+}
+function finish(){
+  const ch = ring.choices;
+  closeRing();
+  if (ch.length) runConversions(ch); else log('Closed without converting');
+}
+
+// ================================================================ conversions (simulated)
+function makeOutput(src, key){
+  const ext = {png:'png', jpeg:'jpg', mp4:'mp4'}[key];
+  const base = src.name.replace(/\.[^.]+$/, '');
+  let name = `${base}.${ext}`, n = 2;
+  while (files.some(f => f.name.toLowerCase() === name.toLowerCase())) name = `${base} ${n++}.${ext}`;
+  return {...src, id:nextId++, name, ext, codec:key === 'mp4' ? 'H.264' : src.codec, converting:true, progress:0, from:src.id, fresh:false};
+}
+function insertAfter(src, out){
+  let i = files.indexOf(src);
+  while (files[i + 1] && files[i + 1].from === src.id) i++;
+  files.splice(i + 1, 0, out);
+}
+function runConversions(choices){
+  const now = performance.now();
+  const b = {id:++batchSeq, start:now, outs:[], jobs:[], finished:false,
+    label:choices.map(c => `${plural(c.opt.applies.length, c.kind)} to ${c.opt.label}${c.quality ? ' ' + c.quality + '%' : ''}`).join(', ')};
+  let k = 0;
+  for (const c of choices) for (const fid of c.opt.applies){
+    const src = byId(fid); if (!src) continue;
+    const out = makeOutput(src, c.opt.key);
+    insertAfter(src, out);
+    b.outs.push(out.id);
+    const vid = src.kind === 'video';
+    const j = {out, src, target:c.opt.label, vid, b, done:false, canceled:false, dur:(vid ? vidSecs(src) : 0.3 + Math.random() * 0.35) * 1000, start:vid ? null : now + (k++) * 80};
+    b.jobs.push(j); jobs.push(j);
+  }
+  batches.push(b);
+  render();
+  log('Converting ' + b.label);
+  if (!loopOn){ loopOn = true; requestAnimationFrame(tick); }
+}
+function tick(now){
+  let running = jobs.filter(j => j.vid && j.start != null && !j.done).length;
+  for (const j of jobs){ if (running >= 2) break; if (j.vid && j.start == null && !j.done){ j.start = now; running++; } }
+  let changed = false;
+  for (const j of jobs){
+    if (j.done || j.start == null) continue;
+    const p = Math.max(0, Math.min(1, (now - j.start) / j.dur));
+    j.out.progress = p;
+    const bar = grid.querySelector(`[data-id="${j.out.id}"] .prog i`);
+    if (bar) bar.style.width = (p * 100) + '%';
+    if (p >= 1){ j.done = true; j.out.converting = false; changed = true; }
+  }
+  for (const b of batches) if (!b.finished && b.jobs.every(j => j.done)){ b.finished = true; b.elapsed = now - b.start; onBatchDone(b); changed = true; }
+  if (changed) render();
+  const live = jobs.filter(j => !j.done);
+  // Menu bar only for work that's still running after 1 s.
+  if (!mbShown && live.some(j => now - j.b.start > 1000)){ mbShown = true; clearTimeout(mbHideT); $('#mb-turnover').hidden = false; }
+  if (mbShown && live.length){
+    const all = jobs.filter(j => !j.b.finished && !j.canceled);
+    $('#mb-pct').textContent = Math.round(100 * sum(all.map(j => (j.out.progress || 0) * j.dur)) / Math.max(1, sum(all.map(j => j.dur)))) + '%';
+  }
+  if (!$('#mbmenu').hidden) renderMbMenu();
+  if (live.length) requestAnimationFrame(tick);
+  else {
+    loopOn = false; jobs = [];
+    if (mbShown){ $('#mb-pct').textContent = '100%'; mbHideT = setTimeout(() => { $('#mb-turnover').hidden = true; $('#mbmenu').hidden = true; $('#mb-turnover').classList.remove('open'); mbShown = false; }, 600); }
+  }
+}
+function cancelJob(j){
+  if (j.done) return;
+  j.done = true; j.canceled = true;
+  files = files.filter(f => f !== j.out);
+  log('Cancelled ' + j.src.name + ' (partial file deleted)');
+  render();
+}
+function flash(id){
+  const f = byId(id); if (!f) return;
+  f.fresh = true;
+  setTimeout(() => { f.fresh = false; grid.querySelector(`[data-id="${id}"]`)?.classList.remove('fresh'); }, 1400);
+}
+function onBatchDone(b){
+  const outs = b.outs.filter(byId);
+  if (!outs.length){ toast('Cancelled'); return; }
+  outs.forEach(flash);
+  selected = new Set(outs); anchor = focusId = outs[0];
+  lastResult = `${b.label} in ${(b.elapsed / 1000).toFixed(1)} s`;
+  if (b.elapsed > 3000) notify(b, outs);
+  requestAnimationFrame(() => grid.querySelector(`[data-id="${outs[0]}"]`)?.scrollIntoView({block:'nearest', behavior:'smooth'}));
+}
+function notify(b, outs){
+  const n = $('#notif');
+  n.innerHTML = `<div>${APP_ICON(36)}</div><div class="ntxt"><b>Turnover</b><span>Converted ${b.label}</span></div><span class="when">now</span><button>Show in Finder</button>`;
+  n.classList.add('on');
+  n.querySelector('button').onclick = () => { selected = new Set(outs.filter(byId)); outs.forEach(flash); render(); n.classList.remove('on'); };
+  clearTimeout(n._t); n._t = setTimeout(() => n.classList.remove('on'), 6000);
+}
+function renderMbMenu(){
+  const m = $('#mbmenu');
+  const live = jobs.filter(j => !j.done);
+  m.innerHTML = `<h6>Converting</h6>` + (live.length ? live.map((j, i) =>
+    `<div class="job"><span class="jn">${esc(j.src.name)} → ${j.target}</span><button class="jx" data-j="${jobs.indexOf(j)}" title="Cancel">✕</button><span class="jb"><i style="width:${Math.round((j.out.progress || 0) * 100)}%"></i></span></div>`).join('') : `<div class="job"><span class="jn">Done</span></div>`);
+  m.querySelectorAll('.jx').forEach(x => x.onmousedown = e => { e.stopPropagation(); cancelJob(jobs[+x.dataset.j]); });
+}
+$('#mb-turnover').onmousedown = e => {
+  e.stopPropagation();
+  const m = $('#mbmenu'), open = m.hidden;
+  m.hidden = !open; $('#mb-turnover').classList.toggle('open', open);
+  if (open){ const r = $('#mb-turnover').getBoundingClientRect(); m.style.left = Math.min(r.left, innerWidth - 310) + 'px'; renderMbMenu(); }
+};
+
+// ================================================================ right-click menu
+function showCtx(x, y){
+  const groups = buildGroups([...selected]);
+  const t = groups.flatMap(g => g.options.map(o => ({g, o})));
+  const ctx = $('#ctx');
+  const turn = t.length ? `<div class="sep"></div><div class="mi"><span class="lead">${APP_GLYPH}Turnover</span><span>›</span><div class="sub">${
+    t.map((x, i) => `<div class="mi" data-t="${i}"><span class="lead">${docIcon(x.o.kind, x.o.label, 14)}${x.o.label}</span><span class="dim">${plural(x.o.applies.length, x.g.kind)}</span></div>`).join('')}</div></div>` : '';
+  ctx.innerHTML = `<div class="mi">Open</div><div class="mi"><span>Open With</span><span>›</span></div><div class="sep"></div><div class="mi">Move to Trash</div><div class="sep"></div>
+    <div class="mi">Get Info</div><div class="mi">Rename</div><div class="mi">Compress</div><div class="mi">Duplicate</div><div class="mi">Quick Look</div><div class="sep"></div>
+    <div class="mi">Copy</div><div class="mi">Share…</div><div class="sep"></div>
+    <div class="mi"><span>Quick Actions</span><span>›</span><div class="sub"><div class="mi">Rotate Left</div><div class="mi">Trim…</div><div class="sep"></div><div class="mi">Customize…</div></div></div>${turn}`;
+  ctx.hidden = false;
+  ctx.classList.toggle('flip', x > innerWidth - 460);
+  ctx.style.left = Math.min(x, innerWidth - 230) + 'px';
+  ctx.style.top = Math.min(y, innerHeight - ctx.offsetHeight - 8) + 'px';
+  ctx.querySelectorAll('[data-t]').forEach(el => el.onclick = ev => {
+    ev.stopPropagation();
+    const x = t[+el.dataset.t];
+    hideCtx();
+    log('Right-click → Turnover → ' + x.o.label);
+    runConversions([{kind:x.g.kind, opt:x.o, quality:x.o.key === 'jpeg' ? 90 : null}]);
+  });
+}
+function hideCtx(){ $('#ctx').hidden = true; }
+
+// ================================================================ setup window
+function showSetup(){
+  const s = $('#setup');
+  s.innerHTML = `<div class="swin"><div class="lights"><i id="setup-close"></i><i></i><i></i></div>
+    <div class="shead">${APP_ICON(68)}<h2>Turnover</h2><p>Drag a file, press <span class="kbd">⇧</span>, choose a format.</p></div>
+    <div class="sgroup">
+      <div class="srow"><span class="st">✓</span><div class="tx"><span>Finder extension</span><small>Adds Turnover to the right-click menu</small></div><span class="state">On</span></div>
+      <div class="srow"><span class="st">✓</span><div class="tx"><span>Notifications</span><small>Tells you when longer conversions finish</small></div><span class="state">Allowed</span></div>
+      <div class="srow" id="ax"><span class="st todo"></span><div class="tx"><span>Accessibility</span><small>Lets Turnover notice ⇧ while you drag</small></div><button class="mbtn">Open Settings…</button></div>
+    </div>
+    <div class="sgroup"><div class="srow"><div class="tx"><span>Open at login</span><small>Turnover needs to be running to show the ring</small></div><span class="switch on" id="sw-login"></span></div></div>
+    <div class="sfoot"><span>Version 0.1 · MIT License</span><button class="mbtn">Quit Turnover</button></div></div>`;
+  s.hidden = false;
+  $('#setup-close').onclick = () => s.hidden = true;
+  $('#sw-login').onclick = e => e.target.classList.toggle('on');
+  $('#ax button').onclick = () => { const r = $('#ax'); r.querySelector('.st').classList.remove('todo'); r.querySelector('.st').textContent = '✓'; r.querySelector('button').outerHTML = '<span class="state">Allowed</span>'; };
+  s.onmousedown = e => { if (e.target === s) s.hidden = true; };
+}
+
+// ================================================================ ghost, toast, hud
+function showGhost(){
+  const fs = drag.ids.map(byId).filter(Boolean).slice(0, 3);
+  $('#ghost').innerHTML = `<div class="stack">${fs.map((f, i) => `<div style="position:absolute;left:${i * 5}px;top:${i * 4}px">${thumbHTML({...f, converting:false})}</div>`).join('')}${drag.ids.length > 1 ? `<span class="count">${drag.ids.length}</span>` : ''}</div>`;
+  $('#ghost').style.display = 'block';
+}
+function moveGhost(x, y){ const g = $('#ghost'); g.style.left = (x - 30) + 'px'; g.style.top = (y - 26) + 'px'; }
+function hideGhost(){ $('#ghost').style.display = 'none'; }
+function toast(t){ const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 2200); log(t); }
+function log(t){ lastEvent = t; hud(); }
+function hud(){
+  let r = 'closed';
+  if (ring){ const g = curGroup(), o = ring.hl ? g.options[ring.hl.opt] : null;
+    r = `${ring.pinned ? 'pinned' : ring.mode} · ${g.label} (${ring.step + 1}/${ring.groups.length})${o ? ' · on ' + choiceText(o, ring.hl.chip) : ''}`; }
+  $('#hud').innerHTML = [
+    `<b>style</b>${STYLES[style]} · ${document.documentElement.dataset.theme}`,
+    `<b>selection</b>${selected.size || 'none'}`,
+    `<b>drag</b>${drag ? (drag.active ? 'dragging ' + plural(drag.ids.length, 'file') : 'mouse down') : '—'}`,
+    `<b>ring</b>${r}`,
+    `<b>last</b>${esc(lastEvent)}`,
+  ].map(s => `<div>${s}</div>`).join('');
+}
+
+// ================================================================ chrome
+function applyTheme(){
+  const dark = themeMode === 'dark' || (themeMode === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  ['auto','light','dark'].forEach(t => $('#th-' + t).classList.toggle('on', themeMode === t));
+  hud();
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+function renderChrome(){
+  $('#sw-label').innerHTML = `<b>${ORDER.indexOf(style) + 1}</b> · ${STYLES[style]}`;
+  $('#info-body').innerHTML = `<h3>Ring style ${ORDER.indexOf(style) + 1} of 3 · ${STYLES[style]}</h3>
+    <p>How it opens is decided: drag + ⇧. This round is only about how it <b>looks</b>.</p>
+    <ol><li><b>Pin ring open</b> (bottom bar) to look at it without dragging. Hover the formats; hover JPEG to see the quality control.</li>
+    <li>Or do it for real: select files, drag, press <b>⇧</b>, drop on a format. ⌘-click <i>IMG_4821</i> + <i>IMG_4835</i> for the images-then-video flow.</li>
+    <li>Flip <b>Light / Dark</b>, and compare styles with <b>[</b> and <b>]</b>.</li>
+    <li><b>Setup window</b> shows the only window Turnover has.</li></ol>
+    <p class="note">In the real app the format icons are macOS's own file icons, the text is the system font, and the glass is the system material, so it will look more native than any browser mock.</p>`;
+  hud();
+}
+function syncURL(){ try { const p = new URLSearchParams(location.search); p.set('variant', style); p.set('theme', themeMode); history.replaceState(null, '', '?' + p); } catch (e) {} }
+function setStyle(v){ style = v; syncURL(); renderChrome(); if (ring) renderRing(); }
+const cycle = d => setStyle(ORDER[(ORDER.indexOf(style) + d + ORDER.length) % ORDER.length]);
+$('#sw-prev').onclick = () => cycle(-1);
+$('#sw-next').onclick = () => cycle(1);
+['auto','light','dark'].forEach(t => $('#th-' + t).onclick = () => { themeMode = t; syncURL(); applyTheme(); });
+$('#sw-setup').onclick = showSetup;
+$('#sw-reset').onclick = () => reset();
+$('#sw-pin').onclick = () => {
+  if (ring){ closeRing(); return; }
+  let ids = [...selected];
+  if (!buildGroups(ids).length){ ids = [1, 2, 4]; selected = new Set(ids); render(); }
+  const r = grid.getBoundingClientRect();
+  openRing('click', ids, {x:r.left + r.width / 2, y:r.top + r.height / 2 + 20});
+};
+
+// ================================================================ input
+grid.addEventListener('mousedown', e => {
+  if (e.button !== 0 || ring) return;
+  hideCtx();
+  const it = e.target.closest('.item');
+  if (!it){ if (!e.shiftKey && !e.metaKey){ selected.clear(); render(); } return; }
+  const id = +it.dataset.id;
+  if (e.metaKey){ selected.has(id) ? selected.delete(id) : selected.add(id); anchor = focusId = id; render(); return; }
+  if (e.shiftKey){ rangeTo(id); render(); return; }
+  pendingSingle = null;
+  if (!selected.has(id)){ selected = new Set([id]); anchor = focusId = id; render(); } else pendingSingle = id;
+  drag = {sx:e.clientX, sy:e.clientY, active:false, ids:[]};
+  e.preventDefault();
+});
+grid.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  if (ring) return;
+  const it = e.target.closest('.item');
+  if (!it){ hideCtx(); return; }
+  const id = +it.dataset.id;
+  if (!selected.has(id)){ selected = new Set([id]); anchor = focusId = id; render(); }
+  showCtx(e.clientX, e.clientY);
+});
+document.addEventListener('contextmenu', e => { if (ring || !e.target.closest('#grid')) e.preventDefault(); });
+document.addEventListener('mousedown', e => {
+  if (!e.target.closest('#ctx')) hideCtx();
+  if (!e.target.closest('#mbmenu') && !e.target.closest('#mb-turnover')){ $('#mbmenu').hidden = true; $('#mb-turnover').classList.remove('open'); }
+  if (!ring || e.target.closest('#switcher')) return;
+  e.preventDefault(); e.stopPropagation();
+  const h = hit(e.clientX, e.clientY);
+  if (h){ ring.hl = h; log('Clicked ' + choiceText(curGroup().options[h.opt], h.chip)); commit(); }
+  else if (ring.pinned) closeRing();
+  else { log('Skipped ' + curGroup().label); advance(); }
+}, true);
+window.addEventListener('mousemove', e => {
+  lastMouse = {x:e.clientX, y:e.clientY};
+  if (drag){
+    if (!drag.active && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 5){
+      drag.active = true; drag.ids = [...selected]; pendingSingle = null; showGhost(); log('Dragging ' + plural(drag.ids.length, 'file'));
+    }
+    if (drag.active){ moveGhost(e.clientX, e.clientY); if (ring && ring.mode === 'drag') setHL(hit(e.clientX, e.clientY)); }
+    return;
+  }
+  if (ring && ring.mode === 'click') setHL(hit(e.clientX, e.clientY));
+});
+window.addEventListener('mouseup', () => {
+  if (!drag) return;
+  const d = drag; drag = null; hideGhost();
+  if (!d.active){
+    if (pendingSingle != null){ selected = new Set([pendingSingle]); anchor = focusId = pendingSingle; pendingSingle = null; render(); }
+    return;
+  }
+  if (ring && ring.mode === 'drag'){
+    if (ring.hl){ log('Dropped on ' + choiceText(curGroup().options[ring.hl.opt], ring.hl.chip)); commit(); }
+    else { closeRing(); toast('Dropped off the ring. Cancelled, nothing moved.'); }
+  } else toast('Normal drop. Finder would move or copy as usual.');
+  hud();
+});
+window.addEventListener('keydown', e => {
+  if (e.key === '[' || e.key === ']'){ cycle(e.key === ']' ? 1 : -1); return; }
+  if (e.key === 'Escape'){
+    hideCtx(); $('#setup').hidden = true;
+    if (drag && drag.active){ drag = null; hideGhost(); if (ring) closeRing(); toast('Drag cancelled'); }
+    else if (ring){ if (ring.pinned) closeRing(); else { log('Esc skipped ' + curGroup().label); advance(); } }
+    return;
+  }
+  if (e.key === 'Shift'){
+    if (!e.repeat && drag && drag.active && !ring){ log('⇧ pressed mid-drag'); openRing('drag', drag.ids); }
+    return;
+  }
+  if (!ring && e.key.startsWith('Arrow')){ e.preventDefault(); arrow(e.key, e.shiftKey); }
+});
+window.addEventListener('keyup', e => {
+  if (e.key === 'Shift' && ring && ring.mode === 'drag'){ closeRing(); log('⇧ released, normal drag continues'); }
+});
+window.addEventListener('blur', () => { if (drag){ drag = null; hideGhost(); } if (ring && ring.mode === 'drag') closeRing(); focusWarn(); });
+window.addEventListener('focus', focusWarn);
+function focusWarn(){ $('#focuswarn').hidden = document.hasFocus(); }
+
+// ================================================================ boot
+function reset(){
+  if (ring) closeRing();
+  drag = null; hideGhost();
+  jobs = []; batches = []; loopOn = false; mbShown = false; $('#mb-turnover').hidden = true; $('#mbmenu').hidden = true;
+  files = INITIAL.map((f, i) => ({...f, id:i + 1}));
+  nextId = 100; selected = new Set(); anchor = focusId = null;
+  lastEvent = 'reset'; lastResult = '—';
+  render();
+}
+function clock(){ $('#clock').textContent = new Date().toLocaleString('en-US', {weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}); }
+clock(); setInterval(clock, 30000); setInterval(focusWarn, 1000);
+applyTheme(); reset(); renderChrome(); syncURL(); focusWarn();
+</script>
+</body>
+</html>

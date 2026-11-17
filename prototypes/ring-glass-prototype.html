@@ -1,0 +1,919 @@
+<!doctype html>
+<!--
+  PROTOTYPE v4 — throwaway. Not part of the Turnover app.
+  Decided: Glass ring, drag + ⇧, regular glass, tinted highlight, text only (no symbols), hold ⌥ for a one-off
+  JPEG quality, edge refraction on, default JPEG quality High (85%).
+  Question: how do mixed selections (images + videos) work without clicking after the drop?
+    rest     = one ring with every format; rest on one for a moment to add it, then drop on another
+    combined = one ring that also offers "JPEG + MP4"-style targets, so one drop does both
+  ?theme=auto|light|dark&mixed=rest|combined
+  Fake files only — nothing on disk is touched.
+-->
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turnover Glass Ring</title>
+<style>
+:root{
+  --accent:#007aff;
+  --label:rgba(0,0,0,.85); --label2:rgba(0,0,0,.5); --label3:rgba(0,0,0,.26);
+  --win-bg:#ffffff; --win-edge:rgba(0,0,0,.18); --sidebar:rgba(236,236,241,.82); --cap:rgba(0,0,0,.05); --hair:rgba(0,0,0,.09);
+  --sel-tile:rgba(0,0,0,.07); --sel-tile-strong:rgba(0,0,0,.11);
+  --menu-bg:rgba(246,246,248,.82);
+  --menu-shadow:0 0 0 .5px rgba(0,0,0,.14),0 14px 40px rgba(0,0,0,.18);
+  --wall:radial-gradient(1200px 800px at 15% 0%,#b9d8ff 0%,transparent 60%),radial-gradient(1000px 900px at 100% 100%,#ffc9a8 0%,transparent 60%),linear-gradient(160deg,#8fb8f0,#e9a7c4);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  --spring:cubic-bezier(.32,1.32,.56,1);
+
+  /* Liquid-glass tokens (light) */
+  --g-tint:rgba(255,255,255,.14);
+  --g-blur:blur(6px) saturate(2) brightness(1.05);
+  --txt-glow:0 0 8px rgba(255,255,255,.75),0 0 2px rgba(255,255,255,.6);
+  --hl-tint:.2;
+  --g-spec:radial-gradient(70% 50% at 30% 8%,rgba(255,255,255,.42),transparent 70%);
+  --g-rim:conic-gradient(from 210deg,rgba(255,255,255,1),rgba(255,255,255,.25) 25%,rgba(255,255,255,.08) 45%,rgba(255,255,255,.7) 60%,rgba(255,255,255,.2) 80%,rgba(255,255,255,1));
+  --g-rim-in:conic-gradient(from 30deg,rgba(255,255,255,.95),rgba(255,255,255,.2) 25%,rgba(255,255,255,.06) 45%,rgba(255,255,255,.55) 60%,rgba(255,255,255,.15) 80%,rgba(255,255,255,.95));
+  --g-inner:inset 0 10px 22px rgba(255,255,255,.2),inset 0 -12px 24px rgba(0,0,0,.05);
+  --g-shadow:0 0 0 .5px rgba(0,0,0,.05),0 18px 50px rgba(0,0,0,.16),0 3px 10px rgba(0,0,0,.07);
+  --hub-tint:rgba(255,255,255,.34);
+  --drop:rgba(255,255,255,.72); --drop-rim:rgba(255,255,255,1); --drop-shadow:rgba(0,0,0,.12);
+}
+:root.clear{ --g-tint:rgba(255,255,255,.04); --g-blur:blur(1.5px) saturate(1.7) brightness(1.07); --hub-tint:rgba(255,255,255,.14); }
+[data-theme=dark]{
+  --accent:#0a84ff;
+  --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.58); --label3:rgba(255,255,255,.3);
+  --win-bg:#1f1f22; --win-edge:rgba(255,255,255,.14); --sidebar:rgba(48,48,54,.78); --cap:rgba(255,255,255,.08); --hair:rgba(255,255,255,.1);
+  --sel-tile:rgba(255,255,255,.1); --sel-tile-strong:rgba(255,255,255,.16);
+  --menu-bg:rgba(40,40,44,.82);
+  --menu-shadow:0 0 0 .5px rgba(0,0,0,.6),0 14px 40px rgba(0,0,0,.45);
+  --wall:radial-gradient(1200px 800px at 15% 0%,#2a3f78 0%,transparent 60%),radial-gradient(1000px 900px at 100% 100%,#5a2a4e 0%,transparent 60%),linear-gradient(160deg,#141a33,#2a1630);
+  --g-tint:rgba(22,22,26,.26);
+  --g-blur:blur(6px) saturate(1.6) brightness(.8);
+  --txt-glow:0 0 8px rgba(0,0,0,.6);
+  --hl-tint:.32;
+  --g-spec:radial-gradient(70% 50% at 30% 8%,rgba(255,255,255,.13),transparent 70%);
+  --g-rim:conic-gradient(from 210deg,rgba(255,255,255,.6),rgba(255,255,255,.1) 25%,rgba(255,255,255,.03) 45%,rgba(255,255,255,.3) 60%,rgba(255,255,255,.08) 80%,rgba(255,255,255,.6));
+  --g-rim-in:conic-gradient(from 30deg,rgba(255,255,255,.45),rgba(255,255,255,.08) 25%,rgba(255,255,255,.02) 45%,rgba(255,255,255,.25) 60%,rgba(255,255,255,.06) 80%,rgba(255,255,255,.45));
+  --g-inner:inset 0 10px 22px rgba(255,255,255,.05),inset 0 -12px 24px rgba(0,0,0,.25);
+  --g-shadow:0 0 0 .5px rgba(0,0,0,.55),0 18px 50px rgba(0,0,0,.5),0 3px 10px rgba(0,0,0,.3);
+  --hub-tint:rgba(40,40,46,.42);
+  --drop:rgba(255,255,255,.17); --drop-rim:rgba(255,255,255,.42); --drop-shadow:rgba(0,0,0,.35);
+}
+[data-theme=dark].clear{ --g-tint:rgba(10,10,12,.08); --g-blur:blur(1.5px) saturate(1.5) brightness(.88); --hub-tint:rgba(30,30,34,.22); }
+
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{font:13px/1.35 var(--font);color:var(--label);background:var(--wall);user-select:none;-webkit-user-select:none}
+
+/* ---------- menu bar ---------- */
+#menubar{position:fixed;top:0;left:0;right:0;height:28px;display:flex;justify-content:space-between;align-items:center;padding:0 16px;z-index:40;color:var(--label);
+  background:linear-gradient(rgba(255,255,255,.18),rgba(255,255,255,.06));backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+#menubar .left{display:flex;gap:20px}
+#menubar .left b{font-weight:700}
+#menubar .right{display:flex;gap:10px;align-items:center;font-variant-numeric:tabular-nums}
+#mb-turnover{display:flex;align-items:center;gap:5px;padding:2px 8px;border-radius:6px;cursor:default;animation:fadeScale .25s var(--spring)}
+#mb-turnover:hover,#mb-turnover.open{background:var(--cap)}
+#mb-turnover[hidden]{display:none}
+#mbmenu{position:fixed;top:32px;width:300px;z-index:92;border-radius:12px;padding:6px;background:var(--menu-bg);backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-shadow:var(--menu-shadow)}
+#mbmenu[hidden]{display:none}
+#mbmenu h6{margin:4px 8px 6px;font-size:11px;color:var(--label2);font-weight:600}
+.job{display:grid;grid-template-columns:1fr auto;gap:3px 8px;align-items:center;padding:5px 8px;border-radius:7px}
+.job:hover{background:var(--cap)}
+.job .jn{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.job .jx{grid-row:span 2;width:20px;height:20px;border-radius:50%;border:0;background:var(--cap);color:var(--label2);font-size:11px;cursor:pointer}
+.job .jx:hover{background:#ff3b30;color:#fff}
+.job .jb{height:4px;border-radius:2px;background:var(--hair);overflow:hidden}
+.job .jb i{display:block;height:100%;background:var(--accent);border-radius:2px}
+@keyframes fadeScale{from{opacity:0;scale:.85}}
+
+/* ---------- finder ---------- */
+.window{position:absolute;top:46px;left:28px;right:384px;bottom:84px;min-width:480px;background:var(--win-bg);border-radius:18px;
+  box-shadow:0 0 0 .5px var(--win-edge),0 30px 80px rgba(0,0,0,.32);display:flex;overflow:hidden}
+.sidebar{width:172px;flex:none;margin:8px 0 8px 8px;border-radius:12px;background:var(--sidebar);padding:44px 8px 8px;position:relative}
+.lights{position:absolute;top:14px;left:14px;display:flex;gap:8px}
+.lights i{width:12px;height:12px;border-radius:50%;background:#ff5f57;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.18)}
+.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+.sidebar h6{margin:12px 8px 4px;font-size:11px;color:var(--label2);font-weight:600}
+.sidebar div.it{padding:5px 8px;border-radius:7px}
+.sidebar div.on{background:var(--sel-tile-strong)}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.toolbar{height:54px;flex:none;display:flex;align-items:center;gap:12px;padding:0 14px 0 12px}
+.toolbar .cap{height:32px;border-radius:16px;background:var(--cap);display:flex;align-items:center;padding:0 12px;gap:16px;color:var(--label2);font-size:15px}
+.toolbar .title{font-weight:700;font-size:15px}
+.toolbar .sp{flex:1}
+#grid{flex:1;overflow:auto;padding:10px 14px;display:grid;grid-template-columns:repeat(auto-fill,112px);grid-auto-rows:122px;gap:4px;align-content:start}
+.item{display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:4px}
+.tw{width:86px;height:70px;display:flex;align-items:center;justify-content:center;border-radius:8px}
+.item.sel .tw{background:var(--sel-tile)}
+.nm{max-width:110px;text-align:center;font-size:12px;line-height:15px}
+.nm span{display:-webkit-inline-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;padding:1px 6px;border-radius:5px;word-break:break-word}
+.item.sel .nm span{background:var(--accent);color:#fff}
+.item.converting .thumb{opacity:.5}
+.item.converting .nm span{color:var(--label2)}
+.item.converting.sel .nm span{color:#fff}
+.item.fresh .tw{animation:fresh 1.3s ease-out}
+@keyframes fresh{0%{box-shadow:0 0 0 0 transparent}25%{box-shadow:0 0 0 5px color-mix(in srgb,var(--accent) 40%,transparent)}100%{box-shadow:0 0 0 14px transparent}}
+.statusbar{height:26px;flex:none;font-size:11px;color:var(--label2);display:flex;align-items:center;justify-content:center;border-top:1px solid var(--hair)}
+.thumb{position:relative;width:64px;height:48px;border:2px solid #fff;border-radius:2px;box-shadow:0 1px 3px rgba(0,0,0,.35);overflow:hidden;background:#ddd;flex:none}
+.thumb.portrait{width:40px;height:56px}
+.thumb.photo{background:linear-gradient(170deg,hsl(var(--h1) 85% 72%),hsl(var(--h2) 62% 40%))}
+.thumb.photo::before{content:"";position:absolute;width:13px;height:13px;border-radius:50%;background:rgba(255,250,220,.9);top:16%;right:18%}
+.thumb.photo::after{content:"";position:absolute;left:0;right:0;bottom:0;height:56%;background:hsl(var(--h2) 45% 22% / .75);clip-path:polygon(0 70%,22% 30%,40% 60%,62% 10%,100% 65%,100% 100%,0 100%)}
+.thumb.screen{background:linear-gradient(#e6e9f0 0 18%,#fff 18%)}
+.thumb.screen::before{content:"";position:absolute;left:8%;top:30%;width:40%;height:55%;background:#d4d9e4;border-radius:2px}
+.thumb.screen::after{content:"";position:absolute;right:8%;top:30%;width:38%;height:8%;background:#c3cad8;box-shadow:0 8px 0 #c3cad8,0 16px 0 #dde2ea}
+.thumb.graphic{background:#fff}
+.thumb.graphic::before{content:"";position:absolute;left:12%;top:18%;width:32%;height:30%;border:2px solid #5b8def;border-radius:3px}
+.thumb.graphic::after{content:"";position:absolute;right:12%;bottom:16%;width:30%;height:34%;border:2px solid #ef8f5b;border-radius:50%}
+.thumb.doc{width:44px;height:56px;background:#fff;border:1px solid #d8d8d8;border-radius:2px 10px 2px 2px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px}
+.thumb.doc span{font-size:9px;font-weight:700;color:#fff;background:#e5483f;padding:1px 4px;border-radius:2px}
+.play{position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:rgba(0,0,0,.45);z-index:2}
+.play::after{content:"";position:absolute;left:7px;top:5px;border-left:6px solid #fff;border-top:4px solid transparent;border-bottom:4px solid transparent}
+.dur{position:absolute;right:2px;bottom:2px;font-size:8px;color:#fff;background:rgba(0,0,0,.55);padding:0 3px;border-radius:2px;z-index:2}
+.prog{position:absolute;left:4px;right:4px;bottom:4px;height:4px;border-radius:2px;background:rgba(255,255,255,.75);z-index:3}
+.prog i{display:block;height:100%;width:0;background:var(--accent);border-radius:2px}
+
+/* ---------- the glass ring ---------- */
+#catcher{position:fixed;inset:0;z-index:60;display:none}
+#catcher.on{display:block}
+#ring{position:fixed;width:560px;height:560px;z-index:70;pointer-events:none;color:var(--label)}
+#ring[hidden]{display:none}
+#ring.show .r-body{animation:ringIn .34s var(--spring)}
+@keyframes ringIn{from{opacity:0;scale:.82;filter:blur(6px)}}
+.r-body{position:absolute;inset:0;transform-origin:280px 280px}
+.lg{position:absolute;border-radius:50%;background:var(--g-spec),var(--g-tint);backdrop-filter:var(--g-blur);-webkit-backdrop-filter:var(--g-blur);box-shadow:var(--g-inner)}
+.lg::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.25px;background:var(--g-rim);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);pointer-events:none}
+.refract .r-band{backdrop-filter:url(#lg-band) var(--g-blur)}
+.refract .r-hub{backdrop-filter:url(#lg-hub) var(--g-blur)}
+.r-shadow{position:absolute;border-radius:50%;box-shadow:var(--g-shadow)}
+.r-hub{background:var(--g-spec),var(--hub-tint);box-shadow:var(--g-inner),0 0 0 .5px rgba(0,0,0,.06),0 6px 18px rgba(0,0,0,.14);display:flex;flex-direction:column;align-items:center;justify-content:center;text-shadow:var(--txt-glow)}
+.r-hub::after{background:var(--g-rim-in)}
+.r-hub b{font-size:21px;font-weight:600;line-height:1;letter-spacing:-.3px}
+.r-hub small{font-size:10.5px;color:var(--label2);margin-top:3px}
+.r-svg{position:absolute;left:0;top:0;width:560px;height:560px;overflow:visible}
+#hlg{transform-origin:280px 280px;transition:transform .4s var(--spring),opacity .15s;opacity:0}
+#hlg .body{opacity:var(--hl-tint)}
+#hlg .shape{fill:var(--accent);stroke:var(--accent);stroke-width:9;stroke-linejoin:round}
+#hlg .sheen{fill:url(#sheen);stroke:none}
+.solid #hlg .body{opacity:.92}
+.opt{position:absolute;translate:-50% -50%;display:flex;flex-direction:column;align-items:center;gap:1px;text-align:center;text-shadow:var(--txt-glow);transition:scale .25s var(--spring);animation:pop .32s var(--spring) backwards;animation-delay:var(--d,0ms)}
+.opt.hl svg,.opt.hl b{color:var(--accent)}
+.solid .opt.hl,.solid .opt.hl svg,.solid .opt.hl b{color:#fff;text-shadow:none}
+.solid .opt.hl small{color:rgba(255,255,255,.85)}
+@keyframes pop{from{opacity:0;scale:.6}}
+.opt svg{width:20px;height:20px;margin-bottom:3px;color:var(--label);opacity:.85;transition:color .12s}
+.opt b{font-size:13px;font-weight:600;letter-spacing:-.1px}
+.opt small{font-size:10.5px;color:var(--label2);font-variant-numeric:tabular-nums}
+.nosym .opt svg{display:none}
+.nosym .opt b{font-size:14.5px}
+.opt.hl{scale:1.06}
+.opt.hl svg{color:var(--accent);opacity:1}
+.opt .def{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--accent);margin-left:3px;vertical-align:2px}
+.r-cap{position:absolute;translate:-50% 0;padding:4px 11px;border-radius:999px;font-size:11.5px;color:var(--label2);white-space:nowrap;
+  background:var(--g-spec),var(--hub-tint);backdrop-filter:var(--g-blur);-webkit-backdrop-filter:var(--g-blur);box-shadow:var(--g-inner),var(--g-shadow);animation:pop .3s var(--spring) backwards}
+#locks path{fill:var(--accent);opacity:calc(var(--hl-tint) * .55)}
+#hlg.dwell .body{opacity:.55;transition:opacity .65s linear}
+#hlg.blink{animation:blink .16s ease-in-out 4 alternate}
+@keyframes blink{to{opacity:.2}}
+.opt .ck{display:inline-block;margin-left:4px;color:var(--accent);font-weight:700}
+.opt.locked b{color:var(--accent)}
+.opt.combo b{font-size:12.5px}
+.r-hub .kinds{font-size:10.5px;color:var(--label2);line-height:1.3;text-align:center;margin-top:2px}
+
+/* ---------- drag ghost, menus, toasts ---------- */
+#ghost{position:fixed;z-index:80;pointer-events:none;display:none;opacity:.85}
+#ghost .stack{position:relative;width:76px;height:64px;transform-origin:30px 26px;transition:scale .2s var(--spring),opacity .2s}
+#ghost.small .stack{scale:.45;opacity:.55}
+#ghost .count{position:absolute;right:-4px;top:-8px;background:#ff3b30;color:#fff;font-size:11px;font-weight:700;border-radius:999px;padding:1px 6px;box-shadow:0 1px 3px rgba(0,0,0,.3);z-index:5}
+.menu{position:fixed;z-index:90;min-width:220px;padding:5px;border-radius:11px;background:var(--menu-bg);backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-shadow:var(--menu-shadow);color:var(--label)}
+.menu[hidden]{display:none}
+.menu .mi{position:relative;padding:3px 10px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;gap:18px;cursor:default}
+.menu .mi:hover{background:var(--accent);color:#fff}
+.menu .mi .dim{opacity:.55;font-size:12px}
+.menu .mi .lead{display:flex;align-items:center;gap:7px}
+.menu .mi .chk{width:12px;display:inline-block}
+.menu .sep{height:1px;background:var(--hair);margin:5px 9px}
+.menu .sub{display:none;position:absolute;left:100%;top:-5px;min-width:210px;padding:5px;border-radius:11px;background:var(--menu-bg);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);box-shadow:var(--menu-shadow);color:var(--label)}
+.menu.flip .sub{left:auto;right:100%}
+.menu .mi:hover>.sub{display:block}
+#toast{position:fixed;left:50%;bottom:78px;translate:-50% 10px;opacity:0;transition:all .2s;z-index:96;padding:7px 14px;border-radius:999px;font-size:12.5px;pointer-events:none;white-space:nowrap;
+  background:var(--menu-bg);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);box-shadow:var(--menu-shadow)}
+#toast.on{opacity:1;translate:-50% 0}
+#notif{position:fixed;top:36px;right:14px;width:344px;z-index:95;display:flex;gap:11px;align-items:center;padding:11px 13px;border-radius:20px;
+  background:var(--menu-bg);backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-shadow:var(--menu-shadow);translate:380px 0;transition:translate .4s var(--spring)}
+#notif.on{translate:0 0}
+#notif .ntxt{flex:1;display:flex;flex-direction:column;min-width:0;font-size:13px}
+#notif .ntxt b{font-weight:600}
+#notif .when{position:absolute;top:10px;right:14px;font-size:11px;color:var(--label2)}
+#notif button{position:absolute;right:12px;bottom:10px;border:0;border-radius:8px;padding:4px 9px;font:inherit;font-size:12px;cursor:pointer;background:var(--cap);color:var(--label);opacity:0;transition:opacity .15s}
+#notif:hover button{opacity:1}
+
+/* ---------- Turnover window ---------- */
+#setup{position:fixed;inset:0;z-index:98;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.12)}
+#setup[hidden]{display:none}
+.swin{position:relative;width:452px;border-radius:20px;background:var(--win-bg);box-shadow:0 0 0 .5px var(--win-edge),0 30px 90px rgba(0,0,0,.4);padding:44px 22px 18px;animation:fadeScale .25s var(--spring)}
+.swin .lights i:first-child{cursor:pointer}
+.shead{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:18px}
+.shead h2{margin:10px 0 2px;font-size:20px;font-weight:700}
+.shead p{margin:0;color:var(--label2)}
+.kbd{display:inline-block;min-width:20px;padding:0 5px;border-radius:5px;background:var(--cap);box-shadow:inset 0 -1px 0 var(--hair);font-weight:600;color:var(--label)}
+.sgroup{background:var(--cap);border-radius:12px;margin-bottom:12px}
+.sgh{font-size:11px;font-weight:600;color:var(--label2);margin:0 0 5px 4px}
+.srow{display:flex;align-items:center;gap:11px;padding:10px 12px;min-height:46px}
+.srow + .srow{border-top:1px solid var(--hair)}
+.srow .tx{flex:1;display:flex;flex-direction:column}
+.srow .tx small{color:var(--label2);font-size:11.5px}
+.st{width:20px;height:20px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:#34c759}
+.st.todo{background:transparent;box-shadow:inset 0 0 0 1.5px var(--label3)}
+.state{color:var(--label2);font-size:12.5px}
+.mbtn{border:0;border-radius:7px;padding:4px 11px;font:inherit;font-size:13px;cursor:pointer;color:var(--label);background:var(--win-bg);box-shadow:0 0 0 .5px var(--win-edge),0 1px 2px rgba(0,0,0,.15)}
+[data-theme=dark] .mbtn{background:rgba(255,255,255,.14)}
+.popup{display:inline-flex;align-items:center;gap:8px;padding-right:6px}
+.popup svg{width:9px;height:12px;opacity:.6}
+.switch{width:38px;height:22px;border-radius:11px;background:var(--label3);position:relative;cursor:pointer;transition:background .15s;flex:none}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .2s var(--spring)}
+.switch.on{background:var(--accent)}
+.switch.on::after{left:18px}
+.sfoot{display:flex;justify-content:space-between;align-items:center;margin-top:4px;color:var(--label2);font-size:11.5px}
+
+/* ---------- prototype chrome (not part of the design) ---------- */
+#info{position:fixed;top:46px;right:20px;width:344px;bottom:84px;overflow:auto;z-index:20;border-radius:16px;padding:14px 16px;font-size:12.5px;line-height:1.5;
+  background:var(--win-bg);box-shadow:0 0 0 .5px var(--win-edge),0 20px 50px rgba(0,0,0,.25);user-select:text;-webkit-user-select:text}
+#info h3{margin:0 0 6px;font-size:15px}
+#info p{margin:0 0 8px;color:var(--label2)}
+#info ol{margin:0 0 10px;padding-left:18px}
+#info li{margin-bottom:4px}
+.opt-row{display:flex;justify-content:space-between;align-items:center;margin:6px 0;gap:8px}
+.opt-row span{color:var(--label2)}
+.segc{display:inline-flex;background:var(--cap);border-radius:8px;padding:2px}
+.segc button{border:0;background:transparent;color:var(--label);font:inherit;font-size:12px;padding:3px 9px;border-radius:6px;cursor:pointer}
+.segc button.on{background:var(--win-bg);box-shadow:0 0 0 .5px var(--win-edge),0 1px 2px rgba(0,0,0,.15);font-weight:600}
+[data-theme=dark] .segc button.on{background:rgba(255,255,255,.18)}
+#focuswarn{background:#fff3cd;color:#7a5b00;border-radius:8px;padding:6px 9px;margin-bottom:8px;font-weight:600}
+#focuswarn[hidden]{display:none}
+#hud{margin-top:10px;background:#1c1c1e;color:#e6e6e6;border-radius:9px;padding:8px 10px;font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+#hud b{color:#8fc7ff;font-weight:600;margin-right:4px}
+#switcher{position:fixed;left:50%;bottom:18px;translate:-50% 0;z-index:100;display:flex;align-items:center;gap:5px;padding:6px;border-radius:999px;background:#111;color:#fff;
+  box-shadow:0 10px 30px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.08);font-size:12.5px;white-space:nowrap}
+#switcher button{border:0;background:rgba(255,255,255,.1);color:#fff;border-radius:999px;padding:6px 11px;font:inherit;cursor:pointer}
+#switcher button:hover{background:rgba(255,255,255,.2)}
+#switcher button.on{background:#0a84ff}
+#switcher .div{width:1px;height:20px;background:rgba(255,255,255,.2);margin:0 3px}
+@media (max-width:1150px){ .window{right:28px} #info{display:none} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="filters"></defs></svg>
+
+<div id="menubar">
+  <div class="left"><b>Finder</b><span>File</span><span>Edit</span><span>View</span><span>Go</span><span>Window</span><span>Help</span></div>
+  <div class="right"><div id="mb-turnover" hidden title="Turnover"><span id="mb-glyph"></span><span id="mb-pct">0%</span></div><span id="clock"></span></div>
+</div>
+<div id="mbmenu" hidden></div>
+
+<div class="window">
+  <aside class="sidebar">
+    <div class="lights"><i></i><i></i><i></i></div>
+    <h6>Favorites</h6><div class="it">Recents</div><div class="it">Applications</div><div class="it">Desktop</div><div class="it">Documents</div><div class="it on">Downloads</div>
+    <h6>Locations</h6><div class="it">iCloud Drive</div><div class="it">Macintosh HD</div>
+  </aside>
+  <div class="main">
+    <div class="toolbar"><div class="cap">‹&nbsp;&nbsp;›</div><div class="title">Downloads</div><div class="sp"></div><div class="cap">▦&nbsp;&nbsp;☰</div></div>
+    <main id="grid"></main>
+    <div class="statusbar" id="statusbar"></div>
+  </div>
+</div>
+
+<div id="info">
+  <div id="focuswarn">Click anywhere on this page once so it receives your key presses.</div>
+  <h3>Glass ring, round 4</h3>
+  <p>The look is locked in: regular glass, tinted highlight, text only, ⌥ for a one-off quality, edge refraction. This round is about <b>images and videos together, without clicking</b>.</p>
+  <ol>
+    <li>⌘-click <i>IMG_4821</i> and <i>IMG_4835</i>, drag them, press <b>⇧</b>.</li>
+    <li id="mixed-help"></li>
+    <li>Hold <b>⌥</b> too and JPEG fans out into Best / High / Small.</li>
+    <li><b>Pin ring</b> (bottom bar) opens it without dragging, using that same mix.</li>
+  </ol>
+  <div class="opt-row"><span>Images + videos</span><span class="segc" data-opt="mixed"><button data-v="rest">Rest to add</button><button data-v="combined">Combined targets</button></span></div>
+  <div id="hud"></div>
+</div>
+
+<div id="catcher"></div>
+<div id="ring" hidden></div>
+<div id="ghost"></div>
+<div id="ctx" class="menu" hidden></div>
+<div id="popmenu" class="menu" hidden></div>
+<div id="notif"></div>
+<div id="toast"></div>
+<div id="setup" hidden></div>
+
+<div id="switcher">
+  <button id="sw-pin">Pin ring</button>
+  <span class="div"></span>
+  <button id="th-auto">Auto</button><button id="th-light">Light</button><button id="th-dark">Dark</button>
+  <span class="div"></span>
+  <button id="sw-setup">Settings window</button>
+  <button id="sw-reset">Reset</button>
+</div>
+
+<script>
+// ================================================================ constants
+const $ = s => document.querySelector(s);
+const grid = $('#grid'), ringEl = $('#ring'), catcher = $('#catcher');
+const C = 280, RO = 128, RM = 87, HUB = 42, HIT_IN = 38, HIT_OUT = 195, DWELL = 650;
+const PRESETS = [{q:100, name:'Best'}, {q:85, name:'High'}, {q:60, name:'Small'}];
+const APP_ICON = s => `<svg viewBox="0 0 64 64" width="${s}" height="${s}"><defs><linearGradient id="tg${s}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb259"/><stop offset="1" stop-color="#f0743a"/></linearGradient></defs><rect x="2" y="2" width="60" height="60" rx="14" fill="url(#tg${s})"/><path d="M14 43 A18 18 0 0 1 50 43 Z" fill="#fff4e0"/><path d="M14 43 H50" stroke="#e2a15c" stroke-width="3" stroke-linecap="round" stroke-dasharray=".1 5.2"/><path d="M19.5 22 A16 16 0 0 1 43 17.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/><path d="M44.5 10.5 v8 h-8" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const APP_GLYPH = `<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 9.5A5.5 5.5 0 0 1 12.8 5.6"/><path d="M13 2.2v3.6H9.4"/><path d="M2 12.5h12"/></svg>`;
+const CHEV = `<svg viewBox="0 0 9 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 4.5L4.5 1.5 7.5 4.5M1.5 7.5L4.5 10.5 7.5 7.5"/></svg>`;
+$('#mb-glyph').innerHTML = APP_GLYPH;
+
+const INITIAL = [
+  {name:'IMG_4821.HEIC', kind:'image', ext:'heic', mp:12, h:[28,345]},
+  {name:'IMG_4822.HEIC', kind:'image', ext:'heic', mp:12, h:[195,225], portrait:true},
+  {name:'IMG_4830.HEIC', kind:'image', ext:'heic', mp:12, h:[90,150]},
+  {name:'IMG_4835.MOV', kind:'video', ext:'mov', codec:'HEVC', dur:42, h:[205,265]},
+  {name:'IMG_4840.MOV', kind:'video', ext:'mov', codec:'HEVC', dur:12, h:[320,275], portrait:true},
+  {name:'Screen Recording 2026-11-12 at 10.41.mov', kind:'video', ext:'mov', codec:'H.264', dur:65, screen:true},
+  {name:'sunset-wallpaper.webp', kind:'image', ext:'webp', mp:8, h:[12,48]},
+  {name:'diagram.png', kind:'image', ext:'png', mp:2, graphic:true},
+  {name:'lease-agreement.pdf', kind:'other', ext:'pdf'},
+];
+
+// ================================================================ state
+const qs = new URLSearchParams(location.search);
+const opts = {
+  theme:['light','dark','auto'].includes(qs.get('theme')) ? qs.get('theme') : 'auto',
+  mixed:qs.get('mixed') === 'combined' ? 'combined' : 'rest',
+};
+let defaultQ = 85;
+let files = [], nextId = 100, selected = new Set(), anchor = null, focusId = null;
+let drag = null, ring = null, pendingSingle = null, altDown = false;
+let lastMouse = {x:innerWidth / 2, y:innerHeight / 2};
+let lastEvent = '—';
+let jobs = [], batches = [], loopOn = false, mbShown = false, mbHideT = null;
+
+// ================================================================ helpers
+const byId = id => files.find(f => f.id === id);
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+const sum = a => a.reduce((x, y) => x + y, 0);
+const deg = r => r * 180 / Math.PI;
+const angDiff = (a, b) => ((a - b + 540) % 360) - 180;
+const polar = (r, a) => [r * Math.cos(a * Math.PI / 180), r * Math.sin(a * Math.PI / 180)];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtDur = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+const fmtMB = x => x < 10 ? `${x.toFixed(1)} MB` : `${Math.round(x)} MB`;
+const presetName = q => (PRESETS.find(p => p.q === q) || {name:q + '%'}).name;
+const partKey = p => p.key + ':' + (p.q ?? '');
+function pngMB(f){ return f.graphic ? f.mp * 0.25 : f.mp * 1.6; }
+function jpgMB(f, q){ const k = {100:.62, 85:.23, 60:.12}[q] ?? .2; return f.graphic ? f.mp * k * 0.6 : f.mp * k; }
+function vidSecs(f){ return f.codec === 'H.264' ? 0.3 : Math.max(1.2, f.dur * 0.11); }
+function mp4Estimate(vs){
+  const lanes = [0, 0];
+  vs.map(vidSecs).sort((a, b) => b - a).forEach(t => { lanes[lanes[0] <= lanes[1] ? 0 : 1] += t; });
+  const t = Math.max(...lanes);
+  return t < 1 ? 'Instant' : `About ${Math.ceil(t)} s`;
+}
+
+// ================================================================ refraction maps (Chromium: backdrop-filter:url())
+function dispMap(size, rOut, edge, lens){
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const ctx = c.getContext('2d'), img = ctx.createImageData(size, size), ctr = size / 2;
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++){
+    const dx = x + .5 - ctr, dy = y + .5 - ctr, r = Math.hypot(dx, dy);
+    let m = 0;
+    if (r <= rOut){
+      if (lens) m = -Math.pow(r / rOut, 3);
+      const dOut = rOut - r;
+      if (dOut < edge){ const t = 1 - dOut / edge; m += -t * t; }
+    }
+    m = Math.max(-1, Math.min(1, m));
+    const ux = r ? dx / r : 0, uy = r ? dy / r : 0, i = (y * size + x) * 4;
+    img.data[i] = 128 + ux * m * 127; img.data[i + 1] = 128 + uy * m * 127; img.data[i + 2] = 128; img.data[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  return c.toDataURL();
+}
+function filterDef(id, size, href, scale){
+  return `<filter id="${id}" x="0" y="0" width="${size}" height="${size}" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <feImage href="${href}" x="0" y="0" width="${size}" height="${size}" preserveAspectRatio="none" result="map"/>
+    <feDisplacementMap in="SourceGraphic" in2="map" scale="${scale}" xChannelSelector="R" yChannelSelector="G"/></filter>`;
+}
+$('#filters').innerHTML = filterDef('lg-band', 2 * RO, dispMap(2 * RO, RO, 20, false), 44) + filterDef('lg-hub', 2 * HUB, dispMap(2 * HUB, HUB, 12, true), 24);
+
+// ================================================================ what the ring offers
+function buildGroups(ids){
+  const fs = ids.map(byId).filter(f => f && !f.converting);
+  const imgs = fs.filter(f => f.kind === 'image'), vids = fs.filter(f => f.kind === 'video');
+  const groups = [];
+  if (imgs.length){
+    const o = [];
+    const pngA = imgs.filter(f => f.ext !== 'png');
+    if (pngA.length) o.push({key:'png', title:'PNG', files:pngA});
+    const jpgA = imgs.filter(f => !['jpg','jpeg'].includes(f.ext));
+    if (jpgA.length) o.push({key:'jpeg', title:'JPEG', files:jpgA});
+    if (o.length) groups.push({kind:'image', count:imgs.length, noun:imgs.length === 1 ? 'image' : 'images', base:o});
+  }
+  if (vids.length){
+    const a = vids.filter(f => f.ext !== 'mp4');
+    if (a.length) groups.push({kind:'video', count:vids.length, noun:vids.length === 1 ? 'video' : 'videos', base:[{key:'mp4', title:'MP4', files:a}]});
+  }
+  groups.skipped = fs.length - imgs.length - vids.length;
+  return groups;
+}
+// Ring entries for one group. With ⌥ held, JPEG fans out into the three presets.
+function entries(g, expanded){
+  return g.base.flatMap(o => {
+    if (o.key === 'jpeg' && expanded)
+      return PRESETS.map(p => ({title:p.name, sub:fmtMB(sum(o.files.map(f => jpgMB(f, p.q)))), def:p.q === defaultQ, kind:g.kind, preset:true,
+        parts:[{kind:g.kind, key:'jpeg', q:p.q, files:o.files, label:'JPEG ' + p.q + '%', short:'JPEG'}]}));
+    const sub = o.key === 'png' ? fmtMB(sum(o.files.map(pngMB))) : o.key === 'jpeg' ? fmtMB(sum(o.files.map(f => jpgMB(f, defaultQ)))) : mp4Estimate(o.files);
+    return [{title:o.title, sub, kind:g.kind, parts:[{kind:g.kind, key:o.key, q:o.key === 'jpeg' ? defaultQ : null, files:o.files, label:o.title, short:o.title}]}];
+  });
+}
+const spread = (list, center, step) => list.forEach((o, i) => o.angle = center + (i - (list.length - 1) / 2) * step);
+function layout(){
+  const gs = ring.groups, ex = ring.expanded;
+  let out;
+  if (gs.length === 1){
+    out = entries(gs[0], ex);
+    const hasJ = gs[0].base.some(o => o.key === 'jpeg');
+    if (!ex || !hasJ) spread(out, out.length === 1 ? -90 : 0, 180), out.length === 2 && (out[0].angle = 180, out[1].angle = 0);
+    else if (gs[0].base.length === 2){ out[0].angle = 180; spread(out.slice(1), 0, 54); }
+    else spread(out, -90, 54);
+  } else if (opts.mixed === 'combined'){
+    // Every single target plus "image format + MP4" combos. ⌥ isn't offered here: it would multiply the combos.
+    const img = entries(gs[0], false), vid = entries(gs[1], false)[0];
+    const total = gs[0].count + gs[1].count;
+    const combos = img.map(o => ({title:`${o.title} + ${vid.title}`, sub:plural(total, 'file'), kind:'combo', combo:true, parts:[...o.parts, ...vid.parts]}));
+    out = [combos[combos.length - 1], vid, ...combos.slice(0, -1), ...img];
+    out.forEach((o, i) => o.angle = -90 + i * 360 / out.length);
+  } else {
+    // One ring: images on the left, videos on the right.
+    const img = entries(gs[0], ex), vid = entries(gs[1], ex);
+    spread(img, 180, ex ? 52 : 74); spread(vid, 0, 74);
+    out = [...img, ...vid];
+  }
+  // Each entry owns the arc halfway to its neighbours (also its hit area).
+  out.forEach(o => {
+    if (out.length === 1){ o.from = -179.9; o.to = 179.9; return; }
+    const rel = out.filter(x => x !== o).map(x => angDiff(x.angle, o.angle));
+    const cw = Math.min(...rel.map(d => d > 0 ? d : d + 360)), ccw = Math.min(...rel.map(d => d < 0 ? -d : 360 - d));
+    o.from = -ccw / 2; o.to = cw / 2;
+  });
+  return out;
+}
+const isLocked = o => !o.combo && ring.locks[o.kind] && partKey(ring.locks[o.kind]) === partKey(o.parts[0]);
+const mixedRest = () => ring.groups.length > 1 && opts.mixed === 'rest';
+
+// ================================================================ finder
+function thumbHTML(f){
+  if (f.kind === 'other') return `<div class="thumb doc"><span>PDF</span></div>`;
+  const type = f.graphic ? 'graphic' : f.screen ? 'screen' : 'photo';
+  const st = f.h ? `--h1:${f.h[0]};--h2:${f.h[1]}` : '';
+  let inner = '';
+  if (f.kind === 'video') inner += `<span class="play"></span><span class="dur">${fmtDur(f.dur)}</span>`;
+  if (f.converting) inner += `<div class="prog"><i style="width:${Math.round((f.progress || 0) * 100)}%"></i></div>`;
+  return `<div class="thumb ${type}${f.portrait ? ' portrait' : ''}" style="${st}">${inner}</div>`;
+}
+function render(){
+  grid.innerHTML = files.map(f => {
+    const cls = ['item'];
+    if (selected.has(f.id)) cls.push('sel');
+    if (f.converting) cls.push('converting');
+    if (f.fresh) cls.push('fresh');
+    return `<div class="${cls.join(' ')}" data-id="${f.id}"><div class="tw">${thumbHTML(f)}</div><div class="nm"><span>${esc(f.name)}</span></div></div>`;
+  }).join('');
+  const n = selected.size;
+  $('#statusbar').textContent = `${files.length} items${n ? `, ${n} selected` : ''}`;
+  hud();
+}
+function rangeTo(id){
+  const ids = files.map(f => f.id);
+  if (anchor == null || !ids.includes(anchor)) anchor = id;
+  const a = ids.indexOf(anchor), b = ids.indexOf(id);
+  const [lo, hi] = a < b ? [a, b] : [b, a];
+  selected = new Set(ids.slice(lo, hi + 1)); focusId = id;
+}
+function arrow(key, shift){
+  const ids = files.map(f => f.id);
+  if (!ids.length) return;
+  const cols = getComputedStyle(grid).gridTemplateColumns.split(' ').length || 1;
+  const i = ids.indexOf(focusId);
+  if (i < 0){ selected = new Set([ids[0]]); anchor = focusId = ids[0]; render(); return; }
+  const d = {ArrowLeft:-1, ArrowRight:1, ArrowUp:-cols, ArrowDown:cols}[key];
+  const id = ids[Math.max(0, Math.min(ids.length - 1, i + d))];
+  if (shift) rangeTo(id); else { selected = new Set([id]); anchor = focusId = id; }
+  render();
+}
+
+// ================================================================ ring
+function sectorPath(cx, cy, r1, r2, a0, a1){
+  const p = (r, a) => [cx + r * Math.cos(a * Math.PI / 180), cy + r * Math.sin(a * Math.PI / 180)];
+  const large = (a1 - a0) > 180 ? 1 : 0;
+  const [x1, y1] = p(r2, a0), [x2, y2] = p(r2, a1), [x3, y3] = p(r1, a1), [x4, y4] = p(r1, a0);
+  return `M${x1} ${y1}A${r2} ${r2} 0 ${large} 1 ${x2} ${y2}L${x3} ${y3}A${r1} ${r1} 0 ${large} 0 ${x4} ${y4}Z`;
+}
+const segPath = (o, base) => { const gap = ring.opts.length === 1 ? 0 : 3.5; return sectorPath(C, C, HUB + 9, RO - 8.5, base + o.from + gap, base + o.to - gap); };
+function openRing(mode, ids, at){
+  const groups = buildGroups(ids);
+  if (!groups.length){ toast(groups.skipped ? "Turnover can't convert this file yet" : 'Nothing to convert'); return; }
+  const p = at || lastMouse;
+  ring = {cx:Math.min(Math.max(p.x, 200), innerWidth - 200), cy:Math.min(Math.max(p.y, 210), innerHeight - 200),
+    groups, mode, pinned:!!at, hl:null, expanded:altDown && groups.some(g => g.base.some(o => o.key === 'jpeg')), locks:{}, dropAngle:null, dwellT:null};
+  catcher.classList.add('on');
+  $('#ghost').classList.add('small');
+  ringEl.hidden = false;
+  ringEl.classList.remove('show'); void ringEl.offsetWidth; ringEl.classList.add('show');
+  hideMenus();
+  renderRing();
+}
+function closeRing(){ $('#ghost').classList.remove('small'); if (ring) clearTimeout(ring.dwellT); ring = null; ringEl.hidden = true; catcher.classList.remove('on'); hud(); }
+function hubHTML(){
+  const gs = ring.groups;
+  if (ring.expanded) return `<b style="font-size:15px">JPEG</b><small>quality</small>`;
+  if (gs.length === 1) return `<b>${gs[0].count}</b><small>${gs[0].noun}</small>`;
+  return `<b>${sum(gs.map(g => g.count))}</b><div class="kinds">${gs.map(g => `${g.count} ${g.noun}`).join('<br>')}</div>`;
+}
+function hubPreview(o){
+  const parts = {...ring.locks}; o.parts.forEach(p => parts[p.kind] = p);
+  const list = Object.values(parts), n = sum(list.map(p => p.files.length));
+  const big = list.map(p => p.short).join(' + ');
+  const small = list.length > 1 ? plural(n, 'file') : (o.preset ? o.title + ' · ' + o.sub : o.sub);
+  return `<b style="font-size:${big.length > 6 ? 13 : 16}px;letter-spacing:-.2px">${big}</b><small>${small}</small>`;
+}
+function captionText(){
+  if (!mixedRest()) return '';
+  const locked = Object.values(ring.locks);
+  if (!locked.length) return 'Rest on a format to add it, then drop on another';
+  return `${locked.map(p => p.label).join(' + ')} added · drop to convert`;
+}
+function renderRing(){
+  ring.opts = layout();
+  ringEl.style.left = (ring.cx - C) + 'px';
+  ringEl.style.top = (ring.cy - C) + 'px';
+  let h = `<div class="r-body">`;
+  h += `<div class="r-shadow" style="left:${C - RO}px;top:${C - RO}px;width:${2 * RO}px;height:${2 * RO}px"></div>`;
+  h += `<div class="lg r-band" style="left:${C - RO}px;top:${C - RO}px;width:${2 * RO}px;height:${2 * RO}px"></div>`;
+  h += `<svg class="r-svg" viewBox="0 0 ${2 * C} ${2 * C}"><defs><linearGradient id="sheen" x1="0" y1="${C - RO}" x2="0" y2="${C + RO}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity=".38"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+    <g id="locks">${ring.opts.filter(isLocked).map(o => `<path d="${segPath(o, o.angle)}"/>`).join('')}</g>
+    <g id="hlg"><g class="body"><path class="shape"/></g><path class="sheen"/></g></svg>`;
+  ring.opts.forEach((o, i) => {
+    const [x, y] = polar(RM, o.angle);
+    const lk = isLocked(o);
+    const mark = lk ? '<i class="ck">✓</i>' : (o.preset && o.def ? '<i class="def"></i>' : '');
+    h += `<div class="opt${lk ? ' locked' : ''}${o.combo ? ' combo' : ''}" data-i="${i}" style="left:${C + x}px;top:${C + y}px;--d:${i * 35}ms"><b>${o.title}${mark}</b><small>${o.sub}</small></div>`;
+  });
+  h += `<div class="lg r-hub" style="left:${C - HUB}px;top:${C - HUB}px;width:${2 * HUB}px;height:${2 * HUB}px">${hubHTML()}</div>`;
+  h += `</div>`;
+  const cap = captionText();
+  if (cap) h += `<div class="r-cap" style="left:${C}px;top:${C + RO + 16}px">${cap}</div>`;
+  ringEl.innerHTML = h;
+  const hlg = ringEl.querySelector('#hlg');
+  if (ring.dropAngle != null){ hlg.style.transition = 'none'; hlg.style.transform = `rotate(${ring.dropAngle}deg)`; void hlg.getBoundingClientRect(); hlg.style.transition = ''; }
+  ring.hl = null;
+  setHL(hit(lastMouse.x, lastMouse.y), true);
+}
+function setHL(h, force){
+  if (!ring || (!force && ring.hl === h)) return;
+  ring.hl = h;
+  ringEl.querySelectorAll('.opt').forEach(el => el.classList.toggle('hl', h != null && +el.dataset.i === h));
+  const hlg = ringEl.querySelector('#hlg');
+  hlg.classList.remove('dwell');
+  clearTimeout(ring.dwellT);
+  ringEl.querySelector('.r-hub').innerHTML = h != null ? hubPreview(ring.opts[h]) : hubHTML();
+  if (h != null){
+    const o = ring.opts[h];
+    const target = ring.dropAngle == null ? o.angle : ring.dropAngle + angDiff(o.angle, ring.dropAngle);
+    if (ring.dropAngle == null){ hlg.style.transition = 'opacity .15s'; hlg.style.transform = `rotate(${target}deg)`; void hlg.getBoundingClientRect(); hlg.style.transition = ''; }
+    ring.dropAngle = target;
+    hlg.style.transform = `rotate(${target}deg)`;
+    hlg.style.opacity = 1;
+    hlg.querySelectorAll('path').forEach(p => p.setAttribute('d', segPath(o, 0)));
+    // Rest-to-add: hovering a format for a moment adds it, like Finder's spring-loaded folders.
+    if (mixedRest() && !isLocked(o)){
+      void hlg.getBoundingClientRect(); hlg.classList.add('dwell');
+      ring.dwellT = setTimeout(() => lock(o), DWELL);
+    }
+  } else hlg.style.opacity = 0;
+  hud();
+}
+function lock(o){
+  if (!ring) return;
+  ring.locks[o.kind] = o.parts[0];
+  log('Added ' + o.parts[0].label);
+  renderRing();
+  const hlg = ringEl.querySelector('#hlg');
+  hlg.classList.remove('blink'); void hlg.getBoundingClientRect(); hlg.classList.add('blink');
+}
+function hit(px, py){
+  if (!ring) return null;
+  const dx = px - ring.cx, dy = py - ring.cy, m = Math.hypot(dx, dy);
+  if (m < HIT_IN || m > HIT_OUT) return null;
+  const a = deg(Math.atan2(dy, dx));
+  let bi = 0, bd = 1e9;
+  ring.opts.forEach((o, i) => { const d = Math.abs(angDiff(a, o.angle)); if (d < bd){ bd = d; bi = i; } });
+  return bi;
+}
+// Drop (or click) on an entry: everything added so far, plus this entry (it wins within its own kind).
+function commit(i){
+  const o = ring.opts[i], parts = {...ring.locks};
+  o.parts.forEach(p => parts[p.kind] = p);
+  const choices = Object.values(parts);
+  log('Convert: ' + choices.map(p => p.label).join(' + '));
+  closeRing();
+  runConversions(choices);
+}
+
+// ================================================================ conversions (simulated)
+function makeOutput(src, key){
+  const ext = {png:'png', jpeg:'jpg', mp4:'mp4'}[key];
+  const base = src.name.replace(/\.[^.]+$/, '');
+  let name = `${base}.${ext}`, n = 2;
+  while (files.some(f => f.name.toLowerCase() === name.toLowerCase())) name = `${base} ${n++}.${ext}`;
+  return {...src, id:nextId++, name, ext, codec:key === 'mp4' ? 'H.264' : src.codec, converting:true, progress:0, from:src.id, fresh:false};
+}
+function insertAfter(src, out){
+  let i = files.indexOf(src);
+  while (files[i + 1] && files[i + 1].from === src.id) i++;
+  files.splice(i + 1, 0, out);
+}
+function runConversions(choices){
+  const now = performance.now();
+  const b = {start:now, outs:[], jobs:[], finished:false, label:choices.map(c => `${plural(c.files.length, c.kind)} to ${c.label}`).join(', ')};
+  let k = 0;
+  for (const c of choices) for (const src of c.files){
+    if (!byId(src.id)) continue;
+    const out = makeOutput(src, c.key);
+    insertAfter(src, out);
+    b.outs.push(out.id);
+    const vid = src.kind === 'video';
+    const j = {out, src, target:c.label, vid, b, done:false, dur:(vid ? vidSecs(src) : 0.3 + Math.random() * 0.35) * 1000, start:vid ? null : now + (k++) * 80};
+    b.jobs.push(j); jobs.push(j);
+  }
+  batches.push(b);
+  render();
+  if (!loopOn){ loopOn = true; requestAnimationFrame(tick); }
+}
+function tick(now){
+  let running = jobs.filter(j => j.vid && j.start != null && !j.done).length;
+  for (const j of jobs){ if (running >= 2) break; if (j.vid && j.start == null && !j.done){ j.start = now; running++; } }
+  let changed = false;
+  for (const j of jobs){
+    if (j.done || j.start == null) continue;
+    const p = Math.max(0, Math.min(1, (now - j.start) / j.dur));
+    j.out.progress = p;
+    const bar = grid.querySelector(`[data-id="${j.out.id}"] .prog i`);
+    if (bar) bar.style.width = (p * 100) + '%';
+    if (p >= 1){ j.done = true; j.out.converting = false; changed = true; }
+  }
+  for (const b of batches) if (!b.finished && b.jobs.every(j => j.done)){ b.finished = true; b.elapsed = now - b.start; onBatchDone(b); changed = true; }
+  if (changed) render();
+  const live = jobs.filter(j => !j.done);
+  if (!mbShown && live.some(j => now - j.b.start > 1000)){ mbShown = true; clearTimeout(mbHideT); $('#mb-turnover').hidden = false; }
+  if (mbShown && live.length){
+    const all = jobs.filter(j => !j.b.finished && !j.canceled);
+    $('#mb-pct').textContent = Math.round(100 * sum(all.map(j => (j.out.progress || 0) * j.dur)) / Math.max(1, sum(all.map(j => j.dur)))) + '%';
+  }
+  if (!$('#mbmenu').hidden) renderMbMenu();
+  if (live.length) requestAnimationFrame(tick);
+  else {
+    loopOn = false; jobs = [];
+    if (mbShown){ $('#mb-pct').textContent = '100%'; mbHideT = setTimeout(() => { $('#mb-turnover').hidden = true; $('#mbmenu').hidden = true; mbShown = false; }, 600); }
+  }
+}
+function cancelJob(j){ if (j.done) return; j.done = true; j.canceled = true; files = files.filter(f => f !== j.out); log('Cancelled ' + j.src.name); render(); }
+function flash(id){ const f = byId(id); if (!f) return; f.fresh = true; setTimeout(() => { f.fresh = false; grid.querySelector(`[data-id="${id}"]`)?.classList.remove('fresh'); }, 1400); }
+function onBatchDone(b){
+  const outs = b.outs.filter(byId);
+  if (!outs.length){ toast('Cancelled'); return; }
+  outs.forEach(flash);
+  selected = new Set(outs); anchor = focusId = outs[0];
+  if (b.elapsed > 3000) notify(b, outs);
+}
+function notify(b, outs){
+  const n = $('#notif');
+  n.innerHTML = `<div>${APP_ICON(36)}</div><div class="ntxt"><b>Turnover</b><span>Converted ${b.label}</span></div><span class="when">now</span><button>Show in Finder</button>`;
+  n.classList.add('on');
+  n.querySelector('button').onclick = () => { selected = new Set(outs.filter(byId)); outs.forEach(flash); render(); n.classList.remove('on'); };
+  clearTimeout(n._t); n._t = setTimeout(() => n.classList.remove('on'), 6000);
+}
+function renderMbMenu(){
+  const m = $('#mbmenu'), live = jobs.filter(j => !j.done);
+  m.innerHTML = `<h6>Converting</h6>` + (live.length ? live.map(j =>
+    `<div class="job"><span class="jn">${esc(j.src.name)} → ${j.target}</span><button class="jx" data-j="${jobs.indexOf(j)}" title="Cancel">✕</button><span class="jb"><i style="width:${Math.round((j.out.progress || 0) * 100)}%"></i></span></div>`).join('') : `<div class="job"><span class="jn">Done</span></div>`);
+  m.querySelectorAll('.jx').forEach(x => x.onmousedown = e => { e.stopPropagation(); cancelJob(jobs[+x.dataset.j]); });
+}
+$('#mb-turnover').onmousedown = e => {
+  e.stopPropagation();
+  const m = $('#mbmenu'), open = m.hidden;
+  m.hidden = !open; $('#mb-turnover').classList.toggle('open', open);
+  if (open){ const r = $('#mb-turnover').getBoundingClientRect(); m.style.left = Math.min(r.left, innerWidth - 310) + 'px'; renderMbMenu(); }
+};
+
+// ================================================================ right-click menu
+function showCtx(x, y){
+  const groups = buildGroups([...selected]);
+  const t = groups.flatMap(g => entries(g, false).map(o => ({g, o})));
+  const ctx = $('#ctx');
+  const turn = t.length ? `<div class="sep"></div><div class="mi"><span class="lead">${APP_GLYPH}Turnover</span><span>›</span><div class="sub">${
+    t.map((x, i) => `<div class="mi" data-t="${i}"><span>${x.o.title}</span><span class="dim">${plural(x.o.parts[0].files.length, x.g.kind)}</span></div>`).join('')}</div></div>` : '';
+  ctx.innerHTML = `<div class="mi">Open</div><div class="mi"><span>Open With</span><span>›</span></div><div class="sep"></div><div class="mi">Move to Trash</div><div class="sep"></div>
+    <div class="mi">Get Info</div><div class="mi">Rename</div><div class="mi">Compress</div><div class="mi">Duplicate</div><div class="mi">Quick Look</div><div class="sep"></div>
+    <div class="mi">Copy</div><div class="mi">Share…</div><div class="sep"></div>
+    <div class="mi"><span>Quick Actions</span><span>›</span><div class="sub"><div class="mi">Rotate Left</div><div class="mi">Trim…</div><div class="sep"></div><div class="mi">Customize…</div></div></div>${turn}`;
+  ctx.hidden = false;
+  ctx.classList.toggle('flip', x > innerWidth - 460);
+  ctx.style.left = Math.min(x, innerWidth - 230) + 'px';
+  ctx.style.top = Math.min(y, innerHeight - ctx.offsetHeight - 8) + 'px';
+  ctx.querySelectorAll('[data-t]').forEach(el => el.onclick = ev => { ev.stopPropagation(); hideMenus(); runConversions(t[+el.dataset.t].o.parts); });
+}
+function hideMenus(){ $('#ctx').hidden = true; $('#popmenu').hidden = true; }
+
+// ================================================================ Turnover window (setup + settings)
+function showSetup(){
+  const s = $('#setup');
+  s.innerHTML = `<div class="swin"><div class="lights"><i id="setup-close"></i><i></i><i></i></div>
+    <div class="shead">${APP_ICON(68)}<h2>Turnover</h2><p>Drag a file, press <span class="kbd">⇧</span>, choose a format.</p></div>
+    <div class="sgh">Setup</div>
+    <div class="sgroup">
+      <div class="srow"><span class="st">✓</span><div class="tx"><span>Finder extension</span><small>Adds Turnover to the right-click menu</small></div><span class="state">On</span></div>
+      <div class="srow"><span class="st">✓</span><div class="tx"><span>Notifications</span><small>Tells you when longer conversions finish</small></div><span class="state">Allowed</span></div>
+      <div class="srow" id="ax"><span class="st todo"></span><div class="tx"><span>Accessibility</span><small>Lets Turnover notice ⇧ while you drag</small></div><button class="mbtn">Open Settings…</button></div>
+    </div>
+    <div class="sgh">Settings</div>
+    <div class="sgroup">
+      <div class="srow"><div class="tx"><span>JPEG quality</span><small>Hold ⌥ over the ring to choose just once</small></div><button class="mbtn popup" id="qpop">${presetName(defaultQ)} (${defaultQ}%) ${CHEV}</button></div>
+      <div class="srow"><div class="tx"><span>Open at login</span><small>Turnover needs to be running to show the ring</small></div><span class="switch on" id="sw-login"></span></div>
+    </div>
+    <div class="sfoot"><span>Version 0.1 · MIT License</span><button class="mbtn">Quit Turnover</button></div></div>`;
+  s.hidden = false;
+  $('#setup-close').onclick = () => s.hidden = true;
+  $('#sw-login').onclick = e => e.target.classList.toggle('on');
+  $('#ax button').onclick = () => { const r = $('#ax'); r.querySelector('.st').classList.remove('todo'); r.querySelector('.st').textContent = '✓'; r.querySelector('button').outerHTML = '<span class="state">Allowed</span>'; };
+  $('#qpop').onmousedown = e => {
+    e.stopPropagation();
+    const pm = $('#popmenu'), r = e.currentTarget.getBoundingClientRect();
+    pm.innerHTML = PRESETS.map(p => `<div class="mi" data-q="${p.q}"><span class="lead"><span class="chk">${p.q === defaultQ ? '✓' : ''}</span>${p.name} (${p.q}%)</span></div>`).join('');
+    pm.hidden = false; pm.style.left = (r.left - 8) + 'px'; pm.style.top = (r.top - 4) + 'px'; pm.style.minWidth = (r.width + 30) + 'px'; pm.style.zIndex = 99;
+    pm.querySelectorAll('[data-q]').forEach(el => el.onmousedown = ev => { ev.stopPropagation(); defaultQ = +el.dataset.q; pm.hidden = true; showSetup(); });
+  };
+  s.onmousedown = e => { if (e.target === s) s.hidden = true; };
+}
+
+// ================================================================ ghost, toast, hud
+function showGhost(){
+  const fs = drag.ids.map(byId).filter(Boolean).slice(0, 3);
+  $('#ghost').innerHTML = `<div class="stack">${fs.map((f, i) => `<div style="position:absolute;left:${i * 5}px;top:${i * 4}px">${thumbHTML({...f, converting:false})}</div>`).join('')}${drag.ids.length > 1 ? `<span class="count">${drag.ids.length}</span>` : ''}</div>`;
+  $('#ghost').style.display = 'block';
+}
+function moveGhost(x, y){ const g = $('#ghost'); g.style.left = (x - 30) + 'px'; g.style.top = (y - 26) + 'px'; }
+function hideGhost(){ $('#ghost').style.display = 'none'; }
+function toast(t){ const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 2200); log(t); }
+function log(t){ lastEvent = t; hud(); }
+function hud(){
+  let r = 'closed';
+  if (ring){
+    const o = ring.hl != null ? ring.opts[ring.hl] : null, locks = Object.values(ring.locks).map(p => p.label);
+    r = `${ring.pinned ? 'pinned' : ring.mode}${ring.expanded ? ' · ⌥ qualities' : ''}${o ? ' · on ' + o.title : ''}${locks.length ? ' · added ' + locks.join(' + ') : ''}`;
+  }
+  $('#hud').innerHTML = [
+    `<b>mixed</b>${opts.mixed === 'rest' ? 'rest to add' : 'combined targets'} · JPEG default ${presetName(defaultQ)} (${defaultQ}%)`,
+    `<b>drag</b>${drag ? (drag.active ? 'dragging ' + plural(drag.ids.length, 'file') : 'mouse down') : '—'} · ⌥ ${altDown ? 'held' : 'up'}`,
+    `<b>ring</b>${r}`,
+    `<b>last</b>${esc(lastEvent)}`,
+  ].map(s => `<div>${s}</div>`).join('');
+}
+
+// ================================================================ chrome
+function applyLook(){
+  const root = document.documentElement;
+  const dark = opts.theme === 'dark' || (opts.theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  root.dataset.theme = dark ? 'dark' : 'light';
+  root.classList.add('nosym');
+  root.classList.toggle('refract', !!window.chrome);
+  ['auto','light','dark'].forEach(t => $('#th-' + t).classList.toggle('on', opts.theme === t));
+  document.querySelectorAll('.segc').forEach(s => s.querySelectorAll('button').forEach(b => b.classList.toggle('on', opts[s.dataset.opt] === b.dataset.v)));
+  $('#mixed-help').innerHTML = opts.mixed === 'rest'
+    ? 'All formats are in one ring. <b>Rest on PNG</b> for a moment until it blinks ✓, then <b>drop on MP4</b>: both convert. Drop straight on one format to convert only that kind.'
+    : 'The ring also offers <b>JPEG + MP4</b> and <b>PNG + MP4</b>. One drop converts everything. ⌥ is off here, since it would multiply the combinations.';
+  try { const p = new URLSearchParams(); Object.entries(opts).forEach(([k, v]) => p.set(k, v)); history.replaceState(null, '', '?' + p); } catch (e) {}
+  if (ring){ ring.locks = {}; renderRing(); }
+  hud();
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyLook);
+['auto','light','dark'].forEach(t => $('#th-' + t).onclick = () => { opts.theme = t; applyLook(); });
+document.querySelectorAll('.segc').forEach(s => s.querySelectorAll('button').forEach(b => b.onclick = () => { opts[s.dataset.opt] = b.dataset.v; applyLook(); }));
+$('#sw-setup').onclick = showSetup;
+$('#sw-reset').onclick = () => reset();
+$('#sw-pin').onclick = () => {
+  if (ring){ closeRing(); return; }
+  let ids = [...selected];
+  if (!buildGroups(ids).length){ ids = [1, 4]; selected = new Set(ids); render(); }
+  const r = grid.getBoundingClientRect();
+  openRing('click', ids, {x:r.left + 260, y:r.top + 180});
+};
+
+// ================================================================ input
+grid.addEventListener('mousedown', e => {
+  if (e.button !== 0 || ring) return;
+  hideMenus();
+  const it = e.target.closest('.item');
+  if (!it){ if (!e.shiftKey && !e.metaKey){ selected.clear(); render(); } return; }
+  const id = +it.dataset.id;
+  if (e.metaKey){ selected.has(id) ? selected.delete(id) : selected.add(id); anchor = focusId = id; render(); return; }
+  if (e.shiftKey){ rangeTo(id); render(); return; }
+  pendingSingle = null;
+  if (!selected.has(id)){ selected = new Set([id]); anchor = focusId = id; render(); } else pendingSingle = id;
+  drag = {sx:e.clientX, sy:e.clientY, active:false, ids:[]};
+  e.preventDefault();
+});
+grid.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  if (ring) return;
+  const it = e.target.closest('.item');
+  if (!it){ hideMenus(); return; }
+  const id = +it.dataset.id;
+  if (!selected.has(id)){ selected = new Set([id]); anchor = focusId = id; render(); }
+  showCtx(e.clientX, e.clientY);
+});
+document.addEventListener('contextmenu', e => { if (ring || !e.target.closest('#grid')) e.preventDefault(); });
+document.addEventListener('mousedown', e => {
+  if (!e.target.closest('.menu')) hideMenus();
+  if (!e.target.closest('#mbmenu') && !e.target.closest('#mb-turnover')){ $('#mbmenu').hidden = true; $('#mb-turnover').classList.remove('open'); }
+  if (!ring || e.target.closest('#switcher') || e.target.closest('#info')) return;
+  e.preventDefault(); e.stopPropagation();
+  const h = hit(e.clientX, e.clientY);
+  if (h != null) commit(h); else closeRing();
+}, true);
+window.addEventListener('mousemove', e => {
+  lastMouse = {x:e.clientX, y:e.clientY};
+  if (drag){
+    if (!drag.active && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 5){
+      drag.active = true; drag.ids = [...selected]; pendingSingle = null; showGhost(); log('Dragging ' + plural(drag.ids.length, 'file'));
+    }
+    if (drag.active){ moveGhost(e.clientX, e.clientY); if (ring && ring.mode === 'drag') setHL(hit(e.clientX, e.clientY)); }
+    return;
+  }
+  if (ring && ring.mode === 'click') setHL(hit(e.clientX, e.clientY));
+});
+window.addEventListener('mouseup', () => {
+  if (!drag) return;
+  const d = drag; drag = null; hideGhost();
+  if (!d.active){
+    if (pendingSingle != null){ selected = new Set([pendingSingle]); anchor = focusId = pendingSingle; pendingSingle = null; render(); }
+    return;
+  }
+  if (ring && ring.mode === 'drag'){
+    if (ring.hl != null) commit(ring.hl);
+    else { closeRing(); toast('Dropped off the ring. Cancelled, nothing moved.'); }
+  } else toast('Normal drop. Finder would move or copy as usual.');
+  hud();
+});
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape'){
+    hideMenus(); $('#setup').hidden = true;
+    if (drag && drag.active){ drag = null; hideGhost(); if (ring) closeRing(); toast('Drag cancelled'); }
+    else if (ring) closeRing();
+    return;
+  }
+  if (e.key === 'Alt'){
+    e.preventDefault();
+    if (!e.repeat){
+      altDown = true;
+      if (ring && !ring.expanded && !(ring.groups.length > 1 && opts.mixed === 'combined') && ring.groups.some(g => g.base.some(o => o.key === 'jpeg'))){ ring.expanded = true; log('⌥ → JPEG qualities'); renderRing(); }
+      hud();
+    }
+    return;
+  }
+  if (e.key === 'Shift'){
+    if (!e.repeat && drag && drag.active && !ring){ log('⇧ pressed mid-drag'); openRing('drag', drag.ids); }
+    return;
+  }
+  if (!ring && e.key.startsWith('Arrow')){ e.preventDefault(); arrow(e.key, e.shiftKey); }
+});
+window.addEventListener('keyup', e => {
+  if (e.key === 'Alt'){ altDown = false; if (ring && ring.expanded){ ring.expanded = false; renderRing(); } hud(); }
+  if (e.key === 'Shift' && ring && ring.mode === 'drag'){ closeRing(); log('⇧ released, normal drag continues'); }
+});
+window.addEventListener('blur', () => { altDown = false; if (drag){ drag = null; hideGhost(); } if (ring && ring.mode === 'drag') closeRing(); focusWarn(); });
+window.addEventListener('focus', focusWarn);
+function focusWarn(){ $('#focuswarn').hidden = document.hasFocus(); }
+
+// ================================================================ boot
+function reset(){
+  if (ring) closeRing();
+  drag = null; hideGhost();
+  jobs = []; batches = []; loopOn = false; mbShown = false; $('#mb-turnover').hidden = true; $('#mbmenu').hidden = true;
+  files = INITIAL.map((f, i) => ({...f, id:i + 1}));
+  nextId = 100; selected = new Set(); anchor = focusId = null;
+  lastEvent = 'reset';
+  render();
+}
+function clock(){ $('#clock').textContent = new Date().toLocaleString('en-US', {weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}); }
+clock(); setInterval(clock, 30000); setInterval(focusWarn, 1000);
+reset(); applyLook(); focusWarn();
+</script>
+</body>
+</html>
