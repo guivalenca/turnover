@@ -127,20 +127,12 @@ enum RingPreview {
         }
     }
 
-    /// Entries at the given angles, each owning the arc halfway to its neighbours.
+    /// Entries at the given angles, each owning its arc as the model works it out.
     private static func placed(_ items: [(String, String, Double)]) -> [RingLook.Entry] {
         let angles = items.map(\.2)
         return items.map { title, subtitle, angle in
-            let others = angles.filter { $0 != angle }
-            guard !others.isEmpty else {
-                return RingLook.Entry(title: title, subtitle: subtitle, angle: angle, arcStart: angle - 180, arcEnd: angle + 180)
-            }
-            let clockwise = others.map { other -> Double in
-                let d = (other - angle).truncatingRemainder(dividingBy: 360)
-                return d <= 0 ? d + 360 : d
-            }
-            return RingLook.Entry(title: title, subtitle: subtitle, angle: angle,
-                                  arcStart: angle - (360 - clockwise.max()!) / 2, arcEnd: angle + clockwise.min()! / 2)
+            let arc = RingModel.Arc(around: angle, among: angles)
+            return RingLook.Entry(title: title, subtitle: subtitle, angle: angle, arcStart: arc.start, arcEnd: arc.end)
         }
     }
     #endif
