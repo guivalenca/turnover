@@ -18,10 +18,14 @@ public final class Feedback {
     private var batches: [Batch] = []
 
     @ObservationIgnored private let clock: any FeedbackClock
+    @ObservationIgnored private let notify: @MainActor (Notice) -> Void
     @ObservationIgnored private var lastEnd: Duration = .zero
 
-    public init(clock: any FeedbackClock = ContinuousFeedbackClock()) {
+    /// `notify` posts each notice as its batch ends.
+    public init(clock: any FeedbackClock = ContinuousFeedbackClock(),
+                notify: @escaping @MainActor (Notice) -> Void = { _ in }) {
         self.clock = clock
+        self.notify = notify
     }
 
     /// Follows `batch` from now until it ends.
@@ -31,7 +35,8 @@ public final class Feedback {
         clock.run(at: clock.now + Self.statusItemDelay) { [weak self] in
             if !batch.isFinished { self?.showsStatusItem = true }
         }
-        batch.whenFinished { [weak self] _ in self?.batchEnded() }
+        let start = clock.now
+        batch.whenFinished { [weak self] batch in self?.ended(batch, startedAt: start) }
     }
 
     /// How much of the batches shown is done, from 0 to 1: the mean of their jobs' progress,
@@ -55,7 +60,8 @@ public final class Feedback {
 
     private var isIdle: Bool { batches.allSatisfy(\.isFinished) }
 
-    private func batchEnded() {
+    private func ended(_ batch: Batch, startedAt start: Duration) {
+        Notice.notices(for: batch, took: clock.now - start).forEach(notify)
         guard isIdle else { return }
         guard showsStatusItem else {
             batches = []
