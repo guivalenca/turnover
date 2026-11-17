@@ -17,8 +17,14 @@ import UniformTypeIdentifiers
 /// 12-megapixel HEICs took about 90 ms and four take about 40.
 struct ImageSizes: Sendable {
     let pixels: Int
-    let png: Int
-    let jpeg: [JPEGQuality: Int]
+    /// The size of each output measured or scaled so far.
+    var sizes: [ImageOutput: Size]
+
+    /// One output's size, and whether it was measured exactly or is a guess.
+    struct Size: Sendable, Hashable {
+        var bytes: Int
+        var isExact: Bool
+    }
 
     static let sampledImages = 4
 
@@ -77,8 +83,9 @@ struct ImageSizes: Sendable {
         let scale = Double(pixels) / Double(measuredPixels)
         func scaled(_ bytes: (ImageSizes) -> Int) -> Int { Int(Double(measured.reduce(0) { $0 + bytes($1) }) * scale) }
         self.pixels = pixels
-        png = scaled(\.png)
-        jpeg = Dictionary(uniqueKeysWithValues: JPEGQuality.allCases.map { quality in (quality, scaled { $0.jpeg[quality]! }) })
+        sizes = Dictionary(uniqueKeysWithValues: ImageOutput.allCases.map { output in
+            (output, Size(bytes: scaled { $0.sizes[output]?.bytes ?? 0 }, isExact: false))
+        })
     }
 
     /// Images up to this many pixels are encoded whole (the fixtures are).
@@ -98,17 +105,16 @@ struct ImageSizes: Sendable {
         guard let image = CGImageSourceCreateImageAtIndex(input, index, [kCGImageSourceShouldCache: false] as CFDictionary)
         else { return nil }
         let sample = Sample(image, properties: properties)
-        guard let png = sample.bytes(as: .png, quality: nil) else { return nil }
-        var jpeg: [JPEGQuality: Int] = [:]
-        for quality in JPEGQuality.allCases {
-            guard let size = sample.bytes(as: .jpeg, quality: quality.encoderQuality) else { return nil }
-            jpeg[quality] = size
+        var sizes: [ImageOutput: Size] = [:]
+        for output in ImageOutput.allCases {
+            guard let bytes = sample.bytes(as: output.type, quality: output.encoderQuality) else { return nil }
+            sizes[output] = Size(bytes: bytes, isExact: false)
         }
-        (self.pixels, self.png, self.jpeg) = (image.width * image.height, png, jpeg)
+        (self.pixels, self.sizes) = (image.width * image.height, sizes)
     }
 
-    func bytes(as format: OutputFormat, quality: JPEGQuality) -> Int {
-        format == .png ? png : jpeg[quality]!
+    init(pixels: Int, sizes: [ImageOutput: Size]) {
+        (self.pixels, self.sizes) = (pixels, sizes)
     }
 
     /// The part of an image that gets encoded, and how to scale the result to the whole.
@@ -173,6 +179,21 @@ struct ImageSizes: Sendable {
             guard let output = CGImageDestinationCreateWithData(data, type.identifier as CFString, 1, nil) else { return nil }
             CGImageDestinationAddImage(output, image, ImageConversion.options(for: image, from: metadata, quality: quality) as CFDictionary)
             return CGImageDestinationFinalize(output) ? data.length : nil
+        }
+    }
+}
+
+extension ImageSizes {
+    /// Decodes `file` exactly as a conversion does and encodes each of `outputs` in memory,
+    /// calling `measured` with each exact size as soon as it is known. Throws
+    /// `ConversionError.damaged` when the file can't be decoded.
+    static func measureExactly(_ file: SourceFile, _ outputs: [ImageOutput],
+                               measured: (ImageOutput, Int) -> Void) throws {
+        let decoded = try ImageConversion.Decoded(file.url)
+        for output in outputs {
+            guard let bytes = ImageConversion.encodedSize(of: decoded, as: output.type, quality: output.encoderQuality)
+            else { throw ConversionError.damaged(file.url) }
+            measured(output, bytes)
         }
     }
 }
