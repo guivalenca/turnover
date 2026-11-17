@@ -13,11 +13,11 @@ func turnoverInTerminal(_ arguments: String...) throws -> Run {
 
 /// The same, sending SIGINT (as Ctrl-C does) once what the terminal shows satisfies `interruptWhen`.
 func turnoverInTerminal(_ arguments: [String], interruptWhen: (@Sendable (String) -> Bool)? = nil) throws -> Run {
-    let (controller, terminal) = try openTerminal()
+    var controller: Int32 = -1, terminal: Int32 = -1
+    guard openpty(&controller, &terminal, nil, nil, nil) == 0 else { throw POSIXError(.ENXIO) }
     defer { close(controller) }
     var output: [Int32] = [-1, -1]
     guard pipe(&output) == 0 else { close(terminal); throw POSIXError(.EMFILE) }
-    output.forEach { _ = fcntl($0, F_SETFD, FD_CLOEXEC) }
     defer { close(output[0]) }
 
     // The child gets /dev/null, the pipe and the terminal as 0, 1 and 2, and nothing else.
@@ -68,25 +68,6 @@ func turnoverInTerminal(_ arguments: [String], interruptWhen: (@Sendable (String
     return Run(status: (status >> 8) & 0xFF,
                output: String(decoding: out, as: UTF8.self),
                errors: String(decoding: shown, as: UTF8.self))
-}
-
-/// A pseudo-terminal: the controller end to read, and the terminal end to give the child.
-///
-/// Both are close-on-exec, so that the `turnover` processes other tests start at the same time
-/// (through `Process`) don't inherit them and hold them open, and the terminal end isn't made
-/// this process's controlling terminal. `ptsname_r`, unlike the `ptsname` inside `openpty`,
-/// is safe while other threads open terminals too.
-private func openTerminal() throws -> (controller: Int32, terminal: Int32) {
-    let controller = posix_openpt(O_RDWR | O_NOCTTY)
-    guard controller >= 0 else { throw POSIXError(.ENXIO) }
-    _ = fcntl(controller, F_SETFD, FD_CLOEXEC)
-    var name = [CChar](repeating: 0, count: 128)
-    guard grantpt(controller) == 0, unlockpt(controller) == 0, ptsname_r(controller, &name, name.count) == 0
-    else { close(controller); throw POSIXError(.ENXIO) }
-    let path = String(decoding: name.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
-    let terminal = open(path, O_RDWR | O_NOCTTY | O_CLOEXEC)
-    guard terminal >= 0 else { close(controller); throw POSIXError(.ENXIO) }
-    return (controller, terminal)
 }
 
 /// Reads until end of file, or the error a terminal gives once its other end is closed, passing

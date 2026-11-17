@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import Testing
 import TurnoverTestSupport
@@ -26,5 +27,20 @@ import TurnoverTestSupport
 
         #expect(run.status == 0)
         #expect(run.output == [slow, quick].map { $0.deletingPathExtension().path + ".mp4\n" }.joined())
+    }
+
+    /// Ctrl-C cancels the batch and turnover exits 130 once every job has stopped and cleaned up.
+    /// (The temporary folders can't be checked from here: macOS lets a process see only its own.
+    /// The kit's cancellation tests check them.)
+    @Test func ctrlCStopsTheBatchAndLeavesNoPartialFile() throws {
+        let clips = try (1...4).map { try folder.add(.movHEVCHDR, as: "clip \($0).mov") }
+
+        // Interrupt as soon as the first percentage shows: a transcode is under way.
+        let run = try turnoverInTerminal(clips.map(\.path) + ["--to", "mp4"], interruptWhen: { $0.contains("%") })
+
+        #expect(run.status == 130)
+        let finished = run.output.split(separator: "\n").map { URL(fileURLWithPath: String($0)).lastPathComponent }
+        #expect(finished.count < clips.count)
+        #expect(try folder.fileNames() == (clips.map(\.lastPathComponent) + finished).sorted())
     }
 }
