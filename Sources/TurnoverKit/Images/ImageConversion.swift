@@ -7,23 +7,51 @@ import UniformTypeIdentifiers
 enum ImageConversion {
     /// `quality`, from 0 to 1, applies to lossy formats; nil leaves it to ImageIO.
     static func convert(_ source: URL, to destination: URL, as type: UTType, quality: Double? = nil) throws {
-        guard let input = CGImageSourceCreateWithURL(source as CFURL, nil),
-              CGImageSourceGetStatus(input) == .statusComplete
-        else { throw ConversionError.damaged(source) }
-        let index = CGImageSourceGetPrimaryImageIndex(input)
-        let properties = CGImageSourceCopyPropertiesAtIndex(input, index, nil) as? [CFString: Any] ?? [:]
-        guard CGImageSourceGetStatusAtIndex(input, index) == .statusComplete,
-              let width = properties[kCGImagePropertyPixelWidth] as? Int,
-              let height = properties[kCGImagePropertyPixelHeight] as? Int,
-              let image = uprightImage(input, at: index, longestSide: max(width, height))
-        else { throw ConversionError.damaged(source) }
+        let decoded = try Decoded(source)
         guard let output = CGImageDestinationCreateWithURL(destination as CFURL, type.identifier as CFString, 1, nil)
         else { throw CocoaError(.fileWriteUnknown, userInfo: [NSURLErrorKey: destination]) }
-        CGImageDestinationAddImage(output, image, options(for: image, from: properties, quality: quality) as CFDictionary)
-        guard CGImageDestinationFinalize(output) else {
-            // Some formats (HEIC) decode lazily, so a truncated file only fails here.
-            if image.dataProvider?.data == nil { throw ConversionError.damaged(source) }
+        guard decoded.write(to: output, quality: quality) else {
+            if decoded.isDamaged { throw ConversionError.damaged(source) }
             throw CocoaError(.fileWriteUnknown, userInfo: [NSURLErrorKey: destination])
+        }
+    }
+
+    /// How many bytes converting `decoded` to `type` writes, found by encoding it in memory exactly
+    /// as `convert` encodes it to a file. Nil if encoding fails.
+    static func encodedSize(of decoded: Decoded, as type: UTType, quality: Double?) -> Int? {
+        let data = NSMutableData()
+        guard let output = CGImageDestinationCreateWithData(data, type.identifier as CFString, 1, nil),
+              decoded.write(to: output, quality: quality)
+        else { return nil }
+        return data.length
+    }
+
+    /// An image decoded for conversion: full size, upright, with the metadata to carry over.
+    struct Decoded: @unchecked Sendable {
+        let image: CGImage
+        let properties: [CFString: Any]
+
+        /// Throws `ConversionError.damaged` when `source` can't be decoded.
+        init(_ source: URL) throws {
+            guard let input = CGImageSourceCreateWithURL(source as CFURL, nil),
+                  CGImageSourceGetStatus(input) == .statusComplete
+            else { throw ConversionError.damaged(source) }
+            let index = CGImageSourceGetPrimaryImageIndex(input)
+            let properties = CGImageSourceCopyPropertiesAtIndex(input, index, nil) as? [CFString: Any] ?? [:]
+            guard CGImageSourceGetStatusAtIndex(input, index) == .statusComplete,
+                  let width = properties[kCGImagePropertyPixelWidth] as? Int,
+                  let height = properties[kCGImagePropertyPixelHeight] as? Int,
+                  let image = ImageConversion.uprightImage(input, at: index, longestSide: max(width, height))
+            else { throw ConversionError.damaged(source) }
+            (self.image, self.properties) = (image, properties)
+        }
+
+        /// Some formats (HEIC) decode lazily, so a truncated file only fails when it is encoded.
+        var isDamaged: Bool { image.dataProvider?.data == nil }
+
+        func write(to output: CGImageDestination, quality: Double?) -> Bool {
+            CGImageDestinationAddImage(output, image, options(for: image, from: properties, quality: quality) as CFDictionary)
+            return CGImageDestinationFinalize(output)
         }
     }
 

@@ -29,6 +29,14 @@ struct VideoTime: Sendable {
         }
     }
 
+    /// The times of every video in `videos` that can be planned, worked out side by side.
+    static func of(_ videos: [SourceFile]) async -> [URL: VideoTime] {
+        await withTaskGroup(of: (URL, VideoTime?).self) { group in
+            for video in videos { group.addTask { (video.url, await VideoTime(of: video.url)) } }
+            return await group.reduce(into: [URL: VideoTime]()) { $0[$1.0] = $1.1 }
+        }
+    }
+
     /// The estimate for converting `videos` as one batch: "Instant" when every video is only
     /// copied and the whole batch takes under a second.
     static func estimate(_ videos: [VideoTime]) -> Estimate? {

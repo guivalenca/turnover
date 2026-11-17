@@ -11,14 +11,15 @@ struct Command {
 
     static let usage = """
         usage: turnover <files…> --to <format> [--quality <quality>]
-               turnover offers <files…>
+               turnover offers [--exact] <files…>
 
         Converts each file and saves the result next to it, with the same name and the new
         extension (numbered if that name is taken). Prints the path of each new file.
         Originals are never modified.
 
         `offers` lists the formats offered for the files, with estimated sizes and times,
-        and converts nothing.
+        and converts nothing. With --exact it measures image sizes exactly (by encoding in
+        memory, a few photos at most), as the ring does while you drag.
 
         formats: \(formats.map(\.key).joined(separator: ", "))
         qualities (jpeg only): \(JPEGQuality.allCases.map { quality in
