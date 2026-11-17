@@ -24,4 +24,13 @@ import TurnoverTestSupport
 
         #expect(try JPEGTables(output) == JPEGTables(quality: 0.85))
     }
+
+    @Test(arguments: [(JPEGQuality.best, 1.0), (.high, 0.85), (.small, 0.6)])
+    func eachPresetEncodesAtItsPercentage(preset: JPEGQuality, quality: Double) async throws {
+        let photo = try folder.add(.heicRotated)
+
+        let output = try await Converter().convert(photo, with: JPEGAction(quality: preset)).output
+
+        #expect(try JPEGTables(output) == JPEGTables(quality: quality))
+    }
 }
