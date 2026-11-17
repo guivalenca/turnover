@@ -86,18 +86,13 @@ public struct Offers: Sendable, Hashable {
     public init(estimating files: [URL], jpegQuality: JPEGQuality = .default) async {
         let inspection = Inspection(files)
         async let images = ImageSizes.of(inspection.files.filter { $0.kind == .image })
-        async let videos = withTaskGroup(of: (URL, VideoTime?).self) { group in
-            for file in inspection.files where file.kind == .video {
-                group.addTask { (file.url, await VideoTime(of: file.url)) }
-            }
-            return await group.reduce(into: [URL: VideoTime]()) { $0[$1.0] = $1.1 }
-        }
+        async let videos = VideoTime.of(inspection.files.filter { $0.kind == .video })
         self.init(files, inspection, jpegQuality: jpegQuality,
                   estimates: Estimates(images: await images, videos: await videos))
     }
 
     /// Every file of a selection, inspected by content.
-    private struct Inspection {
+    struct Inspection: Sendable {
         var files: [SourceFile] = []
         var unreadable: [URL: ConversionError] = [:]
 
@@ -123,19 +118,27 @@ public struct Offers: Sendable, Hashable {
     /// What is known about each file's output. Files that couldn't be measured (damaged ones)
     /// are left out of the estimates, though they stay in their targets: converting them reports
     /// the failure.
-    struct Estimates {
+    struct Estimates: Sendable {
         var images: [URL: ImageSizes]
         var videos: [URL: VideoTime]
+        /// Images not estimated yet. A target with any of them has no estimate: a total of the
+        /// others would look complete.
+        var pending: Set<URL> = []
 
         func estimate(_ format: OutputFormat, quality: JPEGQuality, of files: [URL]) -> Estimate? {
-            if format == .mp4 { return VideoTime.estimate(files.compactMap { videos[$0] }) }
-            let sizes = files.compactMap { images[$0] }
+            guard let output = ImageOutput(format, quality: quality) else {
+                return VideoTime.estimate(files.compactMap { videos[$0] })
+            }
+            guard pending.isDisjoint(with: files) else { return nil }
+            let sizes = files.compactMap { images[$0]?.sizes[output] }
             guard !sizes.isEmpty else { return nil }
-            return .size(sizes.reduce(0) { $0 + $1.bytes(as: format, quality: quality) })
+            let total = sizes.reduce(0) { $0 + $1.bytes }
+            // Exact only if every file was measured: one that couldn't be may still convert.
+            return sizes.count == files.count && sizes.allSatisfy(\.isExact) ? .exactSize(total) : .size(total)
         }
     }
 
-    private init(_ files: [URL], _ inspection: Inspection, jpegQuality: JPEGQuality, estimates: Estimates?) {
+    init(_ files: [URL], _ inspection: Inspection, jpegQuality: JPEGQuality, estimates: Estimates?) {
         let inspected = inspection.files
         let actions = OutputFormat.allCases.map { ($0, $0.action()) }
         groups = [SourceFile.Kind.image, .video].compactMap { kind in
