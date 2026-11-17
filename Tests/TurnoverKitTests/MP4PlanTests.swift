@@ -27,7 +27,7 @@ import TurnoverTestSupport
             })
         }
 
-        #expect(times.min()! < .milliseconds(50))
+        #expect(times.min()! < timeLimit(.milliseconds(50)))
     }
 
     /// Cut at 2 KB the movie's index is gone; cut halfway the index survives, but the samples
