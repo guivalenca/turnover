@@ -33,4 +33,48 @@ import TurnoverTestSupport
 
         #expect(try JPEGTables(output) == JPEGTables(quality: quality))
     }
+
+    @Test func higherQualityGivesALargerFile() async throws {
+        let photo = try folder.add(.heicRotated)
+
+        var sizes: [JPEGQuality: Int] = [:]
+        for preset in JPEGQuality.allCases {
+            let output = try await Converter().convert(photo, with: JPEGAction(quality: preset)).output
+            sizes[preset] = try Data(contentsOf: output).count
+        }
+
+        #expect(sizes[.best]! > sizes[.high]!)
+        #expect(sizes[.high]! > sizes[.small]!)
+    }
+
+    @Test(arguments: [Fixture.png, .webp])
+    func otherImageFormatsConvertToo(fixture: Fixture) async throws {
+        let image = try folder.add(fixture)
+
+        let jpeg = try ImageFacts(try await Converter().convert(image, with: JPEGAction()).output)
+
+        #expect(jpeg.typeIdentifier == "public.jpeg")
+        #expect((jpeg.width, jpeg.height) == (256, 192))
+        #expect(jpeg.isMarkerRed(x: 8, y: 8))
+    }
+
+    @Test func transparentAreasBecomeWhite() async throws {
+        // Below the opaque red marker, the left edge of transparent.png is fully clear.
+        let png = try folder.add(.png)
+
+        let jpeg = try ImageFacts(try await Converter().convert(png, with: JPEGAction()).output)
+
+        let clear = jpeg.pixel(x: 8, y: 100)
+        #expect(clear.red > 250 && clear.green > 250 && clear.blue > 250)
+        #expect(jpeg.isMarkerRed(x: 8, y: 8))
+    }
+
+    @Test func aJPEGIsNotConvertedToJPEG() async throws {
+        let jpeg = try folder.add(.jpeg, as: "photo.jpg")
+
+        await #expect(throws: ConversionError.alreadyInFormat(jpeg, format: "JPEG")) {
+            try await Converter().convert(jpeg, with: JPEGAction())
+        }
+        #expect(try folder.fileNames() == ["photo.jpg"])
+    }
 }

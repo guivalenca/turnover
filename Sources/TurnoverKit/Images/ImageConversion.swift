@@ -21,6 +21,9 @@ enum ImageConversion {
         else { throw CocoaError(.fileWriteUnknown, userInfo: [NSURLErrorKey: destination]) }
         var options = metadata(from: properties, for: image)
         options[kCGImageDestinationLossyCompressionQuality] = quality
+        // Formats without alpha (JPEG) composite transparent areas onto this; ImageIO documents
+        // black as the default. Formats with alpha ignore it.
+        options[kCGImageDestinationBackgroundColor] = CGColor(gray: 1, alpha: 1)
         CGImageDestinationAddImage(output, image, options as CFDictionary)
         guard CGImageDestinationFinalize(output) else {
             // Some formats (HEIC) decode lazily, so a truncated file only fails here.
