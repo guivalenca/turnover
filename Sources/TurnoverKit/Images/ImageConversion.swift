@@ -10,7 +10,7 @@ enum ImageConversion {
         let decoded = try Decoded(source)
         guard let output = CGImageDestinationCreateWithURL(destination as CFURL, type.identifier as CFString, 1, nil)
         else { throw CocoaError(.fileWriteUnknown, userInfo: [NSURLErrorKey: destination]) }
-        guard decoded.write(to: output, as: type, quality: quality) else {
+        guard write(decoded.image(as: type), with: decoded.properties, to: output, quality: quality) else {
             if decoded.isDamaged { throw ConversionError.damaged(source) }
             throw CocoaError(.fileWriteUnknown, userInfo: [NSURLErrorKey: destination])
         }
@@ -19,11 +19,25 @@ enum ImageConversion {
     /// How many bytes converting `decoded` to `type` writes, found by encoding it in memory exactly
     /// as `convert` encodes it to a file. Nil if encoding fails.
     static func encodedSize(of decoded: Decoded, as type: UTType, quality: Double?) -> Int? {
+        encodedSize(of: decoded.image(as: type), with: decoded.properties, as: type, quality: quality)
+    }
+
+    /// How many bytes `image` takes as `type`, with `properties`' metadata, written as every
+    /// output is. Nil if encoding fails. Size estimates encode their samples with it too.
+    static func encodedSize(of image: CGImage, with properties: [CFString: Any], as type: UTType,
+                            quality: Double?) -> Int? {
         let data = NSMutableData()
         guard let output = CGImageDestinationCreateWithData(data, type.identifier as CFString, 1, nil),
-              decoded.write(to: output, as: type, quality: quality)
+              write(image, with: properties, to: output, quality: quality)
         else { return nil }
         return data.length
+    }
+
+    /// Adds `image` to `output` with `options(for:from:quality:)`, and finishes it.
+    private static func write(_ image: CGImage, with properties: [CFString: Any], to output: CGImageDestination,
+                              quality: Double?) -> Bool {
+        CGImageDestinationAddImage(output, image, options(for: image, from: properties, quality: quality) as CFDictionary)
+        return CGImageDestinationFinalize(output)
     }
 
     /// An image decoded for conversion: full size, upright, with the metadata to carry over.
@@ -48,12 +62,10 @@ enum ImageConversion {
         /// Some formats (HEIC) decode lazily, so a truncated file only fails when it is encoded.
         var isDamaged: Bool { image.dataProvider?.data == nil }
 
-        /// Adds the image to `output`, a `type` destination, and finishes it.
-        func write(to output: CGImageDestination, as type: UTType, quality: Double?) -> Bool {
-            // JPEG has no alpha to store, and keeps the hardware decode's faster encoder.
-            let image = hasSpareAlpha && type != .jpeg ? ImageConversion.opaque(image) : image
-            CGImageDestinationAddImage(output, image, options(for: image, from: properties, quality: quality) as CFDictionary)
-            return CGImageDestinationFinalize(output)
+        /// The image to write as `type`. JPEG has no alpha to store, and keeps the hardware
+        /// decode's faster encoder.
+        func image(as type: UTType) -> CGImage {
+            hasSpareAlpha && type != .jpeg ? ImageConversion.opaque(image) : image
         }
     }
 
@@ -67,7 +79,7 @@ enum ImageConversion {
     /// How every output is written: with `properties`' metadata, at `quality` (0 to 1, for lossy
     /// formats; nil leaves it to ImageIO), and transparency flattened onto white where the format
     /// has no alpha. Size estimates encode with the same options.
-    static func options(for image: CGImage, from properties: [CFString: Any], quality: Double?) -> [CFString: Any] {
+    private static func options(for image: CGImage, from properties: [CFString: Any], quality: Double?) -> [CFString: Any] {
         var options = metadata(from: properties, for: image)
         if let quality { options[kCGImageDestinationLossyCompressionQuality] = quality }
         // Formats without alpha (JPEG) composite transparent areas onto this; ImageIO documents

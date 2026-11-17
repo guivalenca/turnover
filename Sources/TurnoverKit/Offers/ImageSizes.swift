@@ -247,9 +247,9 @@ struct ImageSizes: Sendable {
             // The fixed cost of headers, metadata and the colour profile, measured on a crop too
             // small for its pixels to matter: paid once by the output, and once by the mosaic.
             guard let corner = mosaic.cropping(to: CGRect(x: 0, y: 0, width: 16, height: 16)),
-                  let fixed = Self.encodedSize(of: corner, as: type, metadata: properties, quality: quality),
-                  let bare = Self.encodedSize(of: corner, as: type, metadata: [:], quality: quality),
-                  let whole = Self.encodedSize(of: mosaic, as: type, metadata: [:], quality: quality)
+                  let fixed = ImageConversion.encodedSize(of: corner, with: properties, as: type, quality: quality),
+                  let bare = ImageConversion.encodedSize(of: corner, with: [:], as: type, quality: quality),
+                  let whole = ImageConversion.encodedSize(of: mosaic, with: [:], as: type, quality: quality)
             else { return nil }
             let samplePixels = mosaic.width * mosaic.height - corner.width * corner.height
             var bytes = Double(max(0, whole - bare)) * Double(imagePixels) / Double(samplePixels)
@@ -278,11 +278,5 @@ struct ImageSizes: Sendable {
                              bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         }
 
-        private static func encodedSize(of image: CGImage, as type: UTType, metadata: [CFString: Any], quality: Double?) -> Int? {
-            let data = NSMutableData()
-            guard let output = CGImageDestinationCreateWithData(data, type.identifier as CFString, 1, nil) else { return nil }
-            CGImageDestinationAddImage(output, image, ImageConversion.options(for: image, from: metadata, quality: quality) as CFDictionary)
-            return CGImageDestinationFinalize(output) ? data.length : nil
-        }
     }
 }
