@@ -65,7 +65,7 @@ import TurnoverTestSupport
     @Test func aSelectionBiggerThanTheSampleStillEstimatesEveryFile() async throws {
         let heic = try (1...5).map { try folder.add(.heicRotated, as: "photo \($0).heic") }
         let png = try (1...3).map { try folder.add(.png, as: "logo \($0).png") }
-        let large = try folder.addMosaic(of: .webp, width: 1200, height: 900, as: "large.jpg")
+        let large = try await mosaic(in: folder, of: .webp, width: 1200, height: 900, as: "large.jpg")
 
         let offers = await Offers(estimating: heic + png + [large])
 
@@ -85,8 +85,8 @@ import TurnoverTestSupport
     let folder = try! ScratchFolder()
 
     @Test func aLargePhotoIsEstimatedWithinAFactorOfTwo() async throws {
-        let jpeg = try folder.addMosaic(of: .heicRotated, width: 1500, height: 1000, as: "big.jpg")
-        let png = try folder.addMosaic(of: .jpeg, width: 1500, height: 1000, as: "big.png", type: .png)
+        let jpeg = try await mosaic(in: folder, of: .heicRotated, width: 1500, height: 1000, as: "big.jpg")
+        let png = try await mosaic(in: folder, of: .jpeg, width: 1500, height: 1000, as: "big.png", type: .png)
 
         let offers = await Offers(estimating: [jpeg, png])
 

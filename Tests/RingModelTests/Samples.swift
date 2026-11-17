@@ -11,11 +11,15 @@ enum Sample {
     static let lease = URL(fileURLWithPath: "/Users/me/Documents/lease.pdf")
 
     /// Offers for images that aren't PNGs or JPEGs (HEICs, say): PNG and JPEG.
+    /// `presets`: each JPEG quality's estimate, for the ⌥ fan-out.
     static func images(_ files: [URL], png: Estimate? = nil, jpeg: Estimate? = nil,
-                       jpegQuality: JPEGQuality = .default) -> Offers {
+                       jpegQuality: JPEGQuality = .default, presets: [JPEGQuality: Estimate] = [:]) -> Offers {
         Offers(groups: [.init(kind: .image, files: files, targets: [
             .init(format: .png, kind: .image, files: files, estimate: png),
-            .init(format: .jpeg, kind: .image, files: files, quality: jpegQuality, estimate: jpeg),
+            .init(format: .jpeg, kind: .image, files: files, quality: jpegQuality, estimate: jpeg,
+                  presets: JPEGQuality.allCases.compactMap { quality in
+                      presets[quality].map { Offers.Preset(quality: quality, estimate: $0) }
+                  }),
         ])])
     }
 
@@ -24,6 +28,17 @@ enum Sample {
         Offers(groups: [.init(kind: .image, files: files, targets: [
             .init(format: .jpeg, kind: .image, files: files, quality: .default, estimate: jpeg),
         ])])
+    }
+
+    /// Offers for images that aren't PNGs or JPEGs and movies dragged together.
+    static func mixed(_ images: [URL], _ movies: [URL], png: Estimate? = nil, jpeg: Estimate? = nil,
+                      mp4: Estimate? = nil) -> Offers {
+        Offers(groups: Sample.images(images, png: png, jpeg: jpeg).groups + Sample.movies(movies, mp4: mp4).groups)
+    }
+
+    /// Offers for PNGs and movies dragged together.
+    static func mixed(pngs: [URL], _ movies: [URL]) -> Offers {
+        Offers(groups: Sample.pngs(pngs).groups + Sample.movies(movies).groups)
     }
 
     /// Offers for movies: MP4.
@@ -36,8 +51,8 @@ enum Sample {
 
 extension RingModel {
     /// A ring opened by ⇧ during a drag whose offers are already known.
-    static func opened(with offers: Offers) -> RingModel {
-        var ring = RingModel()
+    static func opened(with offers: Offers, restDelay: TimeInterval = 0.5) -> RingModel {
+        var ring = RingModel(restDelay: restDelay)
         ring.send(.dragStarted(shiftDown: false))
         ring.send(.offers(offers))
         ring.send(.shift(down: true))

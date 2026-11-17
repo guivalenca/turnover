@@ -42,10 +42,17 @@ extension RingLook {
     init(_ model: RingModel) {
         let entries = model.entries
         self.entries = entries.map {
-            Entry(title: $0.title, subtitle: $0.subtitle, angle: $0.angle, arcStart: $0.arc.start, arcEnd: $0.arc.end)
+            Entry(title: $0.title, subtitle: $0.subtitle, angle: $0.angle, arcStart: $0.arc.start, arcEnd: $0.arc.end,
+                  isDefault: $0.isDefault, isAdded: $0.isAdded)
         }
-        highlighted = model.highlighted.flatMap { entries.firstIndex(of: $0) }
+        let highlightedEntry = model.highlighted
+        highlighted = highlightedEntry.flatMap { entry in entries.firstIndex { $0.id == entry.id } }
         hub = model.hub.map { Hub(title: $0.title, detail: $0.detail) }
+        caption = model.caption
+        // Resting on the highlighted entry adds it at the deadline: the tint fills until then.
+        if let rest = model.rest, rest.entry == highlightedEntry?.id, let since = rest.since, let deadline = rest.deadline {
+            restingFor = max(0, deadline - since)
+        }
     }
 
     /// Entries that differ only in their estimates keep their labels; anything else lays the

@@ -398,11 +398,7 @@ func timeToExact(_ photo: URL) async -> (png: Duration, jpeg: Duration) {
 @discardableResult
 func mosaic(in folder: ScratchFolder, of fixture: Fixture, width: Int, height: Int, as name: String,
             type: UTType = .jpeg) async throws -> URL {
-    try await withCheckedThrowingContinuation { continuation in
-        DispatchQueue.global().async {
-            continuation.resume(with: Result { try folder.addMosaic(of: fixture, width: width, height: height, as: name, type: type) })
-        }
-    }
+    try await offThePool { try folder.addMosaic(of: fixture, width: width, height: height, as: name, type: type) }
 }
 
 /// The files of `files` whose sizes `estimator` remembers exactly. Asking cancels the selection in

@@ -5,10 +5,10 @@ import TurnoverTestSupport
 @Suite struct MP4CLI {
     let folder = try! ScratchFolder()
 
-    @Test func convertsAMovieToMP4AndPrintsItsPath() throws {
+    @Test func convertsAMovieToMP4AndPrintsItsPath() async throws {
         let clip = try folder.add(.movHEVCHDR, as: "clip.mov")
 
-        let run = try turnover(clip.path, "--to", "mp4")
+        let run = try await turnover(clip.path, "--to", "mp4")
 
         #expect(run.status == 0)
         #expect(run.output == folder.url.appendingPathComponent("clip.mp4").path + "\n")
@@ -17,10 +17,10 @@ import TurnoverTestSupport
         #expect(try folder.fileNames() == ["clip.mov", "clip.mp4"])
     }
 
-    @Test func showsAPercentageWhileConvertingInATerminal() throws {
+    @Test func showsAPercentageWhileConvertingInATerminal() async throws {
         let clip = try folder.add(.movHEVCHDR, as: "clip.mov")
 
-        let run = try turnoverInTerminal(clip.path, "--to", "mp4")
+        let run = try await turnoverInTerminal(clip.path, "--to", "mp4")
 
         #expect(run.status == 0)
         #expect(run.output == folder.url.appendingPathComponent("clip.mp4").path + "\n")
@@ -28,10 +28,10 @@ import TurnoverTestSupport
         #expect(run.errors.contains("%"))
     }
 
-    @Test func anMP4IsRefusedWithAShortReason() throws {
+    @Test func anMP4IsRefusedWithAShortReason() async throws {
         let clip = try folder.add(.mp4H264, as: "clip.mp4")
 
-        let run = try turnover(clip.path, "--to", "mp4")
+        let run = try await turnover(clip.path, "--to", "mp4")
 
         #expect(run.status == 1)
         #expect(run.output == "")
