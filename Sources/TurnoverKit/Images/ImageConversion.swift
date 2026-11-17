@@ -19,17 +19,24 @@ enum ImageConversion {
         else { throw ConversionError.damaged(source) }
         guard let output = CGImageDestinationCreateWithURL(destination as CFURL, type.identifier as CFString, 1, nil)
         else { throw CocoaError(.fileWriteUnknown, userInfo: [NSURLErrorKey: destination]) }
-        var options = metadata(from: properties, for: image)
-        if let quality { options[kCGImageDestinationLossyCompressionQuality] = quality }
-        // Formats without alpha (JPEG) composite transparent areas onto this; ImageIO documents
-        // black as the default. Formats with alpha ignore it.
-        options[kCGImageDestinationBackgroundColor] = CGColor(gray: 1, alpha: 1)
-        CGImageDestinationAddImage(output, image, options as CFDictionary)
+        CGImageDestinationAddImage(output, image, options(for: image, from: properties, quality: quality) as CFDictionary)
         guard CGImageDestinationFinalize(output) else {
             // Some formats (HEIC) decode lazily, so a truncated file only fails here.
             if image.dataProvider?.data == nil { throw ConversionError.damaged(source) }
             throw CocoaError(.fileWriteUnknown, userInfo: [NSURLErrorKey: destination])
         }
+    }
+
+    /// How every output is written: with `properties`' metadata, at `quality` (0 to 1, for lossy
+    /// formats; nil leaves it to ImageIO), and transparency flattened onto white where the format
+    /// has no alpha. Size estimates encode with the same options.
+    static func options(for image: CGImage, from properties: [CFString: Any], quality: Double?) -> [CFString: Any] {
+        var options = metadata(from: properties, for: image)
+        if let quality { options[kCGImageDestinationLossyCompressionQuality] = quality }
+        // Formats without alpha (JPEG) composite transparent areas onto this; ImageIO documents
+        // black as the default. Formats with alpha ignore it.
+        options[kCGImageDestinationBackgroundColor] = CGColor(gray: 1, alpha: 1)
+        return options
     }
 
     /// The metadata dictionaries worth carrying over, marked upright since the pixels now are.

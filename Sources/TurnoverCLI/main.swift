@@ -7,6 +7,10 @@ func printError(_ message: String) {
     FileHandle.standardError.write(Data("turnover: \(message)\n".utf8))
 }
 
+if CommandLine.arguments.dropFirst().first == "offers" {
+    exit(await OffersCommand.run(Array(CommandLine.arguments.dropFirst(2))))
+}
+
 let parsed: Command.Parsed
 do {
     parsed = try Command.parse(Array(CommandLine.arguments.dropFirst()))

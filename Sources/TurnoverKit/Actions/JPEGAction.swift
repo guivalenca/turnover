@@ -19,7 +19,7 @@ public struct JPEGAction: ConversionAction {
     }
 
     public func perform(_ file: SourceFile, writingTo destination: URL) async throws {
-        try ImageConversion.convert(file.url, to: destination, as: outputType, quality: Double(quality.percent) / 100)
+        try ImageConversion.convert(file.url, to: destination, as: outputType, quality: quality.encoderQuality)
     }
 }
 
@@ -38,6 +38,15 @@ public enum JPEGQuality: String, CaseIterable, Sendable {
     /// The preset used when none is chosen.
     public static let `default` = JPEGQuality.high
 
+    /// The name users see: "Best", "High" or "Small".
+    public var name: String {
+        switch self {
+        case .best: "Best"
+        case .high: "High"
+        case .small: "Small"
+        }
+    }
+
     /// The encoder quality as a percentage: 100, 85 or 60.
     public var percent: Int {
         switch self {
@@ -46,4 +55,7 @@ public enum JPEGQuality: String, CaseIterable, Sendable {
         case .small: 60
         }
     }
+
+    /// `percent` as ImageIO takes it, from 0 to 1.
+    var encoderQuality: Double { Double(percent) / 100 }
 }
