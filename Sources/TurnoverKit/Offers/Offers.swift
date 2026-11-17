@@ -32,6 +32,13 @@ public struct Offers: Sendable, Hashable {
         public let files: [URL]
         /// The formats offered, in display order (PNG before JPEG).
         public let targets: [Target]
+
+        /// A group as given, for previews and tests; `Offers(for:)` and its siblings work groups out.
+        public init(kind: SourceFile.Kind, files: [URL], targets: [Target]) {
+            self.kind = kind
+            self.files = files
+            self.targets = targets
+        }
     }
 
     /// One format offered for some of the selected files.
@@ -54,6 +61,17 @@ public struct Offers: Sendable, Hashable {
         /// The action that converts `files` to this target's format.
         public var action: any ConversionAction { format.action(quality: quality ?? .default) }
 
+        /// A target as given, for previews and tests; `Offers(for:)` and its siblings work targets out.
+        public init(format: OutputFormat, kind: SourceFile.Kind, files: [URL], quality: JPEGQuality? = nil,
+                    estimate: Estimate? = nil, presets: [Preset] = []) {
+            self.format = format
+            self.kind = kind
+            self.files = files
+            self.quality = quality
+            self.estimate = estimate
+            self.presets = presets
+        }
+
         /// The Finder menu item: the format and how many files it converts, e.g. "PNG (3 images)".
         public var menuTitle: String {
             let noun = kind == .video ? "video" : "image"
@@ -65,6 +83,18 @@ public struct Offers: Sendable, Hashable {
     public struct Preset: Sendable, Hashable {
         public let quality: JPEGQuality
         public let estimate: Estimate
+
+        public init(quality: JPEGQuality, estimate: Estimate) {
+            self.quality = quality
+            self.estimate = estimate
+        }
+    }
+
+    /// Offers as given, for previews and tests (the ring model's): `init(for:)` and its siblings
+    /// work them out from files.
+    public init(groups: [Group], skipped: [ConversionError] = []) {
+        self.groups = groups
+        self.skipped = skipped
     }
 
     /// Inspects `files` by their contents and works out what is offered. It only sniffs each

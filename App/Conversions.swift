@@ -10,13 +10,16 @@ import TurnoverKit
 @MainActor
 final class Conversions {
     /// Observe `runner.batches` for what is running now.
-    let runner = JobRunner()
+    let runner: JobRunner
+    /// What `runner` converts with. The ring's estimates wait while it works.
+    let converter = Converter()
     /// What the menu bar item and notifications say about the batches.
     let feedback: Feedback
     private let notifier: Notifier
     private let statusItem: StatusItem
 
     init() {
+        runner = JobRunner(converter: converter)
         let notifier = Notifier()
         self.notifier = notifier
         feedback = Feedback(notify: notifier.post)
