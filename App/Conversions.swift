@@ -9,10 +9,10 @@ final class Conversions {
     /// Observe `runner.batches` for what is running now.
     let runner = JobRunner()
 
-    /// A choice from the Finder menu. JPEG converts at the default quality from Settings.
+    /// A choice from the Finder menu. JPEG converts at the default quality from `AppSettings`.
     func convert(_ request: ConversionRequest) {
         log.notice("Converting \(request.files.count) file(s) to \(request.format.name, privacy: .public)")
-        convert(request.files, to: [request.format.action(quality: Settings.jpegQuality)])
+        convert(request.files, to: [request.format.action(quality: AppSettings().jpegQuality)])
     }
 
     /// Converts each of `files` with the first of `actions` that takes it, for example PNG for
