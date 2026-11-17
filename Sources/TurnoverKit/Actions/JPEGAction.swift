@@ -19,7 +19,11 @@ public struct JPEGAction: ConversionAction {
     }
 
     public func perform(_ file: SourceFile, writingTo destination: URL) async throws {
-        try await ImageConversion.convert(file.url, to: destination, as: outputType, quality: quality.encoderQuality)
+        // Off the concurrency threads, like PNG.
+        let (source, type, encoderQuality) = (file.url, outputType, quality.encoderQuality)
+        try await blocking(.userInitiated, throwing: {
+            try ImageConversion.convert(source, to: destination, as: type, quality: encoderQuality)
+        })
     }
 }
 

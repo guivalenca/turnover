@@ -8,6 +8,10 @@ public struct ConversionResult: Sendable, Hashable {
     public let output: URL
     /// True when the original's folder couldn't be written to, so the new file went to Downloads.
     public let savedToDownloads: Bool
+    /// What the original was: an image or a video.
+    public let kind: SourceFile.Kind
+    /// The short name of the format it was converted to, e.g. "PNG".
+    public let format: String
 }
 
 /// Converts single files with an action and places the output next to the original.
@@ -59,6 +63,7 @@ public struct Converter: Sendable {
             try await action.perform(file, writingTo: temporary, progress: progress)
         }
         progress.report(1)
-        return ConversionResult(source: file.url, output: output, savedToDownloads: placement.usesFallback)
+        return ConversionResult(source: file.url, output: output, savedToDownloads: placement.usesFallback,
+                                kind: file.kind, format: action.name)
     }
 }

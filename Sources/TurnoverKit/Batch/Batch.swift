@@ -12,8 +12,8 @@ public final class Batch: Identifiable {
     /// When its last job ended, or nil while it runs.
     public private(set) var finishDate: Date?
 
-    /// Called once, when the last job ends, before anyone waiting is woken.
-    @ObservationIgnored var onFinish: (@MainActor (Batch) -> Void)?
+    /// Called once each, in order, when the last job ends, before anyone waiting is woken.
+    @ObservationIgnored private var finishHandlers: [@MainActor (Batch) -> Void] = []
     @ObservationIgnored private var waiters: [CheckedContinuation<Void, Never>] = []
 
     init(jobs: [Job]) {
@@ -41,6 +41,12 @@ public final class Batch: Identifiable {
         for job in jobs { job.cancel() }
     }
 
+    /// Calls `handler` when the last job ends, before `waitUntilFinished()` returns, or right away
+    /// if the batch has already ended.
+    func whenFinished(_ handler: @escaping @MainActor (Batch) -> Void) {
+        if finishDate != nil { handler(self) } else { finishHandlers.append(handler) }
+    }
+
     /// Returns once every job has ended.
     public func waitUntilFinished() async {
         guard !isFinished else { return }
@@ -51,8 +57,9 @@ public final class Batch: Identifiable {
     func jobEnded() {
         guard isFinished, finishDate == nil else { return }
         finishDate = Date()
-        onFinish?(self)
-        onFinish = nil
+        let handlers = finishHandlers
+        finishHandlers = []
+        handlers.forEach { $0(self) }
         let waiters = waiters
         self.waiters = []
         waiters.forEach { $0.resume() }

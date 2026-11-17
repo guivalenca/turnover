@@ -19,7 +19,9 @@
 		6744631416F9DA96D090348C /* FinderSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC2044A17FFCA87022765DA /* FinderSync.swift */; };
 		71F009451EB3B2DD7F2028FA /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CFE1A4F4FD38BDC673D0E7D /* AppDelegate.swift */; };
 		822634437325DD62BA3E2EE2 /* Ring.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5E48B4CBF2BB72F9350C803 /* Ring.swift */; };
+		826780E2E08784AE032AC556 /* StatusItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 984E4C89E30107C947967E2F /* StatusItem.swift */; };
 		93DE5C807D2EFC9F1AEAE087 /* RingPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51A4BF3AFA4A7C71B80C605C /* RingPanel.swift */; };
+		98E1B3360E4FA75100F7CB82 /* Notifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C47FDA44BE7E24E7179187 /* Notifier.swift */; };
 		C2136102521C8D2B32028665 /* RingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7F7043A5F2901636D394236 /* RingView.swift */; };
 		C2D8E1B0030AB29ABE1F0673 /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = 541110B2C69050B416C31167 /* Log.swift */; };
 		CA415786AA7C7C9B7D7360DB /* HintPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FF5F1C85C2224CC8808FD2 /* HintPanel.swift */; };
@@ -28,6 +30,7 @@
 		D97CE7C59B69AD6637471AF5 /* FinderSync.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 27545BF2090D7CF8C3CD1FD7 /* FinderSync.framework */; };
 		DC48C0ADCF81A7D1C7A43EA3 /* TurnoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DD57A25DA23F1E37A3C9C5C /* TurnoverView.swift */; };
 		EF7A8F929AFB31DAD6DA91B3 /* TurnoverKit in Frameworks */ = {isa = PBXBuildFile; productRef = 9AB89533AF9126858F03FCF0 /* TurnoverKit */; };
+		FC822B4CAFFF758EE9010EFF /* JobRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FC08C6C81FECA955B0208A3 /* JobRow.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -59,7 +62,9 @@
 		1AC2044A17FFCA87022765DA /* FinderSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinderSync.swift; sourceTree = "<group>"; };
 		27545BF2090D7CF8C3CD1FD7 /* FinderSync.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FinderSync.framework; path = System/Library/Frameworks/FinderSync.framework; sourceTree = SDKROOT; };
 		2CFE1A4F4FD38BDC673D0E7D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		32C47FDA44BE7E24E7179187 /* Notifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notifier.swift; sourceTree = "<group>"; };
 		3CDF580712E61F8F0158AFED /* TurnoverWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnoverWindow.swift; sourceTree = "<group>"; };
+		3FC08C6C81FECA955B0208A3 /* JobRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobRow.swift; sourceTree = "<group>"; };
 		40FF5F1C85C2224CC8808FD2 /* HintPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HintPanel.swift; sourceTree = "<group>"; };
 		50A62B2F57C51D120FEB8816 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		51A4BF3AFA4A7C71B80C605C /* RingPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RingPanel.swift; sourceTree = "<group>"; };
@@ -67,6 +72,7 @@
 		5BA307F6BAE8FDF755431170 /* TurnoverFinder.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TurnoverFinder.entitlements; sourceTree = "<group>"; };
 		8DD57A25DA23F1E37A3C9C5C /* TurnoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnoverView.swift; sourceTree = "<group>"; };
 		8EFEFFB35CDC3839342AD369 /* DragWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragWatcher.swift; sourceTree = "<group>"; };
+		984E4C89E30107C947967E2F /* StatusItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusItem.swift; sourceTree = "<group>"; };
 		AC1329052DD8DE6C4A250CF9 /* TurnoverFinder.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TurnoverFinder.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C5E48B4CBF2BB72F9350C803 /* Ring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ring.swift; sourceTree = "<group>"; };
 		D03775AE3E5A433705BF218F /* Conversions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Conversions.swift; sourceTree = "<group>"; };
@@ -110,6 +116,16 @@
 				E087F7DBD31A474881819604 /* WindowModel.swift */,
 			);
 			path = Window;
+			sourceTree = "<group>";
+		};
+		2536FBE43CB469AA56317E48 /* Feedback */ = {
+			isa = PBXGroup;
+			children = (
+				3FC08C6C81FECA955B0208A3 /* JobRow.swift */,
+				32C47FDA44BE7E24E7179187 /* Notifier.swift */,
+				984E4C89E30107C947967E2F /* StatusItem.swift */,
+			);
+			path = Feedback;
 			sourceTree = "<group>";
 		};
 		32E8A7D01BD58223C88EFEFD /* Products */ = {
@@ -172,6 +188,7 @@
 				D3116FA8F1F2055913BDBCD7 /* Info.plist */,
 				541110B2C69050B416C31167 /* Log.swift */,
 				E4EBF56228EF202D2E3574DB /* Main.swift */,
+				2536FBE43CB469AA56317E48 /* Feedback */,
 				5FFA1B3F55748BB384CB8FAF /* Ring */,
 				2412C693104B4BF1EEBA32B7 /* Window */,
 			);
@@ -294,11 +311,14 @@
 				5804849746040A64AD758F92 /* Conversions.swift in Sources */,
 				500092B9CEC5382AE41DB03F /* DragWatcher.swift in Sources */,
 				CA415786AA7C7C9B7D7360DB /* HintPanel.swift in Sources */,
+				FC822B4CAFFF758EE9010EFF /* JobRow.swift in Sources */,
 				C2D8E1B0030AB29ABE1F0673 /* Log.swift in Sources */,
 				3BD80338DBF51E0BE5141CA5 /* Main.swift in Sources */,
+				98E1B3360E4FA75100F7CB82 /* Notifier.swift in Sources */,
 				822634437325DD62BA3E2EE2 /* Ring.swift in Sources */,
 				93DE5C807D2EFC9F1AEAE087 /* RingPanel.swift in Sources */,
 				C2136102521C8D2B32028665 /* RingView.swift in Sources */,
+				826780E2E08784AE032AC556 /* StatusItem.swift in Sources */,
 				DC48C0ADCF81A7D1C7A43EA3 /* TurnoverView.swift in Sources */,
 				21E38D62C349DB7D6E297B23 /* TurnoverWindow.swift in Sources */,
 				CF23129BA93E39724639C3F2 /* WindowModel.swift in Sources */,
