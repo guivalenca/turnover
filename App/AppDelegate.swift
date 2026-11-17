@@ -5,9 +5,12 @@ import TurnoverKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Every conversion the app runs, whoever asked for it.
     let conversions = Conversions()
+    /// The drag + ⇧ ring.
+    private lazy var ring = Ring(conversions: conversions)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         log.notice("Launched from \(Bundle.main.bundlePath, privacy: .public)")
+        ring.start()
     }
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool { true }

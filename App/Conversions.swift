@@ -7,7 +7,13 @@ import TurnoverKit
 @MainActor
 final class Conversions {
     /// Observe `runner.batches` for what is running now.
-    let runner = JobRunner()
+    let runner: JobRunner
+    /// What `runner` converts with. The ring's estimates wait while it works.
+    let converter = Converter()
+
+    init() {
+        runner = JobRunner(converter: converter)
+    }
 
     /// A choice from the Finder menu. JPEG converts at the default quality from Settings.
     func convert(_ request: ConversionRequest) {
