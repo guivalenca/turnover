@@ -59,29 +59,31 @@ extension RingModel {
     /// 180° and 74° apart; videos on the right, at 0°. With ⌥, JPEG's qualities fan out around
     /// where JPEG was: 54° apart, or 52° in a mixed ring. Angles are in (-180, 180].
     static func layout(_ offers: Offers, fannedOut: Bool, added: [Choice]) -> [Entry] {
-        let groups = offers.groups.map { group in
-            (kind: group.kind, spots: group.targets.flatMap { spots(for: $0, fannedOut: fannedOut) })
+        // No local is named `spots`: the runner's older Swift reports a circular reference when
+        // one shadows `spots(for:fannedOut:)` in the same function.
+        let groups: [(kind: SourceFile.Kind, spots: [Spot])] = offers.groups.map { group in
+            (kind: group.kind, spots: group.targets.flatMap { Self.spots(for: $0, fannedOut: fannedOut) })
         }
         let angles: [Double]
         if groups.count == 1 {
-            let spots = groups[0].spots
-            if spots.contains(where: { $0.preset != nil }) {
+            let only = groups[0].spots
+            if only.contains(where: { $0.preset != nil }) {
                 // JPEG's qualities around where JPEG was: the right, or the top if JPEG was alone.
-                let others = spots.filter { $0.preset == nil }.count
+                let others = only.filter { $0.preset == nil }.count
                 angles = others == 1 ? [180] + spread(3, around: 0, step: 54) : spread(3, around: -90, step: 54)
             } else {
-                angles = spots.count == 1 ? [-90] : [180, 0]
+                angles = only.count == 1 ? [-90] : [180, 0]
             }
         } else {
-            angles = groups.flatMap { group in
-                group.kind == .video
+            angles = groups.flatMap { group -> [Double] in
+                group.kind == SourceFile.Kind.video
                     ? spread(group.spots.count, around: 0, step: 74)
                     : spread(group.spots.count, around: 180, step: fannedOut ? 52 : 74)
             }
         }
-        let spots = groups.flatMap(\.spots)
+        let all = groups.flatMap { $0.spots }
         let placed = angles.map(normalized)
-        return zip(spots, placed).map { spot, angle in
+        return zip(all, placed).map { spot, angle in
             Entry(title: spot.title, estimate: spot.estimate, angle: angle,
                   arc: arc(around: angle, among: placed), choices: spot.choices,
                   quality: spot.preset, isDefault: spot.isDefault, isAdded: added.contains(spot.choices[0]))

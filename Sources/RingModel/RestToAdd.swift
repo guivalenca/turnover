@@ -45,15 +45,15 @@ extension RingModel {
     /// }
     /// ```
     func choices(droppingOn entry: Entry) -> [Choice] {
-        var choices = added
+        var merged = added
         for choice in entry.choices {
-            if let index = choices.firstIndex(where: { $0.kind == choice.kind }) {
-                choices[index] = choice
+            if let index = merged.firstIndex(where: { $0.kind == choice.kind }) {
+                merged[index] = choice
             } else {
-                choices.append(choice)
+                merged.append(choice)
             }
         }
-        return choices
+        return merged
     }
 
     /// Adds `entry`, replacing what was added for its kind of file.
