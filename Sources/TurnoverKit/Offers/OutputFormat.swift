@@ -16,11 +16,12 @@ public enum OutputFormat: String, CaseIterable, Sendable, Hashable {
         }
     }
 
-    /// The action that converts to this format. `quality` applies to JPEG only.
-    public func action(quality: JPEGQuality = .default) -> any ConversionAction {
+    /// The action that converts to this format. `quality` applies to JPEG only: the default
+    /// preset when nil.
+    public func action(quality: JPEGQuality? = nil) -> any ConversionAction {
         switch self {
         case .png: PNGAction()
-        case .jpeg: JPEGAction(quality: quality)
+        case .jpeg: JPEGAction(quality: quality ?? .default)
         case .mp4: MP4Action()
         }
     }

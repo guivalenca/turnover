@@ -14,7 +14,7 @@ extension RingModel {
 
         /// The action that converts `files`. Run every choice of a drop as one batch:
         /// `runner.run(choices.flatMap(\\.files), to: choices.map(\\.action))`.
-        public var action: any ConversionAction { format.action(quality: quality ?? .default) }
+        public var action: any ConversionAction { format.action(quality: quality) }
 
         public init(kind: SourceFile.Kind, format: OutputFormat, quality: JPEGQuality? = nil, files: [URL]) {
             self.kind = kind

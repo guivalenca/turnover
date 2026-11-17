@@ -63,7 +63,7 @@ public struct Offers: Sendable, Hashable {
         public let presets: [Preset]
 
         /// The action that converts `files` to this target's format.
-        public var action: any ConversionAction { format.action(quality: quality ?? .default) }
+        public var action: any ConversionAction { format.action(quality: quality) }
 
         /// A target as given, for previews and tests; `Offers(for:)` and its siblings work targets out.
         public init(format: OutputFormat, kind: SourceFile.Kind, files: [URL], quality: JPEGQuality? = nil,
