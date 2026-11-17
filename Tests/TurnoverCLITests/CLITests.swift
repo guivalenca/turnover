@@ -13,7 +13,7 @@ import TurnoverTestSupport
 
         #expect(run.status == 0)
         #expect(run.output == folder.url.appendingPathComponent("photo.png").path + "\n")
-        #expect(run.errors == "")
+        #expect(run.messages == [])
         #expect(try folder.fileNames() == ["photo.heic", "photo.png"])
     }
 
@@ -24,7 +24,7 @@ import TurnoverTestSupport
 
         #expect(run.status == 1)
         #expect(run.output == "")
-        #expect(run.errors == "turnover: notes.txt: not an image or a video (text)\n")
+        #expect(run.messages == ["turnover: notes.txt: not an image or a video (text)"])
         #expect(try folder.fileNames() == ["notes.txt"])
     }
 
@@ -34,7 +34,7 @@ import TurnoverTestSupport
         let run = try turnover(broken.path, "--to", "png")
 
         #expect(run.status == 1)
-        #expect(run.errors == "turnover: broken.heic: damaged or incomplete, can't be decoded\n")
+        #expect(run.messages == ["turnover: broken.heic: damaged or incomplete, can't be decoded"])
         #expect(try folder.fileNames() == ["broken.heic"])
     }
 
@@ -46,7 +46,7 @@ import TurnoverTestSupport
 
         #expect(run.status == 1)
         #expect(run.output == folder.url.appendingPathComponent("photo.png").path + "\n")
-        #expect(run.errors == "turnover: logo.png: already a PNG\n")
+        #expect(run.messages == ["turnover: logo.png: already a PNG"])
     }
 
     @Test(arguments: [
@@ -82,7 +82,14 @@ import TurnoverTestSupport
 struct Run {
     let status: Int32
     let output: String
+    /// Everything on standard error. System frameworks may add noise here (on CI's virtual
+    /// machines ImageIO logs a missing hardware scaler), so prefer `messages`.
     let errors: String
+
+    /// The lines turnover itself wrote to standard error.
+    var messages: [String] {
+        errors.split(separator: "\n").map(String.init).filter { $0.hasPrefix("turnover: ") }
+    }
 }
 
 /// Runs the `turnover` executable that `swift test` built next to this test bundle.
