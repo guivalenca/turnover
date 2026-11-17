@@ -51,6 +51,32 @@ struct QuickEstimateAccuracy {
     }
 }
 
+/// How long the ring waits for an exact size, on the listed photos of 10 to 14 megapixels
+/// (`TURNOVER_ACCURACY_PHOTOS` as above). Each is measured from scratch, fastest of three.
+@MainActor
+@Suite(.enabled(if: ProcessInfo.processInfo.environment["TURNOVER_ACCURACY_PHOTOS"] != nil),
+       .timeLimit(.minutes(30)))
+struct TimeToExactReport {
+    @Test func timeToAnExactSizeFor12MegapixelPhotos() async throws {
+        let list = try String(contentsOfFile: ProcessInfo.processInfo.environment["TURNOVER_ACCURACY_PHOTOS"]!,
+                              encoding: .utf8)
+        let photos = list.split(separator: "\n").map { URL(fileURLWithPath: String($0)) }.filter { photo in
+            guard let facts = try? ImageFacts(photo) else { return false }
+            return (10_000_000...14_000_000).contains(facts.width * facts.height)
+        }
+        for photo in photos {
+            var png: [Duration] = [], jpeg: [Duration] = []
+            for _ in 1...3 {
+                let (toPNG, toJPEG) = await timeToExact(photo)
+                png.append(toPNG)
+                jpeg.append(toJPEG)
+            }
+            print("\(photo.lastPathComponent): PNG exact after \(png.min()!), JPEG after \(jpeg.min()!) (first run \(png[0]), \(jpeg[0]))")
+        }
+        #expect(!photos.isEmpty)
+    }
+}
+
 extension ClosedRange<Int> {
     /// The smallest of `transform` over the range, run one after another.
     func asyncMin(_ transform: (Int) async -> Duration) async -> Duration {

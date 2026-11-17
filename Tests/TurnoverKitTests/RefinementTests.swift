@@ -280,3 +280,58 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
         _ = try await conversion.value
     }
 }
+
+/// How soon the ring shows exact sizes for a typical photo.
+@MainActor
+@Suite(.timeLimit(.minutes(1))) struct TimeToExact {
+    let folder = try! ScratchFolder()
+
+    @Test func a12MegapixelPhotoIsExactWithinASecond() async throws {
+        let photo = try folder.addMosaic(of: .heicRotated, width: 4032, height: 3024, as: "photo.heic", type: .heic)
+
+        // The fastest of two, each from scratch: the first pays for loading the HEVC decoder.
+        var png: [Duration] = [], jpeg: [Duration] = []
+        for _ in 1...2 {
+            let (toPNG, toJPEG) = await timeToExact(photo)
+            png.append(toPNG)
+            jpeg.append(toJPEG)
+        }
+
+        #expect(png.min()! < timeLimit(.seconds(1)), "\(png)")
+        #expect(jpeg.min()! < timeLimit(.seconds(1)), "\(jpeg)")
+    }
+
+    /// A JPEG takes a few milliseconds to encode and a PNG hundreds, so the JPEG the ring shows
+    /// is measured first, then the other presets, then PNG.
+    @Test func theDefaultJPEGIsExactBeforeThePNG() async throws {
+        let photo = try folder.addMosaic(of: .heicRotated, width: 4032, height: 3024, as: "photo.heic", type: .heic)
+
+        let live = Estimator().estimate([photo], jpegQuality: .small)
+        let exact = Recording { live.offers.targets.filter { $0.estimate?.isExact == true }.map(\.format) }
+        let presets = Recording { live.offers.targets.last?.presets.filter(\.estimate.isExact).map(\.quality) ?? [] }
+        await live.waitUntilFinished()
+
+        #expect(exact.values.last == [.png, .jpeg])
+        #expect(exact.values.contains([.jpeg]))
+        #expect(presets.values.first { !$0.isEmpty } == [.small])
+    }
+}
+
+/// How long a fresh `Estimator` takes to show `photo`'s PNG size, then its default JPEG size,
+/// exactly. `.zero` for a format the photo isn't offered.
+@MainActor
+func timeToExact(_ photo: URL) async -> (png: Duration, jpeg: Duration) {
+    let start = ContinuousClock.now
+    let live = Estimator().estimate([photo])
+    var times: [OutputFormat: Duration] = [:]
+    let formats = live.offers.targets.map(\.format).filter { $0 != .mp4 }
+    _ = await eventually(timeout: .seconds(30)) {
+        for target in live.offers.targets where times[target.format] == nil && target.estimate?.isExact == true {
+            times[target.format] = ContinuousClock.now - start
+        }
+        return formats.allSatisfy { times[$0] != nil }
+    }
+    live.cancel()
+    await live.waitUntilFinished()
+    return (times[.png] ?? .zero, times[.jpeg] ?? .zero)
+}

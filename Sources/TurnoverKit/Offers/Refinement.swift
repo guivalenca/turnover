@@ -75,7 +75,7 @@ struct Refinement: Sendable {
             for (output, size) in remembered {
                 measured[image.url, default: ImageSizes(pixels: count, sizes: [:])].sizes[output] = size
             }
-            let outputs = ImageOutput.of(image).filter { remembered[$0] == nil }
+            let outputs = ImageOutput.of(image).filter { remembered[$0] == nil }.sorted { rank($0) < rank($1) }
             guard !outputs.isEmpty, let decoded = try? ImageConversion.Decoded(image.url) else { continue }
             // The decode read the whole file; if it changed meanwhile, these sizes belong to no key.
             let unchanged = SizeCache.Key(image.url) == key
@@ -89,6 +89,16 @@ struct Refinement: Sendable {
                     .sizes[output] = ImageSizes.Size(bytes: bytes, isExact: true)
                 await publish(offers(ImageSizes.completing(measured, for: images, pixels: pixels), videos))
             }
+        }
+    }
+
+    /// The order outputs are measured in: the JPEG the ring shows first, since a JPEG takes
+    /// milliseconds to encode and a PNG hundreds; then the other presets, for the ⌥ fan-out; then PNG.
+    private func rank(_ output: ImageOutput) -> Int {
+        switch output {
+        case .jpeg(jpegQuality): 0
+        case .jpeg: 1
+        case .png: 2
         }
     }
 
