@@ -22,7 +22,8 @@ struct Placement {
     }
 
     /// Runs `write` against a temporary file, then moves the result into place and returns
-    /// its final URL. Whatever happens, the temporary folder is removed.
+    /// its final URL. Whatever happens, the temporary folder is removed. If the task is
+    /// cancelled, nothing is moved into place and this throws `CancellationError`.
     func place(_ write: (URL) async throws -> Void) async throws -> URL {
         let fileManager = FileManager.default
         let scratch = try fileManager.url(
@@ -32,6 +33,7 @@ struct Placement {
         let temporary = scratch.appendingPathComponent(name(number: 1))
         try await write(temporary)
         try copyDates(to: temporary)
+        try Task.checkCancellation()
         return try moveIntoPlace(temporary)
     }
 

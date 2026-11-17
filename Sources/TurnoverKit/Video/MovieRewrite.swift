@@ -1,5 +1,6 @@
 @preconcurrency import AVFoundation
 import Foundation
+import Synchronization
 
 /// Rewrites a movie as an MP4 by moving samples from an `AVAssetReader` to an `AVAssetWriter`.
 struct MovieRewrite {
@@ -56,7 +57,8 @@ struct MovieRewrite {
 }
 
 /// Moves samples from reader outputs to writer inputs, one lane per track, until every lane runs
-/// dry or something fails. All of its state lives on one serial queue.
+/// dry, something fails or the task is cancelled. All of its state lives on one serial queue,
+/// except the cancellation flag, which is checked between samples.
 final class SamplePump: @unchecked Sendable {
     struct Lane {
         let output: AVAssetReaderOutput
@@ -73,6 +75,7 @@ final class SamplePump: @unchecked Sendable {
     private let progress: ConversionProgress
     private var running = 0
     private var continuation: CheckedContinuation<Void, any Error>?
+    private let isCancelled = Atomic(false)
 
     init(reader: AVAssetReader, writer: AVAssetWriter, lanes: [Lane], duration: CMTime, progress: ConversionProgress) {
         self.reader = reader
@@ -82,14 +85,23 @@ final class SamplePump: @unchecked Sendable {
         self.progress = progress
     }
 
+    /// Runs until the output is complete. Cancelling the task stops it within a sample and
+    /// throws `CancellationError`.
     func run() async throws {
-        try await withCheckedThrowingContinuation { continuation in
-            queue.async { self.start(continuation) }
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                queue.async { self.start(continuation) }
+            }
+        } onCancel: {
+            isCancelled.store(true, ordering: .relaxed)
+            // Wakes a pump that is waiting for the writer rather than looping over samples.
+            queue.async { self.stopIfCancelled() }
         }
     }
 
     private func start(_ continuation: CheckedContinuation<Void, any Error>) {
         self.continuation = continuation
+        if stopIfCancelled() { return }
         guard reader.startReading() else { return fail(reader.error) }
         guard writer.startWriting() else { return fail(writer.error) }
         writer.startSession(atSourceTime: .zero)
@@ -102,6 +114,7 @@ final class SamplePump: @unchecked Sendable {
     private func pump(_ lane: Lane) {
         guard continuation != nil else { return }
         while lane.input.isReadyForMoreMediaData {
+            if stopIfCancelled() { return }
             guard let sample = lane.output.copyNextSampleBuffer() else {
                 if reader.status == .failed { return fail(reader.error) }
                 lane.input.markAsFinished()
@@ -134,6 +147,14 @@ final class SamplePump: @unchecked Sendable {
                 }
             }
         }
+    }
+
+    /// Fails with `CancellationError` if the task was cancelled and the pump is still running.
+    @discardableResult
+    private func stopIfCancelled() -> Bool {
+        guard isCancelled.load(ordering: .relaxed), continuation != nil else { return false }
+        fail(CancellationError())
+        return true
     }
 
     private func fail(_ error: (any Error)?) {
