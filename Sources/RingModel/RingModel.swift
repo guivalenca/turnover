@@ -33,8 +33,8 @@ public struct RingModel: Sendable {
         /// Esc: the system cancelled the drag. The app sees it as the open ring's drag leaving
         /// while the button is still down, after the drag image slides back.
         case escape
-        /// The drag ended without a drop on the ring: dropped somewhere else while the ring was
-        /// closed, or the drag session finished some other way.
+        /// The drag ended without a drop on an entry: dropped somewhere else while the ring was
+        /// closed, or off the ring's entries while it was open (which cancels).
         case dragEnded
     }
 
@@ -144,11 +144,8 @@ public struct RingModel: Sendable {
             guard phase == .open else { return }
             outcome = highlighted.map { .convert($0.choices) } ?? .cancel
             phase = .idle
-        case .escape:
+        case .escape, .dragEnded:
             if phase == .open { outcome = .cancel }
-            phase = .idle
-            hint = nil
-        case .dragEnded:
             phase = .idle
             hint = nil
         }

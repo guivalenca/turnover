@@ -101,4 +101,14 @@ import TurnoverKit
 
         #expect(ring.highlighted == nil)
     }
+
+    @Test func theDragEndingWhileTheRingIsOpenCancels() {
+        var ring = RingModel.opened(with: Sample.images([Sample.photo]))
+        ring.send(.pointer(at: 180, distance: 300))
+
+        ring.send(.dragEnded)
+
+        #expect(ring.outcome == .cancel)
+        #expect(ring.phase == .idle)
+    }
 }
