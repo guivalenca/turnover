@@ -9,11 +9,13 @@ import TurnoverTestSupport
     let folder = try! ScratchFolder()
 
     @Test func cancellingARunningJobLeavesNoOutputAndTheOthersGoOn() async throws {
-        let clips = try (1...3).map { try folder.add(.movHEVCHDR, as: "clip \($0).mov") }
+        // Copied, not transcoded: the jobs are cancelled once held, so only the stop is tested,
+        // and CI's three cores stay free for the other tests.
+        let clips = try (1...3).map { try folder.add(.movH264, as: "clip \($0).mov") }
         let turnstile = Turnstile()
         let batch = JobRunner().run(clips, to: [turnstile.holding(MP4Action())])
-        // Clips 1 and 2 are transcoded, their outputs written but not yet in place. (Running isn't
-        // enough: a transcode still under way needs CPU time to stop, which other tests decide.)
+        // Clips 1 and 2 are converted, their outputs written but not yet in place. (Running isn't
+        // enough: a conversion still under way needs CPU time to stop, which other tests decide.)
         #expect(await turnstile.waitUntil(held: 2, timeout: .seconds(30)))
 
         batch.jobs[0].cancel()
