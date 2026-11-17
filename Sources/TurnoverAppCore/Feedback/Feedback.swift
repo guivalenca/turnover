@@ -47,9 +47,7 @@ public final class Feedback {
     /// How much of the batches shown is done, from 0 to 1: the mean of their jobs' progress,
     /// where a job that ended counts as done. Skipped files don't count.
     public var progress: Double {
-        let jobs = batches.flatMap(\.jobs).filter { if case .skipped = $0.state { false } else { true } }
-        guard !jobs.isEmpty else { return isIdle ? 1 : 0 }
-        return jobs.map { $0.isFinished ? 1 : $0.progress }.reduce(0, +) / Double(jobs.count)
+        Job.meanProgress(of: batches.flatMap(\.jobs)) ?? (isIdle ? 1 : 0)
     }
 
     /// The jobs converting now, oldest batch first: the menu's rows, each with a ✕ (`Job.cancel()`).
