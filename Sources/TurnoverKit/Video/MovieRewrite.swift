@@ -23,8 +23,19 @@ struct MovieRewrite {
         writer.shouldOptimizeForNetworkUse = true
 
         var lanes: [SamplePump.Lane] = []
-        let videoOutput = AVAssetReaderTrackOutput(track: video, outputSettings: nil)
-        let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: nil, sourceFormatHint: videoFormat)
+        let videoInput: AVAssetWriterInput
+        let videoOutput: AVAssetReaderTrackOutput
+        if H264.isWidelyPlayable(videoFormat) {
+            videoOutput = AVAssetReaderTrackOutput(track: video, outputSettings: nil)
+            videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: nil, sourceFormatHint: videoFormat)
+        } else {
+            let (frameRate, dataRate) = try await video.load(.nominalFrameRate, .estimatedDataRate)
+            videoOutput = AVAssetReaderTrackOutput(track: video, outputSettings: H264.decodingSettings)
+            videoInput = AVAssetWriterInput(
+                mediaType: .video,
+                outputSettings: H264.encodingSettings(
+                    for: videoFormat.dimensions, frameRate: Double(frameRate), sourceDataRate: Double(dataRate)))
+        }
         videoInput.transform = try await video.load(.preferredTransform)
         lanes.append(.init(output: videoOutput, input: videoInput))
 
