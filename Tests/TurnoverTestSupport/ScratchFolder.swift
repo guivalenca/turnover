@@ -11,7 +11,15 @@ public final class ScratchFolder: @unchecked Sendable {
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
     }
 
-    deinit { try? FileManager.default.removeItem(at: url) }
+    deinit {
+        try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: url.path)
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    /// Makes the folder read-only, like a disk image or a locked drive: nothing can be added.
+    public func makeReadOnly() throws {
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: url.path)
+    }
 
     /// Copies a fixture in, under its own name or `name`, and returns the copy's URL.
     @discardableResult

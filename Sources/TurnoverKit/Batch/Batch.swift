@@ -27,11 +27,7 @@ public final class Batch: Identifiable {
     }
 
     /// The new files, in job order.
-    public var outputs: [URL] {
-        jobs.compactMap { job in
-            if case .converted(let result) = job.state { result.output } else { nil }
-        }
-    }
+    public var outputs: [URL] { jobs.compactMap(\.result?.output) }
 
     /// Cancels every job that hasn't ended. See `Job.cancel()`.
     public func cancel() {

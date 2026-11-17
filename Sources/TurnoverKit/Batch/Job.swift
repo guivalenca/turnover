@@ -46,6 +46,11 @@ public final class Job: Identifiable {
         }
     }
 
+    /// The conversion's result once the job has converted, nil otherwise.
+    public var result: ConversionResult? {
+        if case .converted(let result) = state { result } else { nil }
+    }
+
     /// Stops the job. A waiting job never starts. A running one stops within moments, and its
     /// partial output is deleted; if it was already moving its output into place, it ends
     /// converted instead. Does nothing to a job that has ended.

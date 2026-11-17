@@ -3,7 +3,8 @@ import Foundation
 
 /// Where and how an output file appears: in `folder`, named after the source with the new
 /// extension, numbered Finder-style on a collision (`photo 2.png`, `photo 3.png`, …), with the
-/// source's creation and modification dates.
+/// source's creation and modification dates. `folder` is the source's own folder, or the
+/// fallback (Downloads) when the source's folder can't be written to.
 ///
 /// The output is written to a private temporary folder on the same volume, then moved into
 /// place with an exclusive rename, so it appears whole or not at all and never replaces a file,
@@ -13,10 +14,16 @@ struct Placement {
     let folder: URL
     let baseName: String
     let fileExtension: String
+    /// Whether `folder` is the fallback rather than the source's folder.
+    let usesFallback: Bool
 
-    init(nextTo source: URL, fileExtension: String) {
+    init(nextTo source: URL, fileExtension: String, fallback: URL) {
         self.source = source
-        folder = source.deletingLastPathComponent()
+        let sourceFolder = source.deletingLastPathComponent()
+        // Asked up front: a read-only disk image fails the final rename with EXDEV, not EROFS,
+        // because the temporary folder can't be made on it and lands on the startup disk.
+        usesFallback = access(sourceFolder.path, W_OK) != 0
+        folder = usesFallback ? fallback : sourceFolder
         baseName = source.deletingPathExtension().lastPathComponent
         self.fileExtension = fileExtension
     }

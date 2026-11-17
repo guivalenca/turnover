@@ -105,8 +105,13 @@ public final class JobRunner {
             return .converted(try await converter.convert(file, with: action, progress: progress))
         } catch is CancellationError {
             return .cancelled
-        } catch {
+        } catch let error as ConversionError {
             return .failed(reason: error.localizedDescription)
+        } catch {
+            // Writing failed: no room, no permission, an encoder missing, …
+            let detail = (error as? POSIXError).map { String(cString: strerror($0.code.rawValue)) }
+                ?? error.localizedDescription
+            return .failed(reason: "\(file.url.lastPathComponent): couldn't write the \(action.name) (\(detail))")
         }
     }
 
