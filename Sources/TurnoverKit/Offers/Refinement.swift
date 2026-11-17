@@ -32,6 +32,8 @@ struct Refinement: Sendable {
     }
 
     /// Calls `publish` with the quick offers, then again each time an exact size is known.
+    /// Stops at the next step when its task is cancelled: an encode in progress finishes, and
+    /// nothing else starts.
     func run(publish: @Sendable (Offers) async -> Void) async {
         let (known, _) = remembered()
         async let quickSizes = ImageSizes.of(images, known: known)
@@ -40,6 +42,7 @@ struct Refinement: Sendable {
         await publish(offers(sizes, videos))
 
         for image in images where known[image.url] == nil {
+            guard !Task.isCancelled else { return }
             guard let key = SizeCache.Key(image.url) else { continue }
             // Sizes remembered for some outputs already, from an earlier, interrupted measurement.
             let remembered = cache.sizes(for: key)?.sizes ?? [:]
@@ -50,6 +53,7 @@ struct Refinement: Sendable {
             let unchanged = SizeCache.Key(image.url) == key
             let pixels = decoded.image.width * decoded.image.height
             for output in outputs {
+                guard !Task.isCancelled else { return }
                 guard let bytes = ImageConversion.encodedSize(of: decoded, as: output.type, quality: output.encoderQuality)
                 else { break }
                 if unchanged { cache.store(output, bytes: bytes, pixels: pixels, for: key) }

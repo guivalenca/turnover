@@ -133,3 +133,76 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
         #expect(estimator.estimate([first]).offers.targets.allSatisfy { $0.estimate == nil })
     }
 }
+
+/// Refining starts when a drag starts and stops when it ends or the selection changes.
+@MainActor
+@Suite(.timeLimit(.minutes(1))) struct StoppingRefinement {
+    let folder = try! ScratchFolder()
+
+    /// Three 6-megapixel photos: a few hundred milliseconds of encoding each.
+    func photos() throws -> [URL] {
+        let first = try folder.addMosaic(of: .heicRotated, width: 3000, height: 2000, as: "1.jpg")
+        return try [first] + (2...3).map { index in
+            let copy = folder.url.appendingPathComponent("\(index).jpg")
+            try FileManager.default.copyItem(at: first, to: copy)
+            return copy
+        }
+    }
+
+    @Test func cancellingStopsTheWorkAndLeavesNothingRunning() async throws {
+        let photos = try photos()
+        let estimator = Estimator()
+        let live = estimator.estimate(photos)
+        #expect(await eventually { live.offers.targets.first?.estimate != nil })
+
+        let cancelled = ContinuousClock.now
+        live.cancel()
+        await live.waitUntilFinished()
+
+        #expect(ContinuousClock.now - cancelled < timeLimit(.seconds(1)))
+        #expect(live.isFinished)
+        let last = live.offers
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(live.offers == last)
+        // Nothing was measured after the cancel: the last photo was never encoded.
+        let again = estimator.estimate([photos[2]])
+        #expect(again.offers.targets.allSatisfy { $0.estimate == nil })
+        again.cancel()
+    }
+
+    @Test func theEstimatorCancelsWhenTheDragEnds() async throws {
+        let estimator = Estimator()
+        let live = estimator.estimate(try photos())
+
+        estimator.cancel()
+        await live.waitUntilFinished()
+
+        #expect(live.isFinished)
+        #expect(live.offers.targets.contains { $0.estimate?.isExact != true })
+    }
+
+    @Test func askingAgainForTheSameFilesReusesTheWorkInProgress() async throws {
+        let photos = try photos()
+        let estimator = Estimator()
+
+        let atDragStart = estimator.estimate(photos)
+        let onTheRing = estimator.estimate(photos)
+
+        #expect(onTheRing === atDragStart)
+        estimator.cancel()
+    }
+
+    @Test func aNewSelectionCancelsThePreviousOne() async throws {
+        let photos = try photos()
+        let estimator = Estimator()
+        let first = estimator.estimate(photos)
+
+        let second = estimator.estimate([photos[0]])
+        await first.waitUntilFinished()
+
+        #expect(second !== first)
+        #expect(first.offers.targets.contains { $0.estimate?.isExact != true })
+        await second.waitUntilFinished()
+        try await expectExact(second.offers, for: photos[0])
+    }
+}
