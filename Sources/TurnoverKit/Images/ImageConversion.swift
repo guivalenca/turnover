@@ -5,7 +5,8 @@ import UniformTypeIdentifiers
 
 /// Decodes an image with ImageIO and re-encodes it in another format.
 enum ImageConversion {
-    static func convert(_ source: URL, to destination: URL, as type: UTType) throws {
+    /// `quality`, from 0 to 1, applies to lossy formats; nil leaves it to ImageIO.
+    static func convert(_ source: URL, to destination: URL, as type: UTType, quality: Double? = nil) throws {
         guard let input = CGImageSourceCreateWithURL(source as CFURL, nil),
               CGImageSourceGetStatus(input) == .statusComplete
         else { throw ConversionError.damaged(source) }
@@ -18,7 +19,12 @@ enum ImageConversion {
         else { throw ConversionError.damaged(source) }
         guard let output = CGImageDestinationCreateWithURL(destination as CFURL, type.identifier as CFString, 1, nil)
         else { throw CocoaError(.fileWriteUnknown, userInfo: [NSURLErrorKey: destination]) }
-        CGImageDestinationAddImage(output, image, metadata(from: properties, for: image) as CFDictionary)
+        var options = metadata(from: properties, for: image)
+        if let quality { options[kCGImageDestinationLossyCompressionQuality] = quality }
+        // Formats without alpha (JPEG) composite transparent areas onto this; ImageIO documents
+        // black as the default. Formats with alpha ignore it.
+        options[kCGImageDestinationBackgroundColor] = CGColor(gray: 1, alpha: 1)
+        CGImageDestinationAddImage(output, image, options as CFDictionary)
         guard CGImageDestinationFinalize(output) else {
             // Some formats (HEIC) decode lazily, so a truncated file only fails here.
             if image.dataProvider?.data == nil { throw ConversionError.damaged(source) }
