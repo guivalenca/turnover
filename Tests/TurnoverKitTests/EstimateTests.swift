@@ -60,14 +60,48 @@ import TurnoverTestSupport
         #expect(try isWithinFactorOfTwo(png.estimate, of: real))
     }
 
-    /// Converts a copy of `image` in a folder of its own and returns the output's size in bytes.
-    private func outputSize(of image: URL, with action: some ConversionAction) async throws -> Int {
-        let scratch = try ScratchFolder()
-        let copy = scratch.url.appendingPathComponent(image.lastPathComponent)
-        try FileManager.default.copyItem(at: image, to: copy)
-        let output = try await Converter().convert(copy, with: action).output
-        return try output.resourceValues(forKeys: [.fileSizeKey]).fileSize!
+}
+
+/// Camera-sized photos are estimated from a sample, which must stay quick and close enough.
+@Suite struct LargePhotoEstimates {
+    let folder = try! ScratchFolder()
+
+    @Test func aSixMegapixelPhotoIsEstimatedWithinAFactorOfTwo() async throws {
+        let jpeg = try folder.addMosaic(of: .heicRotated, width: 3000, height: 2000, as: "big.jpg")
+        let png = try folder.addMosaic(of: .jpeg, width: 3000, height: 2000, as: "big.png", type: .png)
+
+        let offers = await Offers(estimating: [jpeg, png])
+
+        let toPNG = try #require(offers.targets.first { $0.format == .png })
+        let toJPEG = try #require(offers.targets.first { $0.format == .jpeg })
+        let realPNG = try await outputSize(of: jpeg, with: PNGAction())
+        #expect(try isWithinFactorOfTwo(toPNG.estimate, of: realPNG))
+        for preset in toJPEG.presets {
+            let real = try await outputSize(of: png, with: JPEGAction(quality: preset.quality))
+            #expect(try isWithinFactorOfTwo(preset.estimate, of: real), "\(preset.quality)")
+        }
     }
+
+    @Test func aSixMegapixelPhotoIsEstimatedInUnder50Milliseconds() async throws {
+        let photo = try folder.addMosaic(of: .heicRotated, width: 3000, height: 2000, as: "big.jpg")
+
+        // The fastest of three rounds: on CI other tests compete for the CPU.
+        var times: [Duration] = []
+        for _ in 1...3 {
+            times.append(await ContinuousClock().measure { _ = await Offers(estimating: [photo]) })
+        }
+
+        #expect(times.min()! < .milliseconds(50))
+    }
+}
+
+/// Converts a copy of `image` in a folder of its own and returns the output's size in bytes.
+func outputSize(of image: URL, with action: some ConversionAction) async throws -> Int {
+    let scratch = try ScratchFolder()
+    let copy = scratch.url.appendingPathComponent(image.lastPathComponent)
+    try FileManager.default.copyItem(at: image, to: copy)
+    let output = try await Converter().convert(copy, with: action).output
+    return try output.resourceValues(forKeys: [.fileSizeKey]).fileSize!
 }
 
 /// How long MP4 says it will take.
