@@ -128,13 +128,7 @@ struct ImageSizes: Sendable {
 
     /// From the header alone. Nil when the image can't be decoded.
     static func pixelCount(of url: URL) -> Int? {
-        guard let input = CGImageSourceCreateWithURL(url as CFURL, nil),
-              CGImageSourceGetStatus(input) == .statusComplete,
-              let properties = CGImageSourceCopyPropertiesAtIndex(input, CGImageSourceGetPrimaryImageIndex(input), nil) as? [CFString: Any],
-              let width = properties[kCGImagePropertyPixelWidth] as? Int,
-              let height = properties[kCGImagePropertyPixelHeight] as? Int
-        else { return nil }
-        return width * height
+        ImageHeader(url)?.pixels
     }
 
     /// An image like `image`, of `pixels` pixels, with as many bytes per pixel in each output as
@@ -163,16 +157,9 @@ struct ImageSizes: Sendable {
     /// Measures one image: exactly when it is small, from a sample otherwise. Nil when it can't
     /// be decoded.
     init?(of file: SourceFile) {
-        guard let input = CGImageSourceCreateWithURL(file.url as CFURL, nil),
-              CGImageSourceGetStatus(input) == .statusComplete
-        else { return nil }
-        let index = CGImageSourceGetPrimaryImageIndex(input)
-        let properties = CGImageSourceCopyPropertiesAtIndex(input, index, nil) as? [CFString: Any] ?? [:]
-        guard let width = properties[kCGImagePropertyPixelWidth] as? Int,
-              let height = properties[kCGImagePropertyPixelHeight] as? Int
-        else { return nil }
+        guard let header = ImageHeader(file.url) else { return nil }
         var sizes: [ImageOutput: Size] = [:]
-        if width * height <= Self.wholeImageLimit {
+        if header.pixels <= Self.wholeImageLimit {
             guard let decoded = try? ImageConversion.Decoded(file.url) else { return nil }
             for output in ImageOutput.allCases {
                 guard let bytes = ImageConversion.encodedSize(of: decoded, as: output.type, quality: output.encoderQuality)
@@ -181,15 +168,16 @@ struct ImageSizes: Sendable {
             }
         } else {
             // Decoded lazily, so a piece of a tiled HEIC decodes only its tile.
-            guard let image = CGImageSourceCreateImageAtIndex(input, index, [kCGImageSourceShouldCache: false] as CFDictionary),
-                  let sample = Sample(image, properties: properties, from: file)
+            guard let image = CGImageSourceCreateImageAtIndex(header.source, header.index,
+                                                              [kCGImageSourceShouldCache: false] as CFDictionary),
+                  let sample = Sample(image, properties: header.properties, from: file)
             else { return nil }
             for output in ImageOutput.allCases {
                 guard let bytes = sample.bytes(as: output) else { return nil }
                 sizes[output] = Size(bytes: bytes, isExact: false)
             }
         }
-        (self.pixels, self.sizes) = (width * height, sizes)
+        (self.pixels, self.sizes) = (header.pixels, sizes)
     }
 
     init(pixels: Int, sizes: [ImageOutput: Size]) {

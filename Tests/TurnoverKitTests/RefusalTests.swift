@@ -55,6 +55,18 @@ import TurnoverTestSupport
         }
         #expect(try folder.fileNames() == [broken.lastPathComponent])
     }
+
+    /// Cut anywhere after its header, a HEIC still opens, and the JPEG encoder never notices the
+    /// missing picture: it wrote a blank JPEG. It must fail as damaged, whatever the format.
+    @Test(arguments: [1_500, 3_000, 4_500, Fixture.heicRotated.data.count - 1], [OutputFormat.jpeg, .png])
+    func aHEICCutShortFailsAsDamaged(kept: Int, format: OutputFormat) async throws {
+        let broken = try folder.add(Fixture.heicRotated.data.prefix(kept), as: "broken.heic")
+
+        await #expect(throws: ConversionError.damaged(broken)) {
+            try await Converter().convert(broken, with: format.action())
+        }
+        #expect(try folder.fileNames() == ["broken.heic"])
+    }
 }
 
 /// The same for videos and MP4.

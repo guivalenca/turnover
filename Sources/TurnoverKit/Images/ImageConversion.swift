@@ -33,17 +33,11 @@ enum ImageConversion {
 
         /// Throws `ConversionError.damaged` when `source` can't be decoded.
         init(_ source: URL) throws {
-            guard let input = CGImageSourceCreateWithURL(source as CFURL, nil),
-                  CGImageSourceGetStatus(input) == .statusComplete
+            guard let header = ImageHeader(source),
+                  let image = ImageConversion.uprightImage(header.source, at: header.index,
+                                                           longestSide: max(header.width, header.height))
             else { throw ConversionError.damaged(source) }
-            let index = CGImageSourceGetPrimaryImageIndex(input)
-            let properties = CGImageSourceCopyPropertiesAtIndex(input, index, nil) as? [CFString: Any] ?? [:]
-            guard CGImageSourceGetStatusAtIndex(input, index) == .statusComplete,
-                  let width = properties[kCGImagePropertyPixelWidth] as? Int,
-                  let height = properties[kCGImagePropertyPixelHeight] as? Int,
-                  let image = ImageConversion.uprightImage(input, at: index, longestSide: max(width, height))
-            else { throw ConversionError.damaged(source) }
-            (self.image, self.properties) = (image, properties)
+            (self.image, self.properties) = (image, header.properties)
         }
 
         /// Some formats (HEIC) decode lazily, so a truncated file only fails when it is encoded.

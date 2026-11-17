@@ -269,10 +269,20 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
         }
     }
 
+    /// A HEIC cut short decodes to whatever ImageIO makes of the missing data: it has no size.
+    @Test func aHEICCutShortIsNeverMeasured() async throws {
+        let broken = try folder.add(Fixture.heicRotated.data.prefix(4_500), as: "broken.heic")
+
+        let live = Estimator().estimate([broken])
+        await live.waitUntilFinished()
+
+        #expect(live.offers.targets.map(\.format) == [.png, .jpeg])
+        #expect(live.offers.targets.map(\.estimate) == [nil, nil])
+    }
+
     @Test func aFileThatCantBeMeasuredMakesTheTotalApproximate() async throws {
         let whole = try folder.add(.png, as: "logo.png")
-        // Cut in its header: offered as an image, but it can't be decoded. (Cut later, a HEIC
-        // decodes to whatever ImageIO makes of the missing data, which varies.)
+        // Cut in its header: offered as an image, but it can't be decoded.
         let broken = try folder.add(Fixture.heicRotated.data.prefix(1_000), as: "broken.heic")
 
         let live = Estimator().estimate([whole, broken])
