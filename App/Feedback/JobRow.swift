@@ -44,12 +44,12 @@ struct JobRow: View {
 
     private var status: String {
         switch job.state {
-        case .waiting: "Waiting"
+        case .waiting: String(localized: "Waiting", comment: "A conversion in the menu bar item's menu, queued.")
         case .running: percent(job.progress)
-        case .converted: "Done"
-        case .cancelled: "Stopped"
-        case .failed: "Failed"
-        case .skipped: "Skipped"
+        case .converted: String(localized: "Done", comment: "A conversion in the menu bar item's menu, finished.")
+        case .cancelled: String(localized: "Stopped", comment: "A conversion in the menu bar item's menu, stopped with ✕.")
+        case .failed: String(localized: "Failed", comment: "A conversion in the menu bar item's menu, failed.")
+        case .skipped: String(localized: "Skipped", comment: "A conversion in the menu bar item's menu, not done: the file doesn't fit the format.")
         }
     }
 }

@@ -10,7 +10,7 @@ import TurnoverTestSupport
     @Test func aPNGIsNotConvertedToPNG() async throws {
         let png = try folder.add(.png, as: "logo.png")
 
-        await #expect(throws: ConversionError.alreadyInFormat(png, format: "PNG")) {
+        await #expect(throws: ConversionError.alreadyInFormat(png, format: .png)) {
             try await Converter().convert(png, with: PNGAction())
         }
         #expect(try folder.fileNames() == ["logo.png"])
@@ -19,7 +19,7 @@ import TurnoverTestSupport
     @Test func aPNGWithAJPGExtensionIsStillRecognisedAndRefused() async throws {
         let png = try folder.add(.png, as: "logo.jpg")
 
-        await #expect(throws: ConversionError.alreadyInFormat(png, format: "PNG")) {
+        await #expect(throws: ConversionError.alreadyInFormat(png, format: .png)) {
             try await Converter().convert(png, with: PNGAction())
         }
         #expect(try folder.fileNames() == ["logo.jpg"])
@@ -55,6 +55,18 @@ import TurnoverTestSupport
         }
         #expect(try folder.fileNames() == [broken.lastPathComponent])
     }
+
+    /// Cut anywhere after its header, a HEIC still opens, and the JPEG encoder never notices the
+    /// missing picture: it wrote a blank JPEG. It must fail as damaged, whatever the format.
+    @Test(arguments: [1_500, 3_000, 4_500, Fixture.heicRotated.data.count - 1], [OutputFormat.jpeg, .png])
+    func aHEICCutShortFailsAsDamaged(kept: Int, format: OutputFormat) async throws {
+        let broken = try folder.add(Fixture.heicRotated.data.prefix(kept), as: "broken.heic")
+
+        await #expect(throws: ConversionError.damaged(broken)) {
+            try await Converter().convert(broken, with: format.action())
+        }
+        #expect(try folder.fileNames() == ["broken.heic"])
+    }
 }
 
 /// The same for videos and MP4.
@@ -64,7 +76,7 @@ import TurnoverTestSupport
     @Test func anMP4IsNotConvertedToMP4() async throws {
         let mp4 = try folder.add(.mp4H264, as: "clip.mp4")
 
-        await #expect(throws: ConversionError.alreadyInFormat(mp4, format: "MP4")) {
+        await #expect(throws: ConversionError.alreadyInFormat(mp4, format: .mp4)) {
             try await Converter().convert(mp4, with: MP4Action())
         }
         #expect(try folder.fileNames() == ["clip.mp4"])

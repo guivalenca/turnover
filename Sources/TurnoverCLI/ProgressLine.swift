@@ -1,5 +1,6 @@
 import Foundation
 import Synchronization
+import TurnoverKit
 
 /// A one-line "clip.mov  42%" (or "3 files  42%") on standard error, redrawn in place while a
 /// batch runs. Shown only when standard error is a terminal; scripts and pipes never see it.
@@ -31,10 +32,8 @@ final class ProgressLine: Sendable {
     func report(_ job: Int, _ fraction: Double) {
         state.withLock { state in
             state.fractions[job] = max(state.fractions[job], fraction)
-            let counted = state.fractions.indices.filter { state.counted[$0] }
-            guard !counted.isEmpty else { return }
-            let total = counted.map { state.fractions[$0] }.reduce(0, +) / Double(counted.count)
-            guard total > 0, total < 1 else { return }
+            let fractions = state.fractions.indices.map { state.counted[$0] ? state.fractions[$0] : nil }
+            guard let total = meanProgress(fractions), total > 0, total < 1 else { return }
             let percent = Int(total * 100)
             guard state.shown != percent else { return }
             state.shown = percent

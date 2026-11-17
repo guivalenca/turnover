@@ -45,14 +45,14 @@ case .convert(let files, let action):
             report = { print(result.output.path) }
         case .skipped(.notApplicable(let file, let format)):
             skipped = true
-            report = { printError("\(file.lastPathComponent): skipped, can't be converted to \(format)") }
+            report = { printError("\(file.lastPathComponent): skipped, can't be converted to \(format.name)") }
         case .skipped(let reason):
             skipped = true
             failed = true
             report = { printError(reason.localizedDescription) }
         case .failed(let reason):
             failed = true
-            report = { printError(reason) }
+            report = { printError(reason.localizedDescription) }
         case .cancelled, .waiting, .running:
             report = {}
         }

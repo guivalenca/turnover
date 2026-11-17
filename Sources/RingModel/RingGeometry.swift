@@ -4,6 +4,17 @@ import CoreGraphics
 /// the highlight turns, how much room each label has, and where the shrunk drag image goes.
 /// Angles are the model's: degrees clockwise from the right, -90° at the top.
 public enum RingGeometry {
+    /// The ring's size, in points from its centre: the prototype's proportions. The view draws
+    /// with these, and the model hit-tests with them, so a drop converts exactly where an entry
+    /// is drawn.
+    ///
+    /// The glass disc's edge: beyond it the pointer is off the ring, and a drop cancels.
+    public static let outerRadius: CGFloat = 128
+    /// The hub lens's edge: inside it nothing is highlighted, and a drop cancels.
+    public static let hubRadius: CGFloat = 42
+    /// Where the entries' labels are centred.
+    public static let labelRadius: CGFloat = 87
+
     /// The centre for a ring opened at `point`: the point itself, moved just enough that
     /// `drawing` (the ring's drawn bounds, relative to its centre) stays inside `frame`.
     public static func centre(openingAt point: CGPoint, drawing: CGRect, within frame: CGRect) -> CGPoint {

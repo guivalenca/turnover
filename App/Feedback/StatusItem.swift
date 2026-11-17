@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import TurnoverKit
+import TurnoverAppCore
 
 /// The menu bar item, present only while `Feedback` says so: the glyph and the overall
 /// percentage, with a menu listing each running conversion with a ✕.
@@ -46,7 +47,7 @@ final class StatusItem: NSObject, NSMenuDelegate {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.button?.image = NSImage(named: "MenuBarGlyph")  // already a template (#14)
         item.button?.imagePosition = .imageLeading
-        item.button?.setAccessibilityLabel("Turnover")
+        item.button?.setAccessibilityLabel(String(localized: "Turnover", comment: "The app's name."))
         item.button?.font = .monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
         item.menu = menu
         self.item = item
@@ -68,14 +69,16 @@ final class StatusItem: NSObject, NSMenuDelegate {
             menu.addItem(row)
         }
         if jobs.count > Self.mostRows {
-            menu.addItem(Self.note("\(jobs.count - Self.mostRows) more waiting"))
+            menu.addItem(Self.note(String(localized: "\(jobs.count - Self.mostRows) more waiting",
+                                          comment: "The menu bar item's menu: conversions queued beyond the rows shown.")))
         }
         if jobs.isEmpty {
-            menu.addItem(Self.note("Done"))
+            menu.addItem(Self.note(String(localized: "Done", comment: "The menu bar item's menu once everything has finished.")))
         }
         if jobs.count > 1 {
             menu.addItem(.separator())
-            let stopAll = NSMenuItem(title: "Stop All", action: #selector(stopAll), keyEquivalent: "")
+            let stopAll = NSMenuItem(title: String(localized: "Stop All", comment: "Stops every conversion in the menu bar item's menu."),
+                                     action: #selector(stopAll), keyEquivalent: "")
             stopAll.target = self
             menu.addItem(stopAll)
         }

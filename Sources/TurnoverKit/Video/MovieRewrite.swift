@@ -21,15 +21,15 @@ struct MovieRewrite {
         writer.shouldOptimizeForNetworkUse = true
         writer.metadata = movie.metadata
 
-        var lanes = [videoLane(movie.video)]
-        if let audio = movie.audio { lanes.append(audioLane(audio)) }
-        for lane in lanes {
-            lane.output.alwaysCopiesSampleData = false
-            reader.add(lane.output)
-            writer.add(lane.input)
+        var streams = [videoStream(movie.video)]
+        if let audio = movie.audio { streams.append(audioStream(audio)) }
+        for stream in streams {
+            stream.output.alwaysCopiesSampleData = false
+            reader.add(stream.output)
+            writer.add(stream.input)
         }
 
-        let pump = SamplePump(reader: reader, writer: writer, lanes: lanes, duration: movie.duration, progress: progress)
+        let pump = SamplePump(reader: reader, writer: writer, streams: streams, duration: movie.duration, progress: progress)
         do {
             try await pump.run()
         } catch is SamplePump.ReadingFailed {
@@ -37,7 +37,7 @@ struct MovieRewrite {
         }
     }
 
-    private func videoLane(_ video: MovieSource.Video) -> SamplePump.Lane {
+    private func videoStream(_ video: MovieSource.Video) -> SamplePump.Stream {
         let output: AVAssetReaderTrackOutput
         let input: AVAssetWriterInput
         if video.isWidelyPlayable {
@@ -51,17 +51,17 @@ struct MovieRewrite {
                     for: video.format.dimensions, frameRate: video.frameRate, sourceDataRate: video.dataRate))
         }
         input.transform = video.transform
-        return SamplePump.Lane(output: output, input: input, reportsProgress: true)
+        return SamplePump.Stream(output: output, input: input, reportsProgress: true)
     }
 
-    private func audioLane(_ audio: MovieSource.Audio) -> SamplePump.Lane {
+    private func audioStream(_ audio: MovieSource.Audio) -> SamplePump.Stream {
         if AAC.isWidelyPlayable(audio.format) {
-            return SamplePump.Lane(
+            return SamplePump.Stream(
                 output: AVAssetReaderTrackOutput(track: audio.track, outputSettings: nil),
                 input: AVAssetWriterInput(mediaType: .audio, outputSettings: nil, sourceFormatHint: audio.format),
                 reportsProgress: false)
         }
-        return SamplePump.Lane(
+        return SamplePump.Stream(
             output: AVAssetReaderTrackOutput(track: audio.track, outputSettings: AAC.decodingSettings(for: audio.format)),
             input: AVAssetWriterInput(mediaType: .audio, outputSettings: AAC.encodingSettings(for: audio.format)),
             reportsProgress: false)

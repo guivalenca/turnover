@@ -130,7 +130,7 @@ import TurnoverTestSupport
     @Test func aJPEGIsNotConvertedToJPEG() async throws {
         let jpeg = try folder.add(.jpeg, as: "photo.jpg")
 
-        await #expect(throws: ConversionError.alreadyInFormat(jpeg, format: "JPEG")) {
+        await #expect(throws: ConversionError.alreadyInFormat(jpeg, format: .jpeg)) {
             try await Converter().convert(jpeg, with: JPEGAction())
         }
         #expect(try folder.fileNames() == ["photo.jpg"])

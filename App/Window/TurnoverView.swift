@@ -22,7 +22,7 @@ struct TurnoverView: View {
                     status: model.notifications == .allowed ? "Allowed" : nil,
                     button: model.notifications == .notAsked ? "Allow…" : "Open Settings…",
                     action: { model.turnOnNotifications() })
-                .disabled(model.notifications == .unknown)
+                .disabled(model.notifications == nil)
             }
 
             Section("Settings") {

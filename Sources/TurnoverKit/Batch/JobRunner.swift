@@ -12,8 +12,11 @@ public final class JobRunner {
     @ObservationIgnored private let converter: Converter
     @ObservationIgnored private var lanes: [Lane: LaneState] = [
         .images: LaneState(limit: ProcessInfo.processInfo.activeProcessorCount),
-        .videos: LaneState(limit: 2),
+        .videos: LaneState(limit: videosAtOnce),
     ]
+
+    /// How many videos convert at once. Video estimates pack a selection into this many at once.
+    nonisolated static let videosAtOnce = 2
 
     public init(converter: Converter = Converter()) {
         self.converter = converter
@@ -61,6 +64,7 @@ public final class JobRunner {
 
     // MARK: - Scheduling
 
+    /// Where a job waits for its turn: images and videos have their own limits.
     private enum Lane { case images, videos }
 
     private struct LaneState {
@@ -106,13 +110,13 @@ public final class JobRunner {
 
     private nonisolated static func route(_ source: URL, to targets: [any ConversionAction]) async -> Route {
         do {
-            let file = try SourceFile(source)
+            let file = try await SourceFile.inspecting(source)
             guard let action = targets.first(where: { $0.accepts(file) }) else {
                 return .end(.skipped(skipReason(file, targets)))
             }
             return .convert(file, action)
         } catch {
-            return .end(.failed(reason: error.localizedDescription))
+            return .end(.failed(error as? ConversionError ?? .unreadable(source)))
         }
     }
 
@@ -122,15 +126,10 @@ public final class JobRunner {
     ) async -> Job.State {
         do {
             return .converted(try await converter.convert(file, with: action, progress: progress))
-        } catch is CancellationError {
-            return .cancelled
         } catch let error as ConversionError {
-            return .failed(reason: error.localizedDescription)
+            return .failed(error)
         } catch {
-            // Writing failed: no room, no permission, an encoder missing, …
-            let detail = (error as? POSIXError).map { String(cString: strerror($0.code.rawValue)) }
-                ?? error.localizedDescription
-            return .failed(reason: "\(file.url.lastPathComponent): couldn't write the \(action.name) (\(detail))")
+            return .cancelled  // Converter throws only those two
         }
     }
 

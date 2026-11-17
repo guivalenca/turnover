@@ -1,5 +1,6 @@
 import AppKit
 import TurnoverKit
+import TurnoverAppCore
 
 /// Runs every conversion the app is asked for and selects the new files in Finder when a batch
 /// ends. There is one for the app, so the runner's limits (at most two videos at a time) hold
@@ -49,7 +50,7 @@ final class Conversions {
             case .converted(let result):
                 log.notice("Converted \(result.source.path, privacy: .public) → \(result.output.path, privacy: .public)")
             case .failed(let reason):
-                log.error("Failed: \(reason, privacy: .public)")
+                log.error("Failed: \(reason.localizedDescription, privacy: .public)")
             case .skipped(let reason):
                 log.notice("Skipped: \(reason.localizedDescription, privacy: .public)")
             case .cancelled, .waiting, .running:

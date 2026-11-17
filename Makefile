@@ -3,7 +3,7 @@
 #   make install     build, sign ad hoc, install to /Applications, enable the Finder menu, launch
 #   make uninstall   quit, disable and unregister everything `make install` set up
 #   make app         build build/Turnover.app only (ad hoc signed; install removes it again)
-#   make test        run the TurnoverKit and CLI tests
+#   make test        run every test: TurnoverKit, the app core, the ring model and the CLI
 #   make project     regenerate Turnover.xcodeproj from project.yml (needs `brew install xcodegen`)
 
 APP_ID      := com.guivalenca.turnover
@@ -68,8 +68,10 @@ uninstall:
 	-@defaults delete $(APP_ID) 2>/dev/null
 	@echo "Uninstalled Turnover."
 
+# Swift Build compiles the String Catalogs; SwiftPM's older native build system (the default
+# before Swift 6.4) copies them as they are, and plural strings then fail their tests.
 test:
-	swift test
+	swift test --build-system swiftbuild
 
 # XcodeGen names the package's folder reference after the folder it runs in, so it runs through
 # a link named "turnover" (left in a new temporary folder): every clone, whatever its folder is

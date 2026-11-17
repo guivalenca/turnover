@@ -36,7 +36,8 @@ struct ImageSizes: Sendable {
         var measured = await quick(sampled)
         measured.merge(known) { quick, _ in quick }
         let unsampled = unknown.filter { !sampled.contains($0) }
-        return completing(measured, for: images, pixels: pixelCounts(of: unsampled))
+        let pixels = await blocking(.userInitiated) { pixelCounts(of: unsampled) }
+        return completing(measured, for: images, pixels: pixels)
     }
 
     /// Quick sizes for `images`, measured side by side; the ones that can't be decoded are left out.
@@ -128,13 +129,7 @@ struct ImageSizes: Sendable {
 
     /// From the header alone. Nil when the image can't be decoded.
     static func pixelCount(of url: URL) -> Int? {
-        guard let input = CGImageSourceCreateWithURL(url as CFURL, nil),
-              CGImageSourceGetStatus(input) == .statusComplete,
-              let properties = CGImageSourceCopyPropertiesAtIndex(input, CGImageSourceGetPrimaryImageIndex(input), nil) as? [CFString: Any],
-              let width = properties[kCGImagePropertyPixelWidth] as? Int,
-              let height = properties[kCGImagePropertyPixelHeight] as? Int
-        else { return nil }
-        return width * height
+        ImageHeader(url)?.pixels
     }
 
     /// An image like `image`, of `pixels` pixels, with as many bytes per pixel in each output as
@@ -163,16 +158,9 @@ struct ImageSizes: Sendable {
     /// Measures one image: exactly when it is small, from a sample otherwise. Nil when it can't
     /// be decoded.
     init?(of file: SourceFile) {
-        guard let input = CGImageSourceCreateWithURL(file.url as CFURL, nil),
-              CGImageSourceGetStatus(input) == .statusComplete
-        else { return nil }
-        let index = CGImageSourceGetPrimaryImageIndex(input)
-        let properties = CGImageSourceCopyPropertiesAtIndex(input, index, nil) as? [CFString: Any] ?? [:]
-        guard let width = properties[kCGImagePropertyPixelWidth] as? Int,
-              let height = properties[kCGImagePropertyPixelHeight] as? Int
-        else { return nil }
+        guard let header = ImageHeader(file.url) else { return nil }
         var sizes: [ImageOutput: Size] = [:]
-        if width * height <= Self.wholeImageLimit {
+        if header.pixels <= Self.wholeImageLimit {
             guard let decoded = try? ImageConversion.Decoded(file.url) else { return nil }
             for output in ImageOutput.allCases {
                 guard let bytes = ImageConversion.encodedSize(of: decoded, as: output.type, quality: output.encoderQuality)
@@ -181,15 +169,16 @@ struct ImageSizes: Sendable {
             }
         } else {
             // Decoded lazily, so a piece of a tiled HEIC decodes only its tile.
-            guard let image = CGImageSourceCreateImageAtIndex(input, index, [kCGImageSourceShouldCache: false] as CFDictionary),
-                  let sample = Sample(image, properties: properties, from: file)
+            guard let image = CGImageSourceCreateImageAtIndex(header.source, header.index,
+                                                              [kCGImageSourceShouldCache: false] as CFDictionary),
+                  let sample = Sample(image, header: header)
             else { return nil }
             for output in ImageOutput.allCases {
                 guard let bytes = sample.bytes(as: output) else { return nil }
                 sizes[output] = Size(bytes: bytes, isExact: false)
             }
         }
-        (self.pixels, self.sizes) = (width * height, sizes)
+        (self.pixels, self.sizes) = (header.pixels, sizes)
     }
 
     init(pixels: Int, sizes: [ImageOutput: Size]) {
@@ -215,7 +204,8 @@ struct ImageSizes: Sendable {
         /// See `hardwareJPEGRatio`.
         let decodesInHardware: Bool
 
-        init?(_ image: CGImage, properties: [CFString: Any], from file: SourceFile) {
+        init?(_ image: CGImage, header: ImageHeader) {
+            let properties = header.properties
             let tiff = properties[kCGImagePropertyTIFFDictionary] as? [CFString: Any]
             let tile = (tiff?[kCGImagePropertyTIFFTileWidth] as? Int ?? 0, tiff?[kCGImagePropertyTIFFTileLength] as? Int ?? 0)
             let tiled = tile.0 > 0 && tile.1 > 0
@@ -223,9 +213,12 @@ struct ImageSizes: Sendable {
             let pieceWidth = min(512, width, tiled ? tile.0 : width)
             let pieceHeight = min(tiled ? 32 : 16, height, tiled ? tile.1 : height)
             let (columns, rows) = tiled ? (3, 3) : (3, 6)
-            decodesInHardware = Self.decodesInHardware(file)
+            decodesInHardware = header.decodesInHardware
+            // The conversion's decode of a hardware-decoded picture has an alpha channel, which a
+            // PNG stores only if the file has transparency (`ImageConversion.opaque`).
+            let opaque = decodesInHardware ? !header.hasAlpha : [.none, .noneSkipFirst, .noneSkipLast].contains(image.alphaInfo)
             guard let context = Self.context(like: image, width: pieceWidth, height: pieceHeight * columns * rows,
-                                             alpha: decodesInHardware)
+                                             opaque: opaque)
             else { return nil }
             var stacked = 0
             for row in 0..<rows {
@@ -254,9 +247,9 @@ struct ImageSizes: Sendable {
             // The fixed cost of headers, metadata and the colour profile, measured on a crop too
             // small for its pixels to matter: paid once by the output, and once by the mosaic.
             guard let corner = mosaic.cropping(to: CGRect(x: 0, y: 0, width: 16, height: 16)),
-                  let fixed = Self.encodedSize(of: corner, as: type, metadata: properties, quality: quality),
-                  let bare = Self.encodedSize(of: corner, as: type, metadata: [:], quality: quality),
-                  let whole = Self.encodedSize(of: mosaic, as: type, metadata: [:], quality: quality)
+                  let fixed = ImageConversion.encodedSize(of: corner, with: properties, as: type, quality: quality),
+                  let bare = ImageConversion.encodedSize(of: corner, with: [:], as: type, quality: quality),
+                  let whole = ImageConversion.encodedSize(of: mosaic, with: [:], as: type, quality: quality)
             else { return nil }
             let samplePixels = mosaic.width * mosaic.height - corner.width * corner.height
             var bytes = Double(max(0, whole - bare)) * Double(imagePixels) / Double(samplePixels)
@@ -264,20 +257,14 @@ struct ImageSizes: Sendable {
             return fixed + Int(bytes)
         }
 
-        /// HEIC, HEIF and AVIF decode through the hardware path. The conversion's decoded image
-        /// then has an alpha channel (so its PNG has one too), and its JPEGs go through a faster
-        /// encoder that writes smaller files than the same pixels copied into a sample do: on 54
-        /// HEICs, by these factors (geometric means; individual photos ranged ±15%).
+        /// A hardware-decoded picture's JPEGs go through a faster encoder that writes smaller files
+        /// than the same pixels copied into a sample do: on 54 HEICs, by these factors (geometric
+        /// means; individual photos ranged ±15%).
         static let hardwareJPEGRatio: [JPEGQuality: Double] = [.best: 0.82, .high: 0.91, .small: 0.88]
 
-        private static func decodesInHardware(_ file: SourceFile) -> Bool {
-            [UTType.heic, .heif, UTType("public.avif")].contains { $0.map(file.contentType.conforms) ?? false }
-        }
-
-        /// A bitmap for the pieces with the decoded image's channels and depth, plus alpha when
-        /// the conversion's decode adds one, so a PNG of it is as big as the conversion's would be.
-        private static func context(like image: CGImage, width: Int, height: Int, alpha: Bool) -> CGContext? {
-            let opaque = !alpha && [.none, .noneSkipFirst, .noneSkipLast].contains(image.alphaInfo)
+        /// A bitmap for the pieces with the decoded image's channels and depth, and alpha unless
+        /// the conversion's output is `opaque`, so a PNG of it is as big as the conversion's.
+        private static func context(like image: CGImage, width: Int, height: Int, opaque: Bool) -> CGContext? {
             let depth = image.bitsPerComponent > 8 ? 16 : 8
             let space = image.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
             let layout: (CGColorSpace, CGImageAlphaInfo) =
@@ -291,11 +278,5 @@ struct ImageSizes: Sendable {
                              bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         }
 
-        private static func encodedSize(of image: CGImage, as type: UTType, metadata: [CFString: Any], quality: Double?) -> Int? {
-            let data = NSMutableData()
-            guard let output = CGImageDestinationCreateWithData(data, type.identifier as CFString, 1, nil) else { return nil }
-            CGImageDestinationAddImage(output, image, ImageConversion.options(for: image, from: metadata, quality: quality) as CFDictionary)
-            return CGImageDestinationFinalize(output) ? data.length : nil
-        }
     }
 }

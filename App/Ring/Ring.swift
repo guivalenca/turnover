@@ -3,6 +3,7 @@ import Observation
 import os
 import RingModel
 import TurnoverKit
+import TurnoverAppCore
 
 /// The ring's log: `log stream --style compact --predicate 'subsystem == "com.guivalenca.turnover"'`.
 let ringLog = Logger(subsystem: "com.guivalenca.turnover", category: "ring")
@@ -158,13 +159,18 @@ final class Ring {
     }
 
     /// Starts working out the offers for `files` and feeds them, and every refinement of their
-    /// estimates, to the model.
+    /// estimates, to the model. The files are looked at off the main actor, so the drag never
+    /// waits for them.
     private func estimate(_ files: [URL]) {
         guard files != self.files else { return }
         self.files = files
-        let live = estimator.estimate(files, jpegQuality: AppSettings().jpegQuality)
-        self.live = live
-        follow(live)
+        let quality = AppSettings().jpegQuality
+        Task {
+            let live = await estimator.estimate(files, jpegQuality: quality)
+            guard files == self.files else { return }  // the drag ended, or other files came
+            self.live = live
+            follow(live)
+        }
     }
 
     private func follow(_ live: LiveOffers) {

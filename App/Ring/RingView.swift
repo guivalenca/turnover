@@ -16,10 +16,10 @@ import RingModel
 /// (clockwise from the right), so they are turned round where they are drawn.
 @MainActor
 final class RingView: NSView {
-    /// The prototype's proportions.
-    nonisolated static let outerRadius: CGFloat = 128
-    nonisolated static let labelRadius: CGFloat = 87
-    nonisolated static let hubRadius: CGFloat = 42
+    /// The model hit-tests with the same radii.
+    nonisolated static let outerRadius = RingGeometry.outerRadius
+    nonisolated static let labelRadius = RingGeometry.labelRadius
+    nonisolated static let hubRadius = RingGeometry.hubRadius
     /// The window's size, with the ring's centre in its middle.
     nonisolated static let size = NSSize(width: 400, height: 400)
     /// What the ring draws around its centre (y up): the disc, and the caption under it, at its
@@ -613,17 +613,8 @@ final class RingWindow {
     private var shows = 0
 
     init() {
-        panel = NSPanel(contentRect: NSRect(origin: .zero, size: RingView.size),
-                        styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = false
-        panel.level = .popUpMenu
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
-        panel.hidesOnDeactivate = false
-        panel.isReleasedWhenClosed = false
-        // Unlike the catching panels: the drag must go through this one to them.
-        panel.ignoresMouseEvents = true
+        // Unlike the catching panels, it ignores the mouse: the drag must go through it to them.
+        panel = NSPanel.overlay(size: RingView.size, ignoresMouse: true)
         panel.contentView = ringView
         #if DEBUG
         // `-RingAppearance dark` (or light): the ring in that appearance, whatever the Mac's.

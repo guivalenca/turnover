@@ -9,7 +9,7 @@ import UniformTypeIdentifiers
 public struct MP4Action: ConversionAction {
     public init() {}
 
-    public var name: String { "MP4" }
+    public var format: OutputFormat { .mp4 }
     public var outputType: UTType { .mpeg4Movie }
 
     /// Any movie but an MPEG-4 one. M4V files are MPEG-4 underneath but still offered MP4: that is

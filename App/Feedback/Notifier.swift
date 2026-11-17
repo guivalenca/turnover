@@ -1,6 +1,7 @@
 import AppKit
 import TurnoverKit
 import UserNotifications
+import TurnoverAppCore
 
 /// Posts `Feedback`'s notices as notifications. Show in Finder (or a click on the notification)
 /// selects the notice's files in Finder.
@@ -18,7 +19,8 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     override init() {
         super.init()
         center.delegate = self
-        let show = UNNotificationAction(identifier: Self.showAction, title: "Show in Finder")
+        let show = UNNotificationAction(identifier: Self.showAction,
+                                        title: String(localized: "Show in Finder", comment: "A notification's button: selects the new files in Finder."))
         center.setNotificationCategories([
             UNNotificationCategory(identifier: Self.showCategory, actions: [show], intentIdentifiers: [])
         ])
@@ -48,18 +50,18 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     }
 
     private func isAllowed() async -> Bool {
-        switch await center.notificationSettings().authorizationStatus {
-        case .notDetermined:
+        switch NotificationPermission(await center.notificationSettings().authorizationStatus) {
+        case .notAsked:
             do {
-                return try await center.requestAuthorization(options: [.alert])
+                return try await center.requestAuthorization(options: NotificationPermission.requestedOptions)
             } catch {
                 log.error("Couldn't ask to post notifications: \(error.localizedDescription, privacy: .public)")
                 return false
             }
-        case .denied:
-            return false
-        default:
+        case .allowed:
             return true
+        case .off:
+            return false
         }
     }
 

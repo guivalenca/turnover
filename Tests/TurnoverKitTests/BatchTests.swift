@@ -29,7 +29,7 @@ import TurnoverTestSupport
         let batch = JobRunner().run([clip, photo], to: [PNGAction()])
         await batch.waitUntilFinished()
 
-        #expect(batch.jobs[0].state == .skipped(.notApplicable(clip, format: "PNG")))
+        #expect(batch.jobs[0].state == .skipped(.notApplicable(clip, format: .png)))
         #expect(batch.outputs == [folder.url.appendingPathComponent("photo.png")])
         #expect(try folder.fileNames() == ["clip.mov", "photo.heic", "photo.png"])
     }
@@ -44,8 +44,8 @@ import TurnoverTestSupport
         await batch.waitUntilFinished()
 
         #expect(batch.jobs.map(\.state) == [
-            .skipped(.alreadyInFormat(logo, format: "PNG")),
-            .skipped(.alreadyInFormat(clip, format: "MP4")),
+            .skipped(.alreadyInFormat(logo, format: .png)),
+            .skipped(.alreadyInFormat(clip, format: .mp4)),
             .skipped(.unsupported(notes, typeDescription: "text")),
         ])
         #expect(try folder.fileNames() == ["clip.mp4", "logo.png", "notes.txt"])
@@ -61,11 +61,20 @@ import TurnoverTestSupport
         let batch = JobRunner().run([photo, broken, cut, clip, missing], to: [PNGAction(), MP4Action()])
         await batch.waitUntilFinished()
 
-        #expect(batch.jobs[1].state == .failed(reason: "broken.heic: damaged or incomplete, can't be decoded"))
-        #expect(batch.jobs[2].state == .failed(reason: "cut.mov: damaged or incomplete, can't be decoded"))
-        #expect(batch.jobs[4].state == .failed(reason: "gone.heic: can't be read"))
+        #expect(batch.jobs[1].state == .failed(.damaged(broken)))
+        #expect(batch.jobs[2].state == .failed(.damaged(cut)))
+        #expect(batch.jobs[4].state == .failed(.unreadable(missing)))
+        #expect(batch.jobs[1].state.failure?.localizedDescription == "broken.heic: damaged or incomplete, can't be decoded")
+        #expect(batch.jobs[4].state.failure?.localizedDescription == "gone.heic: can't be read")
         #expect(batch.outputs == [folder.url.appendingPathComponent("photo.png"),
                                   folder.url.appendingPathComponent("clip.mp4")])
         #expect(try folder.fileNames() == ["broken.heic", "clip.mov", "clip.mp4", "cut.mov", "photo.heic", "photo.png"])
+    }
+}
+
+extension Job.State {
+    /// Why the job failed, if it did.
+    var failure: ConversionError? {
+        if case .failed(let error) = self { error } else { nil }
     }
 }

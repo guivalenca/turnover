@@ -59,7 +59,10 @@ extension RingModel {
     /// Adds `entry`, replacing what was added for its kind of file.
     private mutating func add(_ entry: Entry) {
         let choice = entry.choices[0]
-        let label = entry.quality.map { "\(choice.format.name) \($0.percent)%" } ?? choice.format.name
+        let label = entry.quality.map { quality in
+            String(localized: "\(choice.format.name) \(quality.percent)%", bundle: .ringModel,
+                   comment: "A JPEG quality added by resting on it, in the caption: “JPEG 100%”.")
+        } ?? choice.format.name
         let addition = Addition(choice: choice, label: label)
         if let index = additions.firstIndex(where: { $0.choice.kind == choice.kind }) {
             additions[index] = addition

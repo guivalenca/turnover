@@ -10,8 +10,8 @@ public struct ConversionResult: Sendable, Hashable {
     public let savedToDownloads: Bool
     /// What the original was: an image or a video.
     public let kind: SourceFile.Kind
-    /// The short name of the format it was converted to, e.g. "PNG".
-    public let format: String
+    /// The format it was converted to.
+    public let format: OutputFormat
 }
 
 /// Converts single files with an action and places the output next to the original.
@@ -39,14 +39,14 @@ public struct Converter: Sendable {
     /// go backwards and the last one is 1 when the conversion succeeds. Quick actions (images)
     /// report only that final 1; videos report along the way.
     ///
-    /// Throws `ConversionError` when the file can't be read, isn't something `action` accepts, or
-    /// can't be decoded. File-system failures while writing (for example a full disk) surface
-    /// as the underlying Cocoa or POSIX error.
+    /// Throws `ConversionError` when the file can't be read, isn't something `action` accepts,
+    /// can't be decoded, or the new file can't be written (`.notWritten`, for example on a full
+    /// disk); `CancellationError` when the task is cancelled.
     public func convert(
         _ source: URL, with action: some ConversionAction,
         progress: @escaping @Sendable (Double) -> Void = { _ in }
     ) async throws -> ConversionResult {
-        try await convert(SourceFile(source), with: action, progress: progress)
+        try await convert(SourceFile.inspecting(source), with: action, progress: progress)
     }
 
     /// The same, for a file already inspected.
@@ -59,11 +59,23 @@ public struct Converter: Sendable {
         let progress = ConversionProgress(progress)
         guard action.accepts(file) else { throw ConversionError.refusal(of: file, by: action) }
         let placement = Placement(nextTo: file.url, fileExtension: action.fileExtension, fallback: downloads)
-        let output = try await placement.place { temporary in
-            try await action.perform(file, writingTo: temporary, progress: progress)
+        let output: URL
+        do {
+            output = try await placement.place { temporary in
+                try await action.perform(file, writingTo: temporary, progress: progress)
+            }
+        } catch let error as ConversionError {
+            throw error
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            // Writing failed: no room, no permission, an encoder missing, …
+            let detail = (error as? POSIXError).map { String(cString: strerror($0.code.rawValue)) }
+                ?? error.localizedDescription
+            throw ConversionError.notWritten(file.url, format: action.format, detail: detail)
         }
         progress.report(1)
         return ConversionResult(source: file.url, output: output, savedToDownloads: placement.usesFallback,
-                                kind: file.kind, format: action.name)
+                                kind: file.kind, format: action.format)
     }
 }

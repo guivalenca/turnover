@@ -2,6 +2,7 @@ import Foundation
 import Testing
 import TurnoverKit
 import TurnoverTestSupport
+import TurnoverAppCore
 
 /// The notifications `Feedback` posts when a batch ends: one for a batch that took more than
 /// about 3 seconds, one for failures, and one for outputs saved to Downloads. Quick, clean
@@ -60,15 +61,42 @@ import TurnoverTestSupport
         #expect(posted.notices.first?.files == batch.outputs)
     }
 
-    @Test func aBatchOfThreeSecondsOrLessPostsNothingEvenWithSkippedFiles() async throws {
+    @Test func aBatchOfThreeSecondsOrLessPostsNothing() async throws {
         let photo = try folder.add(.heicRotated, as: "photo.heic")
-        let logo = try folder.add(.png, as: "logo.png")
-        let notes = try folder.add(.text)
 
-        let batch = await run([photo, logo, notes], to: [PNGAction()], taking: 2.9)
+        let batch = await run([photo], to: [PNGAction()], taking: 2.9)
 
         #expect(batch.outputs.count == 1)
         #expect(posted.notices == [])
+    }
+
+    /// The Finder menu offers formats by extension, and the app converts by content. A PNG named
+    /// `x.jpg` is offered PNG; converting it does nothing, and the user must hear why.
+    @Test func aFileSkippedAtConversionIsPostedWithWhy() async throws {
+        let renamed = try folder.add(.png, as: "x.jpg")
+
+        let batch = await run([renamed], to: [PNGAction()], taking: 0.2)
+
+        #expect(batch.outputs.isEmpty)
+        #expect(posted.notices == [Notice(
+            kind: .failed, title: "Couldn't convert x.jpg", body: "Already a PNG", files: [])])
+    }
+
+    @Test func filesSkippedAtConversionArePostedWithTheFailures() async throws {
+        let renamed = try folder.add(.png, as: "x.jpg")
+        let notes = try folder.add(.text, as: "notes.txt")
+        let broken = try folder.add(Fixture.heicRotated.data.prefix(2000), as: "broken.heic")
+
+        _ = await run([renamed, notes, broken], to: [PNGAction()], taking: 0.2)
+
+        #expect(posted.notices == [Notice(
+            kind: .failed, title: "Couldn't convert 3 files",
+            body: """
+                x.jpg: already a PNG
+                notes.txt: not an image or a video (text)
+                broken.heic: damaged or incomplete, can't be decoded
+                """,
+            files: [])])
     }
 
     @Test func aSlowBatchThatWasCancelledPostsNothing() async throws {

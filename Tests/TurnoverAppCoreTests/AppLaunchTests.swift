@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 import TurnoverKit
+import TurnoverAppCore
 
 /// When Turnover's window opens at launch. The signals are what AppKit hands
 /// `applicationDidFinishLaunching`: its "default launch" flag and the launch Apple event.

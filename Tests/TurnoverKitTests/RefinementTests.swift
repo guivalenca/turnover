@@ -14,7 +14,7 @@ import UniformTypeIdentifiers
     func refiningGivesEveryImageOutputItsExactSize(fixture: Fixture) async throws {
         let image = try folder.add(fixture)
 
-        let live = Estimator().estimate([image])
+        let live = await Estimator().estimate([image])
         await live.waitUntilFinished()
 
         try await expectExact(live.offers, for: image)
@@ -24,7 +24,7 @@ import UniformTypeIdentifiers
     func aCameraSizedPhotoIsRefinedToItsExactSize(name: String, type: UTType) async throws {
         let photo = try await mosaic(in: folder, of: .heicRotated, width: 2000, height: 1500, as: name, type: type)
 
-        let live = Estimator().estimate([photo])
+        let live = await Estimator().estimate([photo])
         await live.waitUntilFinished()
 
         try await expectExact(live.offers, for: photo)
@@ -62,7 +62,7 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
     @Test func aQuickApproximateGuessComesBeforeTheExactSize() async throws {
         let photo = try await mosaic(in: folder, of: .heicRotated, width: 3000, height: 2000, as: "big.jpg")
 
-        let live = Estimator().estimate([photo])
+        let live = await Estimator().estimate([photo])
         let png = Recording { live.offers.targets.first?.estimate }
         await live.waitUntilFinished()
 
@@ -82,7 +82,7 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
         var times: [Duration] = []
         for _ in 1...5 {
             let start = ContinuousClock.now
-            let live = Estimator().estimate(photos)
+            let live = await Estimator().estimate(photos)
             #expect(await eventually { live.offers.targets.allSatisfy { $0.estimate != nil } })
             times.append(ContinuousClock.now - start)
             await live.waitUntilFinished()
@@ -102,7 +102,7 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
         let estimator = Estimator()
         await estimator.estimate([photo]).waitUntilFinished()
 
-        let again = estimator.estimate([photo])
+        let again = await estimator.estimate([photo])
 
         // Before any background work: straight from the cache.
         try await expectExact(again.offers, for: photo)
@@ -115,7 +115,7 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
         try FileManager.default.removeItem(at: photo)
         try await mosaic(in: folder, of: .webp, width: 1600, height: 1000, as: "photo.jpg")
 
-        let again = estimator.estimate([photo])
+        let again = await estimator.estimate([photo])
 
         #expect(again.offers.targets.allSatisfy { $0.estimate == nil })
         await again.waitUntilFinished()
@@ -129,8 +129,8 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
         await estimator.estimate([first]).waitUntilFinished()
         await estimator.estimate([second]).waitUntilFinished()
 
-        #expect(estimator.estimate([second]).offers.targets.allSatisfy { $0.estimate?.isExact == true })
-        #expect(estimator.estimate([first]).offers.targets.allSatisfy { $0.estimate == nil })
+        #expect(await estimator.estimate([second]).offers.targets.allSatisfy { $0.estimate?.isExact == true })
+        #expect(await estimator.estimate([first]).offers.targets.allSatisfy { $0.estimate == nil })
     }
 }
 
@@ -155,27 +155,27 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
     @Test func cancellingStopsTheWorkAndLeavesNothingRunning() async throws {
         let photos = try await photos()
         let estimator = Estimator()
-        let live = estimator.estimate(photos)
+        let live = await estimator.estimate(photos)
         #expect(await eventually { live.offers.targets.first?.estimate != nil })
 
         live.cancel()
-        let measuredAtCancel = remembered(photos, by: estimator)
+        let measuredAtCancel = await remembered(photos, by: estimator)
         await live.waitUntilFinished()
 
         #expect(live.isFinished)
         let offers = live.offers
-        let measured = remembered(photos, by: estimator)
+        let measured = await remembered(photos, by: estimator)
         #expect(measured.count <= measuredAtCancel.count + 1, "\(measuredAtCancel.count) measured at the cancel, \(measured.count) once stopped")
         try await Task.sleep(for: .milliseconds(300))
         // Nothing changes any more: neither the offers nor what is remembered.
         #expect(live.offers == offers)
-        #expect(remembered(photos, by: estimator) == measured)
+        #expect(await remembered(photos, by: estimator) == measured)
     }
 
     @Test func theEstimatorCancelsWhenTheDragEnds() async throws {
         let photos = try await photos()
         let estimator = Estimator()
-        let live = estimator.estimate(photos)
+        let live = await estimator.estimate(photos)
 
         estimator.cancel()
         await live.waitUntilFinished()
@@ -183,15 +183,15 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
         #expect(live.isFinished)
         #expect(live.offers.targets.allSatisfy { $0.estimate?.isExact != true })
         // Cancelled before the quick estimates were in: nothing was measured.
-        #expect(remembered(photos, by: estimator) == [])
+        #expect(await remembered(photos, by: estimator) == [])
     }
 
     @Test func askingAgainForTheSameFilesReusesTheWorkInProgress() async throws {
         let photos = try await photos()
         let estimator = Estimator()
 
-        let atDragStart = estimator.estimate(photos)
-        let onTheRing = estimator.estimate(photos)
+        let atDragStart = await estimator.estimate(photos)
+        let onTheRing = await estimator.estimate(photos)
 
         #expect(onTheRing === atDragStart)
         estimator.cancel()
@@ -200,9 +200,9 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
     @Test func aNewSelectionCancelsThePreviousOne() async throws {
         let photos = try await photos()
         let estimator = Estimator()
-        let first = estimator.estimate(photos)
+        let first = await estimator.estimate(photos)
 
-        let second = estimator.estimate([photos[0]])
+        let second = await estimator.estimate([photos[0]])
         await first.waitUntilFinished()
 
         #expect(second !== first)
@@ -229,14 +229,17 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
         let real = try await outputSize(of: first, with: PNGAction())
         let estimator = Estimator(exactPixelBudget: 3_000_000)
 
-        let live = estimator.estimate(photos)
+        let live = await estimator.estimate(photos)
         await live.waitUntilFinished()
 
         let png = try #require(live.offers.targets.first?.estimate)
         #expect(!png.isExact)
         #expect(abs(try bytes(png) - real * 8) * 100 <= real * 8, "within 1%")
         // Only a few were encoded; the others are remembered as unmeasured.
-        let measured = photos.filter { estimator.estimate([$0]).offers.targets.first?.estimate?.isExact == true }
+        var measured: [URL] = []
+        for photo in photos where await estimator.estimate([photo]).offers.targets.first?.estimate?.isExact == true {
+            measured.append(photo)
+        }
         estimator.cancel()
         #expect(measured.count == 2, "\(measured.count) measured")
     }
@@ -257,7 +260,7 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
             return copy
         }
 
-        let live = Estimator().estimate(photos)
+        let live = await Estimator().estimate(photos)
         let png = Recording { live.offers.targets.first { $0.format == .png }?.estimate }
         let small = Recording { live.offers.targets.first { $0.format == .jpeg }?.presets.last?.estimate }
         await live.waitUntilFinished()
@@ -269,13 +272,23 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
         }
     }
 
+    /// A HEIC cut short decodes to whatever ImageIO makes of the missing data: it has no size.
+    @Test func aHEICCutShortIsNeverMeasured() async throws {
+        let broken = try folder.add(Fixture.heicRotated.data.prefix(4_500), as: "broken.heic")
+
+        let live = await Estimator().estimate([broken])
+        await live.waitUntilFinished()
+
+        #expect(live.offers.targets.map(\.format) == [.png, .jpeg])
+        #expect(live.offers.targets.map(\.estimate) == [nil, nil])
+    }
+
     @Test func aFileThatCantBeMeasuredMakesTheTotalApproximate() async throws {
         let whole = try folder.add(.png, as: "logo.png")
-        // Cut in its header: offered as an image, but it can't be decoded. (Cut later, a HEIC
-        // decodes to whatever ImageIO makes of the missing data, which varies.)
+        // Cut in its header: offered as an image, but it can't be decoded.
         let broken = try folder.add(Fixture.heicRotated.data.prefix(1_000), as: "broken.heic")
 
-        let live = Estimator().estimate([whole, broken])
+        let live = await Estimator().estimate([whole, broken])
         await live.waitUntilFinished()
 
         let jpeg = try #require(live.offers.targets.first { $0.format == .jpeg })
@@ -302,7 +315,7 @@ enum ImageSizesSampled {
         let conversion = Task { try await converter.convert(busy, with: turnstile.holding(PNGAction())) }
         #expect(await turnstile.waitUntil(running: 1))
 
-        let live = Estimator(yieldingTo: converter).estimate([photo])
+        let live = await Estimator(yieldingTo: converter).estimate([photo])
 
         // The quick guess still comes at once; the exact size waits for the conversion.
         #expect(await eventually { live.offers.targets.first?.estimate != nil })
@@ -322,7 +335,7 @@ enum ImageSizesSampled {
         let conversion = Task { try await converter.convert(busy, with: turnstile.holding(PNGAction())) }
         #expect(await turnstile.waitUntil(running: 1))
         let estimator = Estimator(yieldingTo: converter)
-        let live = estimator.estimate([photo])
+        let live = await estimator.estimate([photo])
         #expect(await eventually { live.offers.targets.first?.estimate != nil })
 
         let cancelled = ContinuousClock.now
@@ -333,7 +346,7 @@ enum ImageSizesSampled {
         turnstile.open()
         _ = try await conversion.value
         try await Task.sleep(for: .milliseconds(300))
-        #expect(remembered([photo], by: estimator) == [])
+        #expect(await remembered([photo], by: estimator) == [])
     }
 }
 
@@ -366,7 +379,7 @@ enum ImageSizesSampled {
     @Test func theDefaultJPEGIsExactBeforeThePNG() async throws {
         let photo = try await mosaic(in: folder, of: .heicRotated, width: 2000, height: 1500, as: "photo.heic", type: .heic)
 
-        let live = Estimator().estimate([photo], jpegQuality: .small)
+        let live = await Estimator().estimate([photo], jpegQuality: .small)
         let exact = Recording { live.offers.targets.filter { $0.estimate?.isExact == true }.map(\.format) }
         let presets = Recording { live.offers.targets.last?.presets.filter(\.estimate.isExact).map(\.quality) ?? [] }
         await live.waitUntilFinished()
@@ -382,7 +395,7 @@ enum ImageSizesSampled {
 @MainActor
 func timeToExact(_ photo: URL) async -> (png: Duration, jpeg: Duration) {
     let start = ContinuousClock.now
-    let live = Estimator().estimate([photo])
+    let live = await Estimator().estimate([photo])
     var times: [OutputFormat: Duration] = [:]
     let formats = live.offers.targets.map(\.format).filter { $0 != .mp4 }
     _ = await eventually(timeout: .seconds(30)) {
@@ -407,10 +420,11 @@ func mosaic(in folder: ScratchFolder, of fixture: Fixture, width: Int, height: I
 /// The files of `files` whose sizes `estimator` remembers exactly. Asking cancels the selection in
 /// progress, so call it once that is finished.
 @MainActor
-func remembered(_ files: [URL], by estimator: Estimator) -> [URL] {
-    let known = files.filter { file in
-        let offers = estimator.estimate([file]).offers
-        return !offers.targets.isEmpty && offers.targets.allSatisfy { $0.estimate?.isExact == true }
+func remembered(_ files: [URL], by estimator: Estimator) async -> [URL] {
+    var known: [URL] = []
+    for file in files {
+        let offers = await estimator.estimate([file]).offers
+        if !offers.targets.isEmpty, offers.targets.allSatisfy({ $0.estimate?.isExact == true }) { known.append(file) }
     }
     estimator.cancel()
     return known

@@ -70,7 +70,7 @@ import TurnoverTestSupport
         let offers = Offers(for: [movie])
 
         #expect(offers.groups == [])
-        #expect(offers.skipped == [.alreadyInFormat(movie, format: "MP4")])
+        #expect(offers.skipped == [.alreadyInFormat(movie, format: .mp4)])
         #expect(offers.reason == "clip.mp4: already an MP4")
     }
 
@@ -101,6 +101,13 @@ import TurnoverTestSupport
         #expect(offers.reason == "document.pdf: not an image or a video (PDF document), and 2 more files")
     }
 
+    @Test func oneMoreFileIsSingular() throws {
+        let pdf = try folder.add(.pdf)
+        let text = try folder.add(.text)
+
+        #expect(Offers(for: [pdf, text]).reason == "document.pdf: not an image or a video (PDF document), and 1 more file")
+    }
+
     @Test func unsupportedFilesNextToConvertibleOnesAreReportedWithoutAReason() throws {
         let photo = try folder.add(.heicRotated, as: "photo.heic")
         let movie = try folder.add(.movH264, as: "clip.mov")
@@ -114,7 +121,7 @@ import TurnoverTestSupport
         #expect(offers.targets.last?.files == [movie])
         #expect(offers.skipped == [
             .unsupported(pdf, typeDescription: "PDF document"),
-            .alreadyInFormat(mp4, format: "MP4"),
+            .alreadyInFormat(mp4, format: .mp4),
         ])
         #expect(offers.reason == nil)
     }

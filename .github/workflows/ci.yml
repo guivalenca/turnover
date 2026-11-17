@@ -28,11 +28,14 @@ jobs:
           xcodebuild -version
           swift --version
 
+      # Swift Build, not SwiftPM's older native build system (the default before Swift 6.4),
+      # which copies String Catalogs into the bundles without compiling them: every plural
+      # would read "1 files".
       - name: Build
-        run: swift build --build-tests
+        run: swift build --build-tests --build-system swiftbuild
 
       - name: Test
-        run: swift test
+        run: swift test --build-system swiftbuild
 
   app:
     name: Build the app and Finder extension (macOS)

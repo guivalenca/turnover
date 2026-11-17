@@ -1,9 +1,14 @@
 import Foundation
 import Observation
+import TurnoverKit
 
 /// What the app shows about the batches it runs: a menu bar item while a batch takes more than
 /// about a second, and notifications for slow batches, failures and outputs saved to Downloads.
 /// Quick batches get nothing. Give it every batch, and observe it from the main actor.
+///
+/// Give it batches of files offered for their targets only (a Finder menu item's or a ring
+/// entry's files): a file the batch skips is then reported as a failure, since the user asked
+/// for it and nothing happened.
 @MainActor @Observable
 public final class Feedback {
     /// How long a batch runs before the menu bar item appears.
@@ -42,9 +47,7 @@ public final class Feedback {
     /// How much of the batches shown is done, from 0 to 1: the mean of their jobs' progress,
     /// where a job that ended counts as done. Skipped files don't count.
     public var progress: Double {
-        let jobs = batches.flatMap(\.jobs).filter { if case .skipped = $0.state { false } else { true } }
-        guard !jobs.isEmpty else { return isIdle ? 1 : 0 }
-        return jobs.map { $0.isFinished ? 1 : $0.progress }.reduce(0, +) / Double(jobs.count)
+        Job.meanProgress(of: batches.flatMap(\.jobs)) ?? (isIdle ? 1 : 0)
     }
 
     /// The jobs converting now, oldest batch first: the menu's rows, each with a ✕ (`Job.cancel()`).

@@ -1,6 +1,7 @@
 import AppKit
 import ServiceManagement
 import TurnoverKit
+import TurnoverAppCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {

@@ -46,6 +46,23 @@ extension RingModel {
             self.end = end
         }
 
+        /// The arc an entry at `angle` owns among entries at `angles` (its own included): halfway
+        /// to the nearest entry on each side, or the whole circle for a lone entry.
+        public init(around angle: Double, among angles: [Double]) {
+            let others = angles.filter { $0 != angle }
+            guard !others.isEmpty else {
+                self.init(start: angle - 180, end: angle + 180)
+                return
+            }
+            // How far clockwise each other entry is, in (0, 360).
+            let clockwise = others.map { other in
+                let d = (other - angle).truncatingRemainder(dividingBy: 360)
+                return d <= 0 ? d + 360 : d
+            }
+            let next = clockwise.min()!, previous = 360 - clockwise.max()!
+            self.init(start: angle - previous / 2, end: angle + next / 2)
+        }
+
         /// Whether `angle`, in degrees, falls in the arc, whatever turn it is given in.
         public func contains(_ angle: Double) -> Bool {
             var offset = (angle - start).truncatingRemainder(dividingBy: 360)
@@ -85,7 +102,7 @@ extension RingModel {
         let placed = angles.map(normalized)
         return zip(all, placed).map { spot, angle in
             Entry(title: spot.title, estimate: spot.estimate, angle: angle,
-                  arc: arc(around: angle, among: placed), choices: spot.choices,
+                  arc: Arc(around: angle, among: placed), choices: spot.choices,
                   quality: spot.preset, isDefault: spot.isDefault, isAdded: added.contains(spot.choices[0]))
         }
     }
@@ -123,16 +140,4 @@ extension RingModel {
         (0..<count).map { centre + (Double($0) - Double(count - 1) / 2) * step }
     }
 
-    /// The arc halfway to the nearest entry on each side; the whole circle for a lone entry.
-    private static func arc(around angle: Double, among angles: [Double]) -> Arc {
-        let others = angles.filter { $0 != angle }
-        guard !others.isEmpty else { return Arc(start: angle - 180, end: angle + 180) }
-        // How far clockwise each other entry is, in (0, 360).
-        let clockwise = others.map { other in
-            let d = (other - angle).truncatingRemainder(dividingBy: 360)
-            return d <= 0 ? d + 360 : d
-        }
-        let next = clockwise.min()!, previous = 360 - clockwise.max()!
-        return Arc(start: angle - previous / 2, end: angle + next / 2)
-    }
 }

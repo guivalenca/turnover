@@ -28,9 +28,7 @@ public final class Batch: Identifiable {
     /// How much of the batch is done, from 0 to 1: the mean of its jobs' progress, where a job
     /// that ended counts as done. Skipped files don't count. It never goes backwards.
     public var progress: Double {
-        let counted = jobs.filter { if case .skipped = $0.state { false } else { true } }
-        guard !counted.isEmpty else { return isFinished ? 1 : 0 }
-        return counted.map { $0.isFinished ? 1 : $0.progress }.reduce(0, +) / Double(counted.count)
+        Job.meanProgress(of: jobs) ?? (isFinished ? 1 : 0)
     }
 
     /// The new files, in job order.
@@ -43,7 +41,7 @@ public final class Batch: Identifiable {
 
     /// Calls `handler` when the last job ends, before `waitUntilFinished()` returns, or right away
     /// if the batch has already ended.
-    func whenFinished(_ handler: @escaping @MainActor (Batch) -> Void) {
+    package func whenFinished(_ handler: @escaping @MainActor (Batch) -> Void) {
         if finishDate != nil { handler(self) } else { finishHandlers.append(handler) }
     }
 
@@ -64,4 +62,21 @@ public final class Batch: Identifiable {
         self.waiters = []
         waiters.forEach { $0.resume() }
     }
+}
+
+extension Job {
+    /// How much of `jobs` is done, from 0 to 1: the mean of their progress, where a job that
+    /// ended counts as done and a skipped file doesn't count. Nil when no job counts.
+    package static func meanProgress(of jobs: some Sequence<Job>) -> Double? {
+        TurnoverKit.meanProgress(jobs.map { job in
+            if case .skipped = job.state { nil } else { job.isFinished ? 1 : job.progress }
+        })
+    }
+}
+
+/// The mean of `fractions`, leaving out the nils (skipped files); nil when all are nil. Shared
+/// by batches, the app's menu bar item and the command's progress line.
+package func meanProgress(_ fractions: [Double?]) -> Double? {
+    let counted = fractions.compactMap(\.self)
+    return counted.isEmpty ? nil : counted.reduce(0, +) / Double(counted.count)
 }

@@ -37,7 +37,7 @@ struct MovieSource {
             (duration, metadata) = try await asset.load(.duration, .metadata)
             guard let track = try await Self.firstEnabledTrack(of: .video, in: asset),
                   let format = try await track.load(.formatDescriptions).first
-            else { throw ConversionError.notApplicable(url, format: "MP4") }
+            else { throw ConversionError.notApplicable(url, format: .mp4) }
             let (transform, frameRate, dataRate) = try await track.load(.preferredTransform, .nominalFrameRate, .estimatedDataRate)
             video = Video(track: track, format: format, transform: transform, frameRate: Double(frameRate), dataRate: Double(dataRate))
 

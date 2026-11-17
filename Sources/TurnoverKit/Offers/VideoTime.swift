@@ -13,15 +13,13 @@ struct VideoTime: Sendable {
 
     static let copiedBytesPerSecond = 275e6
     static let encodedPixelsPerSecond = 550e6
-    /// The batch runner converts at most this many videos at once.
-    static let simultaneousVideos = 2
 
     /// Nil when the video can't be planned (it is damaged, or has no video track).
-    init?(of url: URL) async {
-        guard let file = try? SourceFile(url), let plan = try? await MP4Action().plan(for: file) else { return nil }
+    init?(of file: SourceFile) async {
+        guard let plan = try? await MP4Action().plan(for: file) else { return nil }
         isCopy = plan.passesVideoThrough
         if isCopy {
-            let bytes = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            let bytes = (try? file.url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
             seconds = Double(bytes) / Self.copiedBytesPerSecond
         } else {
             let pixels = Double(plan.frameWidth * plan.frameHeight) * plan.frameRate * plan.duration
@@ -32,7 +30,7 @@ struct VideoTime: Sendable {
     /// The times of every video in `videos` that can be planned, worked out side by side.
     static func of(_ videos: [SourceFile]) async -> [URL: VideoTime] {
         await withTaskGroup(of: (URL, VideoTime?).self) { group in
-            for video in videos { group.addTask { (video.url, await VideoTime(of: video.url)) } }
+            for video in videos { group.addTask { (video.url, await VideoTime(of: video)) } }
             return await group.reduce(into: [URL: VideoTime]()) { $0[$1.0] = $1.1 }
         }
     }
@@ -41,12 +39,12 @@ struct VideoTime: Sendable {
     /// copied and the whole batch takes under a second.
     static func estimate(_ videos: [VideoTime]) -> Estimate? {
         guard !videos.isEmpty else { return nil }
-        // Longest first, each into the lane that frees up first.
-        var lanes = [Double](repeating: 0, count: simultaneousVideos)
+        // Longest first, each into the runner's video slot that frees up first.
+        var slots = [Double](repeating: 0, count: JobRunner.videosAtOnce)
         for video in videos.sorted(by: { $0.seconds > $1.seconds }) {
-            lanes[lanes.indices.min { lanes[$0] < lanes[$1] }!] += video.seconds
+            slots[slots.indices.min { slots[$0] < slots[$1] }!] += video.seconds
         }
-        let total = lanes.max()!
+        let total = slots.max()!
         return videos.allSatisfy(\.isCopy) && total < 1 ? .instant : .duration(total)
     }
 }

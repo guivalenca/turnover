@@ -2,6 +2,7 @@ import Foundation
 import Testing
 import TurnoverKit
 import TurnoverTestSupport
+import TurnoverAppCore
 
 /// The menu bar item: it shows only while a batch has been running for more than about a second,
 /// reports overall progress, and goes away shortly after everything has ended.

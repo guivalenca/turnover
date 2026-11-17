@@ -8,10 +8,10 @@ import UniformTypeIdentifiers
 /// action whether it applies, hands it a temporary destination, then names, places and dates
 /// the output. New outputs (JPEG, MP4, later PDF or trimming) plug in as new conformances.
 public protocol ConversionAction: Sendable {
-    /// The short name users see, e.g. "PNG".
-    var name: String { get }
+    /// The format the action converts to.
+    var format: OutputFormat { get }
 
-    /// The format the action writes.
+    /// The file type the action writes.
     var outputType: UTType { get }
 
     /// The output's filename extension, without the dot. Defaults to `outputType`'s preferred one.
@@ -35,6 +35,9 @@ public protocol ConversionAction: Sendable {
 }
 
 extension ConversionAction {
+    /// The short name users see, e.g. "PNG".
+    public var name: String { format.name }
+
     public var fileExtension: String { outputType.preferredFilenameExtension ?? "out" }
 
     public func perform(_ file: SourceFile, writingTo destination: URL, progress: ConversionProgress) async throws {

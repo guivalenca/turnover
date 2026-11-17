@@ -71,7 +71,8 @@ extension DownloadsFallback {
         let batch = runner.run([photo], to: [PNGAction()])
         await batch.waitUntilFinished()
 
-        #expect(batch.jobs[0].state == .failed(reason: "photo.heic: couldn't write the PNG (Permission denied)"))
+        #expect(batch.jobs[0].state == .failed(.notWritten(photo, format: .png, detail: "Permission denied")))
+        #expect(batch.jobs[0].state.failure?.localizedDescription == "photo.heic: couldn't write the PNG (Permission denied)")
         #expect(try folder.fileNames() == ["photo.heic"])
         #expect(try downloads.fileNames() == [])
     }

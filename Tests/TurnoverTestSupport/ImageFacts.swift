@@ -13,6 +13,8 @@ public struct ImageFacts {
     public let orientation: Int
     /// The embedded colour profile's name, e.g. "Display P3".
     public let profileName: String?
+    /// Whether the file stores an alpha channel.
+    public let hasAlpha: Bool
     public let exif: [String: Any]
     public let gps: [String: Any]
     public let tiff: [String: Any]
@@ -29,6 +31,7 @@ public struct ImageFacts {
         height = image.height
         orientation = properties[kCGImagePropertyOrientation] as? Int ?? 1
         profileName = properties[kCGImagePropertyProfileName] as? String
+        hasAlpha = properties[kCGImagePropertyHasAlpha] as? Bool ?? false
         exif = properties[kCGImagePropertyExifDictionary] as? [String: Any] ?? [:]
         gps = properties[kCGImagePropertyGPSDictionary] as? [String: Any] ?? [:]
         tiff = properties[kCGImagePropertyTIFFDictionary] as? [String: Any] ?? [:]

@@ -13,17 +13,20 @@
 		381DD881ECE88E96D3DB8F19 /* RingModel in Frameworks */ = {isa = PBXBuildFile; productRef = 59393087FCD3B3EECF1EEBB9 /* RingModel */; };
 		39EAFD21CDF3C0F2B7E34E2E /* TurnoverKit in Frameworks */ = {isa = PBXBuildFile; productRef = 76C12C9F1D3471F0D7C1B5B2 /* TurnoverKit */; };
 		3BD80338DBF51E0BE5141CA5 /* Main.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4EBF56228EF202D2E3574DB /* Main.swift */; };
+		4821FF95521A2230644FA956 /* OverlayPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57AF6B96525487B25800937B /* OverlayPanel.swift */; };
 		500092B9CEC5382AE41DB03F /* DragWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFEFFB35CDC3839342AD369 /* DragWatcher.swift */; };
 		535419A9360015A9B43A7F3E /* TurnoverFinder.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AC1329052DD8DE6C4A250CF9 /* TurnoverFinder.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		5804849746040A64AD758F92 /* Conversions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03775AE3E5A433705BF218F /* Conversions.swift */; };
 		5C05B6701BE56F9B6416FC35 /* FinderSync.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 27545BF2090D7CF8C3CD1FD7 /* FinderSync.framework */; };
 		6744631416F9DA96D090348C /* FinderSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC2044A17FFCA87022765DA /* FinderSync.swift */; };
 		71F009451EB3B2DD7F2028FA /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CFE1A4F4FD38BDC673D0E7D /* AppDelegate.swift */; };
+		7229503244AE096AE5EFF7C3 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 0BA6FF4333F7083E90F48F79 /* Localizable.xcstrings */; };
 		822634437325DD62BA3E2EE2 /* Ring.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5E48B4CBF2BB72F9350C803 /* Ring.swift */; };
 		826780E2E08784AE032AC556 /* StatusItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 984E4C89E30107C947967E2F /* StatusItem.swift */; };
 		93DE5C807D2EFC9F1AEAE087 /* RingPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51A4BF3AFA4A7C71B80C605C /* RingPanel.swift */; };
 		9585DA56708BCAAB20142EBB /* RingLook.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0308915F2C2F7E2AA0E71EC5 /* RingLook.swift */; };
 		98E1B3360E4FA75100F7CB82 /* Notifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C47FDA44BE7E24E7179187 /* Notifier.swift */; };
+		BCD751CBD266A5E8ED54338D /* TurnoverAppCore in Frameworks */ = {isa = PBXBuildFile; productRef = E6F109764F461B172C3BEB91 /* TurnoverAppCore */; };
 		C2136102521C8D2B32028665 /* RingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7F7043A5F2901636D394236 /* RingView.swift */; };
 		C2D8E1B0030AB29ABE1F0673 /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = 541110B2C69050B416C31167 /* Log.swift */; };
 		CA415786AA7C7C9B7D7360DB /* HintPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FF5F1C85C2224CC8808FD2 /* HintPanel.swift */; };
@@ -63,6 +66,7 @@
 /* Begin PBXFileReference section */
 		0308915F2C2F7E2AA0E71EC5 /* RingLook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RingLook.swift; sourceTree = "<group>"; };
 		087F5B432461D800C2130B97 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		0BA6FF4333F7083E90F48F79 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		1AC2044A17FFCA87022765DA /* FinderSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinderSync.swift; sourceTree = "<group>"; };
 		1B308C965AF00979AF7C7E44 /* RingPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RingPreview.swift; sourceTree = "<group>"; };
 		27545BF2090D7CF8C3CD1FD7 /* FinderSync.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FinderSync.framework; path = System/Library/Frameworks/FinderSync.framework; sourceTree = SDKROOT; };
@@ -75,6 +79,7 @@
 		50A62B2F57C51D120FEB8816 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		51A4BF3AFA4A7C71B80C605C /* RingPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RingPanel.swift; sourceTree = "<group>"; };
 		541110B2C69050B416C31167 /* Log.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
+		57AF6B96525487B25800937B /* OverlayPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayPanel.swift; sourceTree = "<group>"; };
 		5BA307F6BAE8FDF755431170 /* TurnoverFinder.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TurnoverFinder.entitlements; sourceTree = "<group>"; };
 		8DD57A25DA23F1E37A3C9C5C /* TurnoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnoverView.swift; sourceTree = "<group>"; };
 		8EFEFFB35CDC3839342AD369 /* DragWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragWatcher.swift; sourceTree = "<group>"; };
@@ -107,6 +112,7 @@
 			files = (
 				39EAFD21CDF3C0F2B7E34E2E /* TurnoverKit in Frameworks */,
 				381DD881ECE88E96D3DB8F19 /* RingModel in Frameworks */,
+				BCD751CBD266A5E8ED54338D /* TurnoverAppCore in Frameworks */,
 				5C05B6701BE56F9B6416FC35 /* FinderSync.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -177,6 +183,7 @@
 			children = (
 				8EFEFFB35CDC3839342AD369 /* DragWatcher.swift */,
 				40FF5F1C85C2224CC8808FD2 /* HintPanel.swift */,
+				57AF6B96525487B25800937B /* OverlayPanel.swift */,
 				C5E48B4CBF2BB72F9350C803 /* Ring.swift */,
 				0308915F2C2F7E2AA0E71EC5 /* RingLook.swift */,
 				4A2617A1399E95B8F363A55E /* RingMaterial.swift */,
@@ -195,6 +202,7 @@
 				50A62B2F57C51D120FEB8816 /* Assets.xcassets */,
 				D03775AE3E5A433705BF218F /* Conversions.swift */,
 				D3116FA8F1F2055913BDBCD7 /* Info.plist */,
+				0BA6FF4333F7083E90F48F79 /* Localizable.xcstrings */,
 				541110B2C69050B416C31167 /* Log.swift */,
 				E4EBF56228EF202D2E3574DB /* Main.swift */,
 				2536FBE43CB469AA56317E48 /* Feedback */,
@@ -252,6 +260,7 @@
 			packageProductDependencies = (
 				76C12C9F1D3471F0D7C1B5B2 /* TurnoverKit */,
 				59393087FCD3B3EECF1EEBB9 /* RingModel */,
+				E6F109764F461B172C3BEB91 /* TurnoverAppCore */,
 			);
 			productName = Turnover;
 			productReference = E483924A3901F93F84C37DF8 /* Turnover.app */;
@@ -306,6 +315,7 @@
 			files = (
 				22D9C7AB4E308CA9354AF965 /* AppIcon.icon in Resources */,
 				D3EFE15020AF3FE3025201D4 /* Assets.xcassets in Resources */,
+				7229503244AE096AE5EFF7C3 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -324,6 +334,7 @@
 				C2D8E1B0030AB29ABE1F0673 /* Log.swift in Sources */,
 				3BD80338DBF51E0BE5141CA5 /* Main.swift in Sources */,
 				98E1B3360E4FA75100F7CB82 /* Notifier.swift in Sources */,
+				4821FF95521A2230644FA956 /* OverlayPanel.swift in Sources */,
 				822634437325DD62BA3E2EE2 /* Ring.swift in Sources */,
 				9585DA56708BCAAB20142EBB /* RingLook.swift in Sources */,
 				DEA71ABAE6648F4C47C2B9C3 /* RingMaterial.swift in Sources */,
@@ -608,6 +619,10 @@
 		9AB89533AF9126858F03FCF0 /* TurnoverKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = TurnoverKit;
+		};
+		E6F109764F461B172C3BEB91 /* TurnoverAppCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TurnoverAppCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

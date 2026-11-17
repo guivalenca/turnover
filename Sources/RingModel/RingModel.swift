@@ -86,11 +86,11 @@ public struct RingModel: Sendable {
     }
 
     /// The entry a drop would convert to: the one whose arc the pointer is in, if the pointer is
-    /// between the hub and the outer edge.
+    /// on the drawn band, between the hub and the outer edge (`RingGeometry`'s radii).
     public var highlighted: Entry? {
         guard let pointer else { return nil }
         let distance = (pointer.x * pointer.x + pointer.y * pointer.y).squareRoot()
-        guard distance >= Self.hubRadius, distance <= Self.outerRadius else { return nil }
+        guard distance >= RingGeometry.hubRadius, distance <= RingGeometry.outerRadius else { return nil }
         let angle = atan2(pointer.y, pointer.x) * 180 / .pi
         return entries.first { $0.arc.contains(angle) }
     }
@@ -100,34 +100,44 @@ public struct RingModel: Sendable {
     public var hub: Hub? {
         guard phase == .open, let offers else { return nil }
         guard let entry = highlighted, let choice = entry.choices.first else {
-            if isFannedOut { return Hub(title: "JPEG", detail: "quality", text: "JPEG quality") }
-            let files = offers.groups.flatMap(\.files)
+            if isFannedOut {
+                return Hub(title: OutputFormat.jpeg.name,
+                           detail: String(localized: "quality", bundle: .ringModel,
+                                          comment: "The hub's small line under “JPEG” while ⌥ fans out JPEG's qualities."),
+                           text: String(localized: "JPEG quality", bundle: .ringModel,
+                                        comment: "The hub while ⌥ fans out JPEG's qualities, on one line."))
+            }
+            let count = offers.groups.flatMap(\.files).count
             let kinds = Set(offers.groups.map(\.kind))
-            let noun = kinds.count == 1 ? Self.noun(kinds.first!, count: files.count) : (files.count == 1 ? "file" : "files")
-            return Hub(title: "\(files.count)", detail: noun, text: "\(files.count) \(noun)")
+            let kind = kinds.count == 1 ? kinds.first : nil
+            return Hub(title: "\(count)", detail: Self.noun(of: kind, count: count), text: Self.files(count, of: kind))
         }
         // Several formats (one added, say): their names and how many files they convert.
         let dropped = choices(droppingOn: entry)
         if dropped.count > 1 {
             let title = dropped.map(\.format.name).joined(separator: " + ")
-            let count = dropped.map(\.files.count).reduce(0, +)
-            let detail = "\(count) file\(count == 1 ? "" : "s")"
-            return Hub(title: title, detail: detail, text: "\(title) · \(detail)")
+            let detail = Self.files(dropped.map(\.files.count).reduce(0, +), of: nil)
+            return Hub(title: title, detail: detail, text: Self.line(title, detail))
         }
         // One format: its size or time, or how many files it converts until that is known.
-        var detail = entry.estimate?.label ?? "\(choice.files.count) \(Self.noun(choice.kind, count: choice.files.count))"
+        var detail = entry.estimate?.label ?? Self.files(choice.files.count, of: choice.kind)
         // A JPEG quality: "JPEG", "Best · 5.2 MB".
-        if let quality = entry.quality { detail = "\(quality.name) · \(detail)" }
+        if let quality = entry.quality { detail = Self.line(quality.name, detail) }
         let title = choice.format.name
-        return Hub(title: title, detail: detail, text: "\(title) · \(detail)")
+        return Hub(title: title, detail: detail, text: Self.line(title, detail))
     }
 
     /// The line under the ring, for images and videos dragged together only: how to add a
     /// format, then what has been added ("PNG added · drop to convert"). Nil otherwise.
     public var caption: String? {
         guard isMixed else { return nil }
-        guard !additions.isEmpty else { return "Rest on a format to add it, then drop on another" }
-        return additions.map(\.label).joined(separator: " + ") + " added · drop to convert"
+        guard !additions.isEmpty else {
+            return String(localized: "Rest on a format to add it, then drop on another", bundle: .ringModel,
+                          comment: "Under the ring when photos and videos are dragged together.")
+        }
+        let added = additions.map(\.label).joined(separator: " + ")
+        return String(localized: "\(added) added · drop to convert", bundle: .ringModel,
+                      comment: "Under the ring once formats are added by resting on them: “PNG + MP4 added · drop to convert”.")
     }
 
     /// The open ring offers formats for more than one kind of file: rest-to-add applies.
@@ -150,14 +160,30 @@ public struct RingModel: Sendable {
         public let text: String
     }
 
-    private static func noun(_ kind: SourceFile.Kind, count: Int) -> String {
-        (kind == .video ? "video" : "image") + (count == 1 ? "" : "s")
+    /// "3 images", "1 video", or "2 files" for nil (both kinds).
+    private static func files(_ count: Int, of kind: SourceFile.Kind?) -> String {
+        switch kind {
+        case .image: String(localized: "\(count) images", bundle: .ringModel, comment: "How many images a drop converts.")
+        case .video: String(localized: "\(count) videos", bundle: .ringModel, comment: "How many videos a drop converts.")
+        default: String(localized: "\(count) files", bundle: .ringModel, comment: "How many files a drop converts.")
+        }
     }
 
-    /// Inside this distance from the centre, the pointer is on the hub: nothing is highlighted.
-    public static let hubRadius = 38.0
-    /// Beyond this distance from the centre, the pointer is off the ring: nothing is highlighted.
-    public static let outerRadius = 195.0
+    /// The noun alone, agreeing with `count`, for the hub's small line under the count.
+    private static func noun(of kind: SourceFile.Kind?, count: Int) -> String {
+        let comment: StaticString = "The hub's small line under the count of dragged files: the noun alone, agreeing with the count above it."
+        return switch kind {
+        case .image: String(localized: "images under a count of \(count)", bundle: .ringModel, comment: comment)
+        case .video: String(localized: "videos under a count of \(count)", bundle: .ringModel, comment: comment)
+        default: String(localized: "files under a count of \(count)", bundle: .ringModel, comment: comment)
+        }
+    }
+
+    /// Two parts of the hub on one line: "PNG · 19 MB", "Best · 5.2 MB".
+    private static func line(_ first: String, _ second: String) -> String {
+        String(localized: "\(first) · \(second)", bundle: .ringModel,
+               comment: "Two parts of the hub on one line: the format and its size, “PNG · 19 MB”.")
+    }
 
     /// The dragged files' offers, once known.
     private var offers: Offers?

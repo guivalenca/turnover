@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 public struct PNGAction: ConversionAction {
     public init() {}
 
-    public var name: String { "PNG" }
+    public var format: OutputFormat { .png }
     public var outputType: UTType { .png }
 
     public func accepts(_ file: SourceFile) -> Bool {

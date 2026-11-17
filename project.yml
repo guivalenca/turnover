@@ -70,6 +70,8 @@ targets:
         product: TurnoverKit
       - package: Turnover
         product: RingModel
+      - package: Turnover
+        product: TurnoverAppCore
       - sdk: FinderSync.framework
 
   # The Finder Sync extension: the right-click "Turnover ›" submenu. Sandboxed, as app
