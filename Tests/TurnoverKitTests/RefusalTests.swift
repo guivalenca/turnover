@@ -42,4 +42,17 @@ import TurnoverTestSupport
             try await Converter().convert(text, with: PNGAction())
         }
     }
+
+    // A truncated JPEG is not in the list: ImageIO decodes what is there and fills the rest
+    // with grey, as Preview does, so it converts.
+    @Test(arguments: [Fixture.heicRotated, .webp])
+    func aTruncatedImageFailsAndLeavesNothingBehind(fixture: Fixture) async throws {
+        let whole = fixture.data
+        let broken = try folder.add(whole.prefix(whole.count / 2), as: "broken-\(fixture.rawValue)")
+
+        await #expect(throws: ConversionError.damaged(broken)) {
+            try await Converter().convert(broken, with: PNGAction())
+        }
+        #expect(try folder.fileNames() == [broken.lastPathComponent])
+    }
 }

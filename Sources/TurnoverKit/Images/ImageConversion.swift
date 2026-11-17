@@ -6,16 +6,24 @@ import UniformTypeIdentifiers
 /// Decodes an image with ImageIO and re-encodes it in another format.
 enum ImageConversion {
     static func convert(_ source: URL, to destination: URL, as type: UTType) throws {
-        guard let input = CGImageSourceCreateWithURL(source as CFURL, nil) else { throw CocoaError(.fileReadCorruptFile) }
+        guard let input = CGImageSourceCreateWithURL(source as CFURL, nil),
+              CGImageSourceGetStatus(input) == .statusComplete
+        else { throw ConversionError.damaged(source) }
         let index = CGImageSourceGetPrimaryImageIndex(input)
         let properties = CGImageSourceCopyPropertiesAtIndex(input, index, nil) as? [CFString: Any] ?? [:]
-        guard let width = properties[kCGImagePropertyPixelWidth] as? Int,
+        guard CGImageSourceGetStatusAtIndex(input, index) == .statusComplete,
+              let width = properties[kCGImagePropertyPixelWidth] as? Int,
               let height = properties[kCGImagePropertyPixelHeight] as? Int,
-              let image = uprightImage(input, at: index, longestSide: max(width, height)),
-              let output = CGImageDestinationCreateWithURL(destination as CFURL, type.identifier as CFString, 1, nil)
-        else { throw CocoaError(.fileReadCorruptFile) }
+              let image = uprightImage(input, at: index, longestSide: max(width, height))
+        else { throw ConversionError.damaged(source) }
+        guard let output = CGImageDestinationCreateWithURL(destination as CFURL, type.identifier as CFString, 1, nil)
+        else { throw CocoaError(.fileWriteUnknown, userInfo: [NSURLErrorKey: destination]) }
         CGImageDestinationAddImage(output, image, metadata(from: properties, for: image) as CFDictionary)
-        guard CGImageDestinationFinalize(output) else { throw CocoaError(.fileWriteUnknown) }
+        guard CGImageDestinationFinalize(output) else {
+            // Some formats (HEIC) decode lazily, so a truncated file only fails here.
+            if image.dataProvider?.data == nil { throw ConversionError.damaged(source) }
+            throw CocoaError(.fileWriteUnknown, userInfo: [NSURLErrorKey: destination])
+        }
     }
 
     /// The metadata dictionaries worth carrying over, marked upright since the pixels now are.
