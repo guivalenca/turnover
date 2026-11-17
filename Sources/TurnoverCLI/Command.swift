@@ -6,6 +6,7 @@ struct Command {
     static let formats: KeyValuePairs<String, any ConversionAction> = [
         "png": PNGAction(),
         "jpeg": JPEGAction(),
+        "mp4": MP4Action(),
     ]
 
     static let usage = """

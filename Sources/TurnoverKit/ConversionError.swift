@@ -25,9 +25,15 @@ extension ConversionError: LocalizedError {
         case .unsupported(let url, let typeDescription):
             "\(url.lastPathComponent): not an image or a video (\(typeDescription))"
         case .alreadyInFormat(let url, let format):
-            "\(url.lastPathComponent): already a \(format)"
+            "\(url.lastPathComponent): already \(article(format)) \(format)"
         case .notApplicable(let url, let format):
             "\(url.lastPathComponent): can't be converted to \(format)"
         }
     }
+}
+
+/// "a PNG", "a JPEG", but "an MP4": the article follows how the first letter is said.
+private func article(_ format: String) -> String {
+    guard let first = format.uppercased().first else { return "a" }
+    return "AEFILMNORSX".contains(first) ? "an" : "a"
 }

@@ -56,3 +56,41 @@ import TurnoverTestSupport
         #expect(try folder.fileNames() == [broken.lastPathComponent])
     }
 }
+
+/// The same for videos and MP4.
+@Suite struct VideoRefusals {
+    let folder = try! ScratchFolder()
+
+    @Test func anMP4IsNotConvertedToMP4() async throws {
+        let mp4 = try folder.add(.mp4H264, as: "clip.mp4")
+
+        await #expect(throws: ConversionError.alreadyInFormat(mp4, format: "MP4")) {
+            try await Converter().convert(mp4, with: MP4Action())
+        }
+        #expect(try folder.fileNames() == ["clip.mp4"])
+    }
+
+    @Test(arguments: [Fixture.heicRotated, .text, .pdf])
+    func filesThatAreNotVideosAreRefused(fixture: Fixture) async throws {
+        let file = try folder.add(fixture)
+
+        await #expect(throws: ConversionError.self) {
+            try await Converter().convert(file, with: MP4Action())
+        }
+        #expect(try folder.fileNames() == [fixture.rawValue])
+    }
+
+    /// Cut halfway, the movie's index survives but half its frames are missing; cut at 2 KB,
+    /// even the index is gone.
+    @Test(arguments: [(Fixture.movHEVCHDR, 0.5), (.movH264, 0.5), (.movHEVCHDR, 0.06), (.movH264, 0.06)])
+    func aTruncatedVideoFailsAndLeavesNothingBehind(fixture: Fixture, kept: Double) async throws {
+        let whole = fixture.data
+        let broken = try folder.add(whole.prefix(Int(Double(whole.count) * kept)), as: "broken.mov")
+
+        await #expect(throws: ConversionError.damaged(broken)) {
+            try await Converter().convert(broken, with: MP4Action())
+        }
+        #expect(try folder.fileNames() == ["broken.mov"])
+        #expect(ConversionError.damaged(broken).localizedDescription == "broken.mov: damaged or incomplete, can't be decoded")
+    }
+}

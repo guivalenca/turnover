@@ -42,6 +42,18 @@ $ff -display_rotation -90 -i hevc-landscape.tmp.mov -c copy -movflags +faststart
   -f mov clip-hevc-hdr.mov && echo "wrote clip-hevc-hdr.mov"
 rm hevc-landscape.tmp.mov
 
+# clip-h264-pcm.mov: the H.264 stream with uncompressed 16-bit PCM audio, as some cameras and
+# screen recorders write, plus an iPhone's recording date and location as QuickTime metadata.
+$ff -i clip-h264.mov -f lavfi -i sine=frequency=440:sample_rate=8000:duration=2 \
+  -map 0:v -map 1:a -c:v copy -c:a pcm_s16le -ac 1 -f mov pcm.tmp.mov
+swift $root/scripts/tag-movie.swift pcm.tmp.mov clip-h264-pcm.mov \
+  2024-06-15T10:30:00+0200 +48.8584+002.2945+035.000/ && echo "wrote clip-h264-pcm.mov"
+rm pcm.tmp.mov
+
+# clip-h264-silent.mov: the H.264 stream alone, like a screen recording without sound.
+$ff -i clip-h264.mov -map 0:v -c copy -movflags +faststart -f mov clip-h264-silent.mov \
+  && echo "wrote clip-h264-silent.mov"
+
 # notes.txt: plain text, another file Turnover cannot convert.
 print "This is not a picture." > notes.txt && echo "wrote notes.txt"
 
