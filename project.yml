@@ -25,10 +25,13 @@ settings:
     GENERATE_INFOPLIST_FILE: NO
     DEAD_CODE_STRIPPING: YES
 
-# The repository's own Swift package, for TurnoverKit.
+# The repository's own Swift package, for TurnoverKit. Kept out of the file tree: its folder
+# reference would be named after the clone's folder, and the project would differ per clone.
+# Xcode lists it under Package Dependencies.
 packages:
   Turnover:
     path: .
+    excludeFromProject: true
 
 targets:
   # The background agent. It owns every conversion; the extension only forwards choices.

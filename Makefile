@@ -14,6 +14,8 @@ PRODUCT     := build/Turnover.app
 INSTALLED   := /Applications/Turnover.app
 EXTENSION   := Contents/PlugIns/TurnoverFinder.appex
 LSREGISTER  := /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+# The XcodeGen CI checks Turnover.xcodeproj with (.github/workflows/ci.yml); keep them in step.
+XCODEGEN_VERSION := 2.47.0
 
 .PHONY: app install uninstall test project clean
 
@@ -66,6 +68,8 @@ test:
 	swift test
 
 project:
+	@xcodegen --version | grep -q "$(XCODEGEN_VERSION)" || \
+		echo "warning: CI checks the project with XcodeGen $(XCODEGEN_VERSION); this is $$(xcodegen --version)"
 	xcodegen generate
 
 clean:

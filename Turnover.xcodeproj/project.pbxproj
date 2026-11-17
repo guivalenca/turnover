@@ -53,7 +53,6 @@
 		5BA307F6BAE8FDF755431170 /* TurnoverFinder.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TurnoverFinder.entitlements; sourceTree = "<group>"; };
 		AC1329052DD8DE6C4A250CF9 /* TurnoverFinder.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TurnoverFinder.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03775AE3E5A433705BF218F /* Conversions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Conversions.swift; sourceTree = "<group>"; };
-		D1360AB3759E7021C466820D /* 8-finder-menu */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "8-finder-menu"; path = .; sourceTree = SOURCE_ROOT; };
 		D3116FA8F1F2055913BDBCD7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		E483924A3901F93F84C37DF8 /* Turnover.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Turnover.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E4EBF56228EF202D2E3574DB /* Main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Main.swift; sourceTree = "<group>"; };
@@ -101,20 +100,11 @@
 			path = FinderExtension;
 			sourceTree = "<group>";
 		};
-		58A087F021AAC3A2E72D2D86 /* Packages */ = {
-			isa = PBXGroup;
-			children = (
-				D1360AB3759E7021C466820D /* 8-finder-menu */,
-			);
-			name = Packages;
-			sourceTree = "<group>";
-		};
 		5BA8B975847E74B962162944 = {
 			isa = PBXGroup;
 			children = (
 				603E6801205FB750EED52F6C /* App */,
 				3A04E961229E6BF85717E920 /* FinderExtension */,
-				58A087F021AAC3A2E72D2D86 /* Packages */,
 				9053796AE02723F780F1975B /* Frameworks */,
 				32E8A7D01BD58223C88EFEFD /* Products */,
 			);
@@ -212,9 +202,6 @@
 			);
 			mainGroup = 5BA8B975847E74B962162944;
 			minimizedProjectReferenceProxies = 1;
-			packageReferences = (
-				9531429DCEF87958918F6625 /* XCLocalSwiftPackageReference "." */,
-			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 32E8A7D01BD58223C88EFEFD /* Products */;
 			projectDirPath = "";
@@ -490,13 +477,6 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCLocalSwiftPackageReference section */
-		9531429DCEF87958918F6625 /* XCLocalSwiftPackageReference "." */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = .;
-		};
-/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		76C12C9F1D3471F0D7C1B5B2 /* TurnoverKit */ = {

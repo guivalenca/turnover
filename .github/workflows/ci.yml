@@ -44,11 +44,16 @@ jobs:
       - uses: actions/checkout@v5
 
       # Turnover.xcodeproj is committed so a clone needs only Xcode; make sure it is the one
-      # project.yml generates.
+      # project.yml generates. XcodeGen is pinned (the runner's Homebrew lags behind, and each
+      # version writes slightly different files); keep it in step with the Makefile.
       - name: Check the Xcode project matches project.yml
+        env:
+          XCODEGEN_VERSION: "2.47.0"
         run: |
-          brew install xcodegen
-          xcodegen generate
+          curl -fsSL -o "$RUNNER_TEMP/xcodegen.zip" \
+            "https://github.com/yonaskolb/XcodeGen/releases/download/$XCODEGEN_VERSION/xcodegen.zip"
+          unzip -q "$RUNNER_TEMP/xcodegen.zip" -d "$RUNNER_TEMP"
+          "$RUNNER_TEMP/xcodegen/bin/xcodegen" generate
           git status --porcelain
           git diff --exit-code
 
