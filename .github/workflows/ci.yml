@@ -33,3 +33,32 @@ jobs:
 
       - name: Test
         run: swift test
+
+  app:
+    name: Build the app and Finder extension (macOS)
+    runs-on: macos-26
+    timeout-minutes: 20
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v5
+
+      # Turnover.xcodeproj is committed so a clone needs only Xcode; make sure it is the one
+      # project.yml generates. XcodeGen is pinned (the runner's Homebrew lags behind, and each
+      # version writes slightly different files); keep it in step with the Makefile.
+      - name: Check the Xcode project matches project.yml
+        env:
+          XCODEGEN_VERSION: "2.47.0"
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/xcodegen.zip" \
+            "https://github.com/yonaskolb/XcodeGen/releases/download/$XCODEGEN_VERSION/xcodegen.zip"
+          unzip -q "$RUNNER_TEMP/xcodegen.zip" -d "$RUNNER_TEMP"
+          make project XCODEGEN="$RUNNER_TEMP/xcodegen/bin/xcodegen"
+          git status --porcelain
+          git diff --exit-code
+
+      # Unsigned here; `make install` signs ad hoc on the user's Mac.
+      - name: Build
+        run: >
+          xcodebuild -project Turnover.xcodeproj -scheme Turnover -configuration Release
+          -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO build

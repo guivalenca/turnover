@@ -37,6 +37,8 @@ public struct Offers: Sendable, Hashable {
     /// One format offered for some of the selected files.
     public struct Target: Sendable, Hashable {
         public let format: OutputFormat
+        /// The kind of file it converts: `.image` or `.video`.
+        public let kind: SourceFile.Kind
         /// The files this format applies to, in selection order. A file never appears in a
         /// target for its own format: a PNG is not offered PNG.
         public let files: [URL]
@@ -51,6 +53,12 @@ public struct Offers: Sendable, Hashable {
 
         /// The action that converts `files` to this target's format.
         public var action: any ConversionAction { format.action(quality: quality ?? .default) }
+
+        /// The Finder menu item: the format and how many files it converts, e.g. "PNG (3 images)".
+        public var menuTitle: String {
+            let noun = kind == .video ? "video" : "image"
+            return "\(format.name) (\(files.count) \(noun)\(files.count == 1 ? "" : "s"))"
+        }
     }
 
     /// One JPEG quality and its estimate.
@@ -63,6 +71,14 @@ public struct Offers: Sendable, Hashable {
     /// file's type, without decoding it, so it is quick enough to build a menu.
     public init(for files: [URL]) {
         self.init(files, Inspection(files), jpegQuality: .default, estimates: nil)
+    }
+
+    /// Works out what is offered from each file's declared type (`URLResourceValues.contentType`,
+    /// mostly from its extension), without opening the files. This is for the sandboxed Finder
+    /// extension, which may read the selection's metadata but not its contents. A file whose
+    /// extension doesn't match its contents is skipped later, when the app converts it.
+    public init(declaredTypesOf files: [URL]) {
+        self.init(files, Inspection(declaredTypesOf: files), jpegQuality: .default, estimates: nil)
     }
 
     /// The same offers, with an estimate for each target: output sizes for images (each JPEG
@@ -89,6 +105,16 @@ public struct Offers: Sendable, Hashable {
             for url in urls {
                 do { files.append(try SourceFile(url)) } catch {
                     unreadable[url] = error as? ConversionError ?? .unreadable(url)
+                }
+            }
+        }
+
+        init(declaredTypesOf urls: [URL]) {
+            for url in urls {
+                if let type = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType {
+                    files.append(SourceFile(url, declaredType: type))
+                } else {
+                    unreadable[url] = .unreadable(url)
                 }
             }
         }
@@ -121,7 +147,7 @@ public struct Offers: Sendable, Hashable {
                 let presets = format != .jpeg ? [] : JPEGQuality.allCases.compactMap { preset in
                     estimates?.estimate(format, quality: preset, of: fitting).map { Preset(quality: preset, estimate: $0) }
                 }
-                return Target(format: format, files: fitting, quality: quality,
+                return Target(format: format, kind: kind, files: fitting, quality: quality,
                               estimate: estimates?.estimate(format, quality: jpegQuality, of: fitting), presets: presets)
             }
             return targets.isEmpty ? nil : Group(kind: kind, files: members.map(\.url), targets: targets)
