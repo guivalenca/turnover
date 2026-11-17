@@ -1,6 +1,6 @@
 import AppKit
 
-/// Notices drags of files in any app, and ⇧ during them, with no Accessibility or Input
+/// Notices drags of files in any app, and ⇧ and ⌥ during them, with no Accessibility or Input
 /// Monitoring permission (the approach #2's spike settled):
 ///
 /// - A global monitor for left-mouse and modifier events. Global *mouse* monitors need no
@@ -16,11 +16,14 @@ import AppKit
 @MainActor
 final class DragWatcher {
     enum Event {
-        /// A drag of files started. `files` are the dragged files when the drag pasteboard could
-        /// be read at once; nil when they have to come from the ring's panel later.
-        case dragStarted(shiftDown: Bool, files: [URL]?)
+        /// A drag of files started, with ⇧ and ⌥ as they were then. `files` are the dragged files
+        /// when the drag pasteboard could be read at once; nil when they have to come from the
+        /// ring's panel later.
+        case dragStarted(shiftDown: Bool, optionDown: Bool, files: [URL]?)
         /// ⇧ went down or up during the drag.
         case shift(down: Bool)
+        /// ⌥ went down or up during the drag.
+        case option(down: Bool)
         /// The left button went up: the drag is over, or about to be.
         case buttonUp
     }
@@ -32,7 +35,7 @@ final class DragWatcher {
         /// The button is down and no drag has started yet. `since`: when the drag pasteboard
         /// first changed without file URLs on it, if it has.
         case pressed(baseline: Int, since: Date?)
-        case dragging(shift: Bool)
+        case dragging(shift: Bool, option: Bool)
         /// A drag of something other than files (text, say): ignored until the button goes up.
         case otherDrag
     }
@@ -86,7 +89,8 @@ final class DragWatcher {
 
     private func tick() {
         let buttonDown = NSEvent.pressedMouseButtons & 1 != 0
-        let shift = NSEvent.modifierFlags.contains(.shift)
+        let flags = NSEvent.modifierFlags
+        let shift = flags.contains(.shift), option = flags.contains(.option)
 
         switch phase {
         case .idle:
@@ -95,22 +99,23 @@ final class DragWatcher {
             guard buttonDown else { phase = .idle; break }
             guard pasteboard.changeCount != baseline else { break }
             if let files = fileURLs() {
-                phase = .dragging(shift: shift)
-                ringLog.debug("Drag of \(files.count) file(s) started, ⇧ \(shift ? "held" : "up")")
-                onEvent?(.dragStarted(shiftDown: shift, files: files.isEmpty ? nil : files))
+                phase = .dragging(shift: shift, option: option)
+                ringLog.debug("Drag of \(files.count) file(s) started, ⇧ \(shift ? "held" : "up"), ⌥ \(option ? "held" : "up")")
+                onEvent?(.dragStarted(shiftDown: shift, optionDown: option, files: files.isEmpty ? nil : files))
             } else if let since, Date.now.timeIntervalSince(since) > Self.fileURLGrace {
                 phase = .otherDrag
             } else if since == nil {
                 phase = .pressed(baseline: baseline, since: .now)
             }
-        case .dragging(let wasShift):
+        case .dragging(let wasShift, let wasOption):
             if !buttonDown {
                 phase = .idle
                 onEvent?(.buttonUp)
-            } else if shift != wasShift {
-                phase = .dragging(shift: shift)
-                onEvent?(.shift(down: shift))
+                break
             }
+            phase = .dragging(shift: shift, option: option)
+            if option != wasOption { onEvent?(.option(down: option)) }
+            if shift != wasShift { onEvent?(.shift(down: shift)) }
         case .otherDrag:
             if !buttonDown { phase = .idle }
         }

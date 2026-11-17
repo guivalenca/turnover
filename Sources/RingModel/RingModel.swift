@@ -21,6 +21,9 @@ public struct RingModel: Sendable {
         case dragStarted(shiftDown: Bool)
         /// ⇧ went down or up.
         case shift(down: Bool)
+        /// ⌥ went down or up. Send it whenever it changes during a drag, and its state at drag
+        /// start: held while the ring is open, it fans JPEG out into its qualities.
+        case option(down: Bool)
         /// What the dragged files can be converted to, or the same offers with newer estimates.
         /// Send it as soon as the files are known (at drag start if the drag pasteboard can be
         /// read then, otherwise when the open ring first sees the drag), then on every update.
@@ -28,6 +31,10 @@ public struct RingModel: Sendable {
         /// The pointer moved over the open ring: its offset from the ring's centre, in points,
         /// x to the right and y down (screen coordinates, as the angles are).
         case pointer(x: Double, y: Double)
+        /// The time, in seconds on a steady clock (the app sends `ProcessInfo.systemUptime`).
+        /// Send it before every `pointer`, and again at `rest?.deadline`: resting on a format
+        /// that long adds it.
+        case time(TimeInterval)
         /// The files were dropped on the open ring.
         case drop
         /// Esc: the system cancelled the drag. The app sees it as the open ring's drag leaving
@@ -59,7 +66,23 @@ public struct RingModel: Sendable {
     /// The ring's entries while it is open and the dragged files are known; empty otherwise.
     public var entries: [Entry] {
         guard phase == .open, let offers else { return [] }
-        return Self.layout(offers)
+        return Self.layout(offers, fannedOut: isFannedOut, added: added)
+    }
+
+    /// How long the pointer rests on a format to add it: the system's spring-loading delay.
+    public let restDelay: TimeInterval
+
+    /// The formats added by resting on them, at most one per kind of file, in the order they
+    /// were added. A drop converts these plus the format dropped on, which wins within its kind.
+    public var added: [Choice] { additions.map(\.choice) }
+
+    /// The pointer resting on a format that resting adds, in a mixed ring; nil otherwise.
+    public internal(set) var rest: Rest?
+
+    /// ⌥ is held over the open ring and JPEG is offered: JPEG is fanned out into its qualities.
+    public var isFannedOut: Bool {
+        guard phase == .open, optionDown, let offers else { return false }
+        return offers.targets.contains { $0.format == .jpeg }
     }
 
     /// The entry a drop would convert to: the one whose arc the pointer is in, if the pointer is
@@ -77,23 +100,53 @@ public struct RingModel: Sendable {
     public var hub: Hub? {
         guard phase == .open, let offers else { return nil }
         guard let entry = highlighted, let choice = entry.choices.first else {
+            if isFannedOut { return Hub(title: "JPEG", detail: "quality", text: "JPEG quality") }
             let files = offers.groups.flatMap(\.files)
             let kinds = Set(offers.groups.map(\.kind))
             let noun = kinds.count == 1 ? Self.noun(kinds.first!, count: files.count) : (files.count == 1 ? "file" : "files")
             return Hub(title: "\(files.count)", detail: noun, text: "\(files.count) \(noun)")
         }
+        // Several formats (one added, say): their names and how many files they convert.
+        let dropped = choices(droppingOn: entry)
+        if dropped.count > 1 {
+            let title = dropped.map(\.format.name).joined(separator: " + ")
+            let count = dropped.map(\.files.count).reduce(0, +)
+            let detail = "\(count) file\(count == 1 ? "" : "s")"
+            return Hub(title: title, detail: detail, text: "\(title) · \(detail)")
+        }
         // One format: its size or time, or how many files it converts until that is known.
-        let detail = entry.estimate?.label ?? "\(choice.files.count) \(Self.noun(choice.kind, count: choice.files.count))"
-        return Hub(title: entry.title, detail: detail, text: "\(entry.title) · \(detail)")
+        var detail = entry.estimate?.label ?? "\(choice.files.count) \(Self.noun(choice.kind, count: choice.files.count))"
+        // A JPEG quality: "JPEG", "Best · 5.2 MB".
+        if let quality = entry.quality { detail = "\(quality.name) · \(detail)" }
+        let title = choice.format.name
+        return Hub(title: title, detail: detail, text: "\(title) · \(detail)")
+    }
+
+    /// The line under the ring, for images and videos dragged together only: how to add a
+    /// format, then what has been added ("PNG added · drop to convert"). Nil otherwise.
+    public var caption: String? {
+        guard isMixed else { return nil }
+        guard !additions.isEmpty else { return "Rest on a format to add it, then drop on another" }
+        return additions.map(\.label).joined(separator: " + ") + " added · drop to convert"
+    }
+
+    /// The open ring offers formats for more than one kind of file: rest-to-add applies.
+    var isMixed: Bool {
+        guard phase == .open, let offers else { return false }
+        return offers.groups.count > 1
     }
 
     /// The text in the ring's centre.
     public struct Hub: Sendable, Hashable {
-        /// The large line: the format a drop converts to ("PNG"), or the file count ("3").
+        /// The large line: what a drop converts to ("PNG", "PNG + MP4", "JPEG"), or the file
+        /// count ("3"), or "JPEG" while ⌥ fans it out.
         public let title: String
-        /// The small line under it: the estimate ("19 MB") or what is counted ("images").
+        /// The small line under it: the estimate ("19 MB"), the quality and its estimate
+        /// ("Best · 5.2 MB"), the files converted ("3 files"), what is counted ("images"), or
+        /// "quality".
         public let detail: String
-        /// Both on one line, for logs and accessibility: "PNG · 19 MB", "3 images".
+        /// Both on one line, for logs and accessibility: "PNG · 19 MB", "PNG + MP4 · 3 files",
+        /// "3 images", "JPEG quality".
         public let text: String
     }
 
@@ -113,10 +166,20 @@ public struct RingModel: Sendable {
 
     /// ⇧ was held when the drag started and hasn't been released since: it doesn't count.
     private var shiftHeldSinceDragStart = false
+    /// ⌥ is held.
+    private var optionDown = false
+    /// The last time sent, if any.
+    var now: TimeInterval?
+    /// What resting added, with how the caption names it.
+    var additions: [Addition] = []
 
-    public init() {}
+    /// `restDelay`: the system's spring-loading delay, `com.apple.springing.delay`.
+    public init(restDelay: TimeInterval = 0.5) {
+        self.restDelay = restDelay
+    }
 
     public mutating func send(_ event: Event) {
+        defer { settleRest() }
         switch event {
         case .dragStarted(let shiftDown):
             phase = .dragging
@@ -131,6 +194,8 @@ public struct RingModel: Sendable {
             shiftHeldSinceDragStart = false
             hint = nil
             if phase == .open { phase = .dragging }
+        case .option(let down):
+            optionDown = down
         case .offers(let offers):
             self.offers = offers
             // Nothing to convert: a hint instead of the ring, and the drag goes on as usual.
@@ -140,9 +205,11 @@ public struct RingModel: Sendable {
             }
         case .pointer(let x, let y):
             pointer = (x, y)
+        case .time(let time):
+            now = time
         case .drop:
             guard phase == .open else { return }
-            outcome = highlighted.map { .convert($0.choices) } ?? .cancel
+            outcome = highlighted.map { .convert(choices(droppingOn: $0)) } ?? .cancel
             phase = .idle
         case .escape, .dragEnded:
             if phase == .open { outcome = .cancel }
@@ -160,5 +227,7 @@ public struct RingModel: Sendable {
         }
         phase = .open
         pointer = (0, 0)
+        additions = []
+        rest = nil
     }
 }
