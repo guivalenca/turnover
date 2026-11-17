@@ -51,6 +51,11 @@ public struct RingModel: Sendable {
     /// Set when a drag ends with the ring open; nil until then, and again from the next drag.
     public private(set) var outcome: Outcome?
 
+    /// Why nothing is offered, shown briefly instead of the ring when ⇧ is pressed during a drag
+    /// of files Turnover can't convert, e.g. "lease.pdf: not an image or a video (PDF document)".
+    /// Nil once ⇧ is released or the drag ends.
+    public private(set) var hint: String?
+
     /// The ring's entries while it is open and the dragged files are known; empty otherwise.
     public var entries: [Entry] {
         guard phase == .open, let offers else { return [] }
@@ -65,6 +70,35 @@ public struct RingModel: Sendable {
         guard distance >= Self.hubRadius, distance <= Self.outerRadius else { return nil }
         let angle = atan2(pointer.y, pointer.x) * 180 / .pi
         return entries.first { $0.arc.contains(angle) }
+    }
+
+    /// What the hub says while the ring is open and the files are known: what a drop on the
+    /// highlighted entry converts to, or how many files are dragged.
+    public var hub: Hub? {
+        guard phase == .open, let offers else { return nil }
+        guard let entry = highlighted, let choice = entry.choices.first else {
+            let files = offers.groups.flatMap(\.files)
+            let kinds = Set(offers.groups.map(\.kind))
+            let noun = kinds.count == 1 ? Self.noun(kinds.first!, count: files.count) : (files.count == 1 ? "file" : "files")
+            return Hub(title: "\(files.count)", detail: noun, text: "\(files.count) \(noun)")
+        }
+        // One format: its size or time, or how many files it converts until that is known.
+        let detail = entry.estimate?.label ?? "\(choice.files.count) \(Self.noun(choice.kind, count: choice.files.count))"
+        return Hub(title: entry.title, detail: detail, text: "\(entry.title) · \(detail)")
+    }
+
+    /// The text in the ring's centre.
+    public struct Hub: Sendable, Hashable {
+        /// The large line: the format a drop converts to ("PNG"), or the file count ("3").
+        public let title: String
+        /// The small line under it: the estimate ("19 MB") or what is counted ("images").
+        public let detail: String
+        /// Both on one line, for logs and accessibility: "PNG · 19 MB", "3 images".
+        public let text: String
+    }
+
+    private static func noun(_ kind: SourceFile.Kind, count: Int) -> String {
+        (kind == .video ? "video" : "image") + (count == 1 ? "" : "s")
     }
 
     /// Inside this distance from the centre, the pointer is on the hub: nothing is highlighted.
@@ -89,16 +123,21 @@ public struct RingModel: Sendable {
             shiftHeldSinceDragStart = shiftDown
             offers = nil
             outcome = nil
-        case .shift(let down):
-            if !down { shiftHeldSinceDragStart = false }
-            if down, phase == .dragging, !shiftHeldSinceDragStart {
-                phase = .open
-                // The ring opens centred on the pointer.
-                pointer = (0, 0)
-            }
-            if !down, phase == .open { phase = .dragging }
+            hint = nil
+        case .shift(down: true):
+            guard phase == .dragging, !shiftHeldSinceDragStart else { return }
+            open()
+        case .shift(down: false):
+            shiftHeldSinceDragStart = false
+            hint = nil
+            if phase == .open { phase = .dragging }
         case .offers(let offers):
             self.offers = offers
+            // Nothing to convert: a hint instead of the ring, and the drag goes on as usual.
+            if phase == .open, let reason = offers.reason {
+                phase = .dragging
+                hint = reason
+            }
         case .pointer(let x, let y):
             pointer = (x, y)
         case .drop:
@@ -108,8 +147,21 @@ public struct RingModel: Sendable {
         case .escape:
             if phase == .open { outcome = .cancel }
             phase = .idle
+            hint = nil
         case .dragEnded:
             phase = .idle
+            hint = nil
         }
+    }
+
+    /// ⇧ pressed mid-drag: the ring opens centred on the pointer, unless the files are known to
+    /// have nothing to convert.
+    private mutating func open() {
+        if let reason = offers?.reason {
+            hint = reason
+            return
+        }
+        phase = .open
+        pointer = (0, 0)
     }
 }

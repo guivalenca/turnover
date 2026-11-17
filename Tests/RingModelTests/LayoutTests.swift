@@ -18,4 +18,13 @@ import TurnoverKit
         #expect(ring.entries.map(\.title) == ["PNG", "JPEG"])
         #expect(ring.entries.map(\.angle) == [180, 0])
     }
+
+    @Test func aMixedDragGetsAnEntryForEveryTarget() {
+        let mixed = Offers(groups: Sample.images([Sample.photo]).groups + Sample.movies([Sample.movie]).groups)
+
+        let ring = RingModel.opened(with: mixed)
+
+        #expect(ring.entries.map(\.title) == ["PNG", "JPEG", "MP4"])
+        #expect(Set(ring.entries.map(\.angle)).count == 3)
+    }
 }

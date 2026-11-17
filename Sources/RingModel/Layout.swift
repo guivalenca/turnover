@@ -5,6 +5,10 @@ extension RingModel {
     public struct Entry: Sendable, Hashable {
         /// The format: "PNG", "JPEG" or "MP4".
         public let title: String
+        /// Its estimate: "19 MB" (measured), "~19 MB", "Instant", "About 5 s"; "…" until known.
+        public var subtitle: String { estimate?.label ?? "…" }
+        /// For every file it converts together; nil until estimated.
+        public let estimate: Estimate?
         /// Where it sits, in degrees clockwise from the right (screen coordinates, y down):
         /// -90° is the top, 180° the left.
         public let angle: Double
@@ -33,18 +37,19 @@ extension RingModel {
         }
     }
 
-    /// One group: a single entry sits at the top; two sit left and right, in display order
-    /// (PNG left, JPEG right).
+    /// A single entry sits at the top; two sit left and right, in display order (PNG left, JPEG
+    /// right). More (a mixed drag) are spread evenly from the top for now: #12 lays out mixed
+    /// drags, images on the left and videos on the right.
     static func layout(_ offers: Offers) -> [Entry] {
         let targets = offers.targets
         let angles: [Double] = switch targets.count {
         case 1: [-90]
         case 2: [180, 0]
-        default: []
+        default: targets.indices.map { -90 + Double($0) * 360 / Double(targets.count) }
         }
         return zip(targets, angles).map { target, angle in
-            Entry(title: target.format.name, angle: angle, arc: arc(around: angle, among: angles),
-                  choices: [Choice(target)])
+            Entry(title: target.format.name, estimate: target.estimate, angle: angle,
+                  arc: arc(around: angle, among: angles), choices: [Choice(target)])
         }
     }
 
