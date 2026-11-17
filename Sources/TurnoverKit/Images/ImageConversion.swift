@@ -14,8 +14,30 @@ enum ImageConversion {
               let image = uprightImage(input, at: index, longestSide: max(width, height)),
               let output = CGImageDestinationCreateWithURL(destination as CFURL, type.identifier as CFString, 1, nil)
         else { throw CocoaError(.fileReadCorruptFile) }
-        CGImageDestinationAddImage(output, image, nil)
+        CGImageDestinationAddImage(output, image, metadata(from: properties, for: image) as CFDictionary)
         guard CGImageDestinationFinalize(output) else { throw CocoaError(.fileWriteUnknown) }
+    }
+
+    /// The metadata dictionaries worth carrying over, marked upright since the pixels now are.
+    /// The colour profile travels with the image itself.
+    private static func metadata(from properties: [CFString: Any], for image: CGImage) -> [CFString: Any] {
+        let carried: [CFString] = [
+            kCGImagePropertyExifDictionary, kCGImagePropertyExifAuxDictionary, kCGImagePropertyGPSDictionary,
+            kCGImagePropertyTIFFDictionary, kCGImagePropertyIPTCDictionary, kCGImagePropertyMakerAppleDictionary,
+            kCGImagePropertyDPIWidth, kCGImagePropertyDPIHeight,
+        ]
+        var metadata = properties.filter { carried.contains($0.key) }
+        metadata[kCGImagePropertyOrientation] = 1
+        if var tiff = metadata[kCGImagePropertyTIFFDictionary] as? [CFString: Any] {
+            tiff[kCGImagePropertyTIFFOrientation] = 1
+            metadata[kCGImagePropertyTIFFDictionary] = tiff
+        }
+        if var exif = metadata[kCGImagePropertyExifDictionary] as? [CFString: Any] {
+            exif[kCGImagePropertyExifPixelXDimension] = image.width
+            exif[kCGImagePropertyExifPixelYDimension] = image.height
+            metadata[kCGImagePropertyExifDictionary] = exif
+        }
+        return metadata
     }
 
     /// The full-size image with its EXIF orientation applied to the pixels.

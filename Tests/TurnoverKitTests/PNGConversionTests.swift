@@ -60,4 +60,17 @@ import TurnoverTestSupport
         #expect(png.gps["LongitudeRef"] as? String == "E")
         #expect(png.gps["Altitude"] as? Double == 35)
     }
+
+    @Test func outputKeepsTheOriginalsCreationAndModificationDates() async throws {
+        let photo = try folder.add(.heicRotated)
+        let created = Date(timeIntervalSince1970: 1_718_447_400)  // 2024-06-15 10:30:00 UTC
+        let modified = Date(timeIntervalSince1970: 1_718_620_200)  // 2024-06-17 10:30:00 UTC
+        try FileManager.default.setAttributes([.creationDate: created, .modificationDate: modified], ofItemAtPath: photo.path)
+
+        let output = try await Converter().convert(photo, with: PNGAction()).output
+
+        let dates = try output.resourceValues(forKeys: [.creationDateKey, .contentModificationDateKey])
+        #expect(dates.creationDate == created)
+        #expect(dates.contentModificationDate == modified)
+    }
 }
