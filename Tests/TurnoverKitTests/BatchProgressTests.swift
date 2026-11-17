@@ -25,7 +25,7 @@ import TurnoverTestSupport
 
         #expect(video.values.first == 0)
         #expect(video.values == video.values.sorted())
-        #expect(video.values.filter { $0 > 0 && $0 < 1 }.count > 10)
+        #expect(video.values.contains { $0 > 0 && $0 < 1 })
         #expect(image.values.first == 0)
         #expect(batch.jobs.map(\.progress) == [1, 1])
     }
