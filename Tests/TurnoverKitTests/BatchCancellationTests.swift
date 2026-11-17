@@ -24,6 +24,8 @@ import TurnoverTestSupport
         #expect(batch.outputs == [folder.url.appendingPathComponent("clip 2.mp4"),
                                   folder.url.appendingPathComponent("clip 3.mp4")])
         #expect(try folder.fileNames() == ["clip 1.mov", "clip 2.mov", "clip 2.mp4", "clip 3.mov", "clip 3.mp4"])
+        #expect(turnstile.destinations.count == 3)
+        #expect(turnstile.destinations.allSatisfy { $0.folderIsGone })
     }
 
     @Test func aJobCancelledWhileWaitingNeverStarts() async throws {
@@ -54,5 +56,12 @@ import TurnoverTestSupport
         await batch.waitUntilFinished()
         #expect(batch.jobs.map(\.state) == [.cancelled, .cancelled, .cancelled, .cancelled])
         #expect(try folder.fileNames() == ["clip 1.mov", "clip 2.mov", "clip 3.mov", "photo.heic"])
+        #expect(turnstile.destinations.count == 3)
+        #expect(turnstile.destinations.allSatisfy { $0.folderIsGone })
     }
+}
+
+private extension URL {
+    /// Whether the folder holding this temporary file has been removed.
+    var folderIsGone: Bool { !FileManager.default.fileExists(atPath: deletingLastPathComponent().path) }
 }

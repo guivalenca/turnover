@@ -16,6 +16,7 @@ public final class Turnstile: Sendable {
         var started = 0
         var mostAtOnce = 0
         var isOpen = false
+        var destinations: [URL] = []
     }
 
     private let state = Mutex(State())
@@ -38,6 +39,10 @@ public final class Turnstile: Sendable {
     /// The most that ever ran at once.
     public var mostAtOnce: Int { state.withLock { $0.mostAtOnce } }
 
+    /// The temporary files the conversions were told to write, in the converter's private
+    /// temporary folders. Each folder should be gone once its job has ended.
+    public var destinations: [URL] { state.withLock { $0.destinations } }
+
     /// Lets every conversion through, now and from now on.
     public func open() {
         state.withLock { $0.isOpen = true }
@@ -53,8 +58,9 @@ public final class Turnstile: Sendable {
         return true
     }
 
-    fileprivate func run(_ work: () async throws -> Void) async throws {
+    fileprivate func run(writingTo destination: URL, _ work: () async throws -> Void) async throws {
         state.withLock { state in
+            state.destinations.append(destination)
             state.running += 1
             state.started += 1
             state.mostAtOnce = max(state.mostAtOnce, state.running)
@@ -78,10 +84,10 @@ private struct Held<Wrapped: ConversionAction>: ConversionAction {
     func accepts(_ file: SourceFile) -> Bool { wrapped.accepts(file) }
 
     func perform(_ file: SourceFile, writingTo destination: URL) async throws {
-        try await turnstile.run { try await wrapped.perform(file, writingTo: destination) }
+        try await turnstile.run(writingTo: destination) { try await wrapped.perform(file, writingTo: destination) }
     }
 
     func perform(_ file: SourceFile, writingTo destination: URL, progress: ConversionProgress) async throws {
-        try await turnstile.run { try await wrapped.perform(file, writingTo: destination, progress: progress) }
+        try await turnstile.run(writingTo: destination) { try await wrapped.perform(file, writingTo: destination, progress: progress) }
     }
 }
