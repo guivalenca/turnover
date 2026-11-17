@@ -10,6 +10,8 @@ struct Refinement: Sendable {
     let cache: SizeCache
     /// Measuring waits while these run. The quick estimates don't: the ring needs them at once.
     let conversions: ConversionActivity?
+    /// How many pixels may be measured exactly; the other images are scaled from them.
+    let exactPixelBudget: Int
 
     /// The images of the selection.
     var images: [SourceFile] { inspection.files.filter { $0.kind == .image } }
@@ -33,10 +35,6 @@ struct Refinement: Sendable {
         return offers(known, [:], pending: pending.union(inspection.files.filter { $0.kind == .video }.map(\.url)))
     }
 
-    /// How many pixels a selection may have measured exactly: one 48-megapixel photo, or four
-    /// 12-megapixel ones. Measuring decodes one image at a time, so this also bounds the memory.
-    /// The other images are scaled from the measured ones.
-    static let exactPixelBudget = 50_000_000
 
     /// What the quick estimates found, for measuring exactly afterwards.
     struct Start: Sendable {
@@ -72,7 +70,7 @@ struct Refinement: Sendable {
     private func measureExactly(_ candidates: [SourceFile], pixels: [URL: Int], from start: [URL: ImageSizes],
                                 videos: [URL: VideoTime], publish: @Sendable (Offers) async -> Void) async {
         var measured = start
-        var budget = Self.exactPixelBudget
+        var budget = exactPixelBudget
         for image in candidates {
             await conversions?.waitUntilIdle()
             guard !Task.isCancelled else { return }
@@ -95,7 +93,7 @@ struct Refinement: Sendable {
                 if unchanged { cache.store(output, bytes: bytes, pixels: count, for: key) }
                 measured[image.url, default: ImageSizes(pixels: count, sizes: [:])]
                     .sizes[output] = ImageSizes.Size(bytes: bytes, isExact: true)
-                await publish(offers(ImageSizes.completing(measured, for: images, pixels: pixels), videos))
+                await publish(offers(ImageSizes.completing(measured, for: images, pixels: pixels, quick: start), videos))
             }
         }
     }

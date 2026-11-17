@@ -49,16 +49,51 @@ struct ImageSizes: Sendable {
 
     /// `measured`, plus an approximate size for each other image of `images` whose pixel count is
     /// in `pixels`, scaled from the measured images.
-    static func completing(_ measured: [URL: ImageSizes], for images: [SourceFile], pixels: [URL: Int]) -> [URL: ImageSizes] {
-        let references = images.compactMap { image in measured[image.url].map { (image, $0) } }
+    ///
+    /// `quick` holds the quick estimates of images since measured exactly. Each format's quick
+    /// estimates are calibrated by them: multiplied by how far off they turned out on that format.
+    static func completing(_ measured: [URL: ImageSizes], for images: [SourceFile], pixels: [URL: Int],
+                           quick: [URL: ImageSizes] = [:]) -> [URL: ImageSizes] {
         let selected = Set(images.map(\.url))
         var sizes = measured.filter { selected.contains($0.key) }
+        let ratios = calibration(of: quick, by: sizes, for: images)
+        for image in images {
+            guard var own = sizes[image.url] else { continue }
+            for (output, size) in own.sizes where !size.isExact {
+                guard let ratio = ratios[Calibrated(type: image.contentType, output: output)] else { continue }
+                own.sizes[output] = Size(bytes: Int(Double(size.bytes) * ratio), isExact: false)
+            }
+            sizes[image.url] = own
+        }
+        let references = images.compactMap { image in sizes[image.url].map { (image, $0) } }
         for image in images where sizes[image.url] == nil {
             guard let count = pixels[image.url], let scaled = ImageSizes(scaling: references, to: count, like: image)
             else { continue }
             sizes[image.url] = scaled
         }
         return sizes
+    }
+
+    private struct Calibrated: Hashable {
+        let type: UTType
+        let output: ImageOutput
+    }
+
+    /// For each source format and output, the exact sizes of the images measured since their
+    /// quick estimate, divided by those quick estimates.
+    private static func calibration(of quick: [URL: ImageSizes], by measured: [URL: ImageSizes],
+                                    for images: [SourceFile]) -> [Calibrated: Double] {
+        var sums: [Calibrated: (exact: Int, quick: Int)] = [:]
+        for image in images {
+            guard let guesses = quick[image.url], let sizes = measured[image.url] else { continue }
+            for (output, guess) in guesses.sizes where !guess.isExact && guess.bytes > 0 {
+                guard let size = sizes.sizes[output], size.isExact else { continue }
+                let key = Calibrated(type: image.contentType, output: output)
+                sums[key, default: (0, 0)].exact += size.bytes
+                sums[key, default: (0, 0)].quick += guess.bytes
+            }
+        }
+        return sums.mapValues { Double($0.exact) / Double($0.quick) }
     }
 
     /// Every image, taking one of each format in turn, in selection order: the first few are a
@@ -96,14 +131,16 @@ struct ImageSizes: Sendable {
     }
 
     /// An image like `image`, of `pixels` pixels, with as many bytes per pixel in each output as
-    /// the `references` of its own format together, or all of them when none has its format.
-    /// Always approximate.
+    /// the `references` of its own format together, or all of them when none has its format;
+    /// among those, only the ones measured exactly, if any are. Always approximate.
     private init?(scaling references: [(SourceFile, ImageSizes)], to pixels: Int, like image: SourceFile) {
         var sizes: [ImageOutput: Size] = [:]
         for output in ImageOutput.allCases {
             let having = references.filter { $0.1.sizes[output] != nil && $0.1.pixels > 0 }
             let sameFormat = having.filter { $0.0.contentType == image.contentType }
-            let basis = (sameFormat.isEmpty ? having : sameFormat).map(\.1)
+            let pool = sameFormat.isEmpty ? having : sameFormat
+            let exact = pool.filter { $0.1.sizes[output]!.isExact }
+            let basis = (exact.isEmpty ? pool : exact).map(\.1)
             let basisPixels = basis.reduce(0) { $0 + $1.pixels }
             guard basisPixels > 0 else { continue }
             let bytes = basis.reduce(0) { $0 + $1.sizes[output]!.bytes }

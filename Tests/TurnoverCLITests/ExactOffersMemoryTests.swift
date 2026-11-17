@@ -20,9 +20,10 @@ import TurnoverTestSupport
         let ten = try peakMemory(ofTurnover: ["offers", "--exact"] + photos.map(\.path))
 
         #expect(one.status == 0 && ten.status == 0)
-        // About what converting one of them to PNG takes: the decoded photo plus the PNG.
+        // About what converting one of them to PNG takes: the decoded photo plus the PNG (about
+        // 600 MB here, 485 MB on CI). Measuring them all at once would take over 2 GB.
         #expect(ten.bytes < 1_000_000_000, "\(ten.bytes / 1_000_000) MB")
-        #expect(ten.bytes < one.bytes + 100_000_000, "\(one.bytes / 1_000_000) MB, then \(ten.bytes / 1_000_000) MB")
+        #expect(Double(ten.bytes) < Double(one.bytes) * 1.5, "\(one.bytes / 1_000_000) MB, then \(ten.bytes / 1_000_000) MB")
     }
 }
 

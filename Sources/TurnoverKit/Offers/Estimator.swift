@@ -13,12 +13,20 @@ public final class Estimator {
     /// The selection being estimated, until `cancel()` or another selection.
     private var current: (files: [URL], jpegQuality: JPEGQuality, live: LiveOffers)?
 
-    /// Measuring waits while `converter` (the one the app converts with, or a copy of it) runs
-    /// a conversion, so it never slows one down. `cacheCapacity` is how many files' exact sizes
-    /// are remembered, most recently used first.
-    public init(yieldingTo converter: Converter? = nil, cacheCapacity: Int = 1000) {
+    private let exactPixelBudget: Int
+
+    /// - Parameters:
+    ///   - converter: The converter the app converts with, or a copy of it. Measuring waits while
+    ///     it runs a conversion, so it never slows one down.
+    ///   - cacheCapacity: How many files' exact sizes are remembered, most recently used first.
+    ///   - exactPixelBudget: How many pixels of each selection are measured exactly, one image at
+    ///     a time: by default one 48-megapixel photo or four 12-megapixel ones. The other images
+    ///     are scaled from the measured ones. This bounds the time and memory measuring takes.
+    public init(yieldingTo converter: Converter? = nil, cacheCapacity: Int = 1000,
+                exactPixelBudget: Int = 50_000_000) {
         conversions = converter?.activity
         cache = SizeCache(capacity: cacheCapacity)
+        self.exactPixelBudget = exactPixelBudget
     }
 
     /// Starts estimating `files` and returns at once.
@@ -35,7 +43,8 @@ public final class Estimator {
         }
         current?.live.cancel()
         let live = LiveOffers(Refinement(files: files, inspection: Offers.Inspection(files),
-                                         jpegQuality: jpegQuality, cache: cache, conversions: conversions))
+                                         jpegQuality: jpegQuality, cache: cache, conversions: conversions,
+                                         exactPixelBudget: exactPixelBudget))
         current = (files, jpegQuality, live)
         return live
     }
