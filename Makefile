@@ -16,6 +16,7 @@ EXTENSION   := Contents/PlugIns/TurnoverFinder.appex
 LSREGISTER  := /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 # The XcodeGen CI checks Turnover.xcodeproj with (.github/workflows/ci.yml); keep them in step.
 XCODEGEN_VERSION := 2.47.0
+XCODEGEN    ?= xcodegen
 
 .PHONY: app install uninstall test project clean
 
@@ -67,10 +68,14 @@ uninstall:
 test:
 	swift test
 
+# XcodeGen names the package's folder reference after the folder it runs in, so it runs through
+# a link named "turnover" (left in a new temporary folder): every clone, whatever its folder is
+# called, then gets the same project.
 project:
-	@xcodegen --version | grep -q "$(XCODEGEN_VERSION)" || \
-		echo "warning: CI checks the project with XcodeGen $(XCODEGEN_VERSION); this is $$(xcodegen --version)"
-	xcodegen generate
+	@$(XCODEGEN) --version | grep -q "$(XCODEGEN_VERSION)" || \
+		echo "warning: CI checks the project with XcodeGen $(XCODEGEN_VERSION); this is $$($(XCODEGEN) --version)"
+	@link="$$(mktemp -d)/turnover" && ln -s "$(CURDIR)" "$$link" && \
+		$(XCODEGEN) generate --spec "$$link/project.yml"
 
 clean:
 	rm -rf build
