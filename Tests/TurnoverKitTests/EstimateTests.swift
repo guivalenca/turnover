@@ -106,7 +106,7 @@ import TurnoverTestSupport
     /// accuracy is measured on real photos (`QuickEstimateAccuracy`).
     @Test(arguments: [Fixture.heicRotated, .webp])
     func aCameraSizedHEICIsEstimatedWithin30Percent(fixture: Fixture) async throws {
-        let photo = try folder.addMosaic(of: fixture, width: 4032, height: 3024, as: "photo.heic", type: .heic)
+        let photo = try await mosaic(in: folder, of: fixture, width: 4032, height: 3024, as: "photo.heic", type: .heic)
 
         let offers = await Offers(estimating: [photo])
 
@@ -122,7 +122,7 @@ import TurnoverTestSupport
     }
 
     @Test func aSixMegapixelPhotoIsEstimatedInUnder50Milliseconds() async throws {
-        let photo = try folder.addMosaic(of: .heicRotated, width: 3000, height: 2000, as: "big.jpg")
+        let photo = try await mosaic(in: folder, of: .heicRotated, width: 3000, height: 2000, as: "big.jpg")
 
         // The fastest of five rounds: the first pays for loading ImageIO, and other tests
         // compete for the CPU.

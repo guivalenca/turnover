@@ -123,7 +123,7 @@ import TurnoverTestSupport
 
     /// Two videos convert at a time, so the third waits. Cancelling one lets the next start.
     @Test func listsTheRunningAndWaitingJobsAndCancellingOneLeavesNoPartialFile() async throws {
-        let clips = try ["a", "b", "c"].map { try folder.add(.movHEVCHDR, as: "\($0).mov") }
+        let clips = try ["a", "b", "c"].map { try folder.add(.movH264, as: "\($0).mov") }
         let feedback = Feedback(clock: clock)
 
         let batch = JobRunner().run(clips, to: [turnstile.holding(MP4Action())])
@@ -144,7 +144,7 @@ import TurnoverTestSupport
     }
 
     @Test func cancelAllStopsEveryBatchShown() async throws {
-        let clips = try ["a", "b", "c"].map { try folder.add(.movHEVCHDR, as: "\($0).mov") }
+        let clips = try ["a", "b", "c"].map { try folder.add(.movH264, as: "\($0).mov") }
         let photo = try folder.add(.heicRotated, as: "photo.heic")
         let feedback = Feedback(clock: clock)
         let runner = JobRunner()
