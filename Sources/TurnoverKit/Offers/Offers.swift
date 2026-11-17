@@ -68,15 +68,10 @@ public struct Offers: Sendable, Hashable {
     /// The same offers, with an estimate for each target: output sizes for images (each JPEG
     /// preset too, with `jpegQuality` the one JPEG uses), and time for videos.
     public init(estimating files: [URL], jpegQuality: JPEGQuality = .default) async {
-        let kinds = files.map { (url: $0, kind: (try? SourceFile($0))?.kind) }
-        async let images = withTaskGroup(of: (URL, ImageSizes?).self) { group in
-            for file in kinds where file.kind == .image {
-                group.addTask { (file.url, ImageSizes(of: file.url)) }
-            }
-            return await group.reduce(into: [URL: ImageSizes]()) { $0[$1.0] = $1.1 }
-        }
+        let inspected = files.compactMap { try? SourceFile($0) }
+        async let images = ImageSizes.of(inspected.filter { $0.kind == .image })
         async let videos = withTaskGroup(of: (URL, VideoTime?).self) { group in
-            for file in kinds where file.kind == .video {
+            for file in inspected where file.kind == .video {
                 group.addTask { (file.url, await VideoTime(of: file.url)) }
             }
             return await group.reduce(into: [URL: VideoTime]()) { $0[$1.0] = $1.1 }

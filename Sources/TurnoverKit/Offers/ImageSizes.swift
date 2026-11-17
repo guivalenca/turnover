@@ -10,9 +10,76 @@ import UniformTypeIdentifiers
 /// shrinking a photo packs more detail into each pixel and overestimates the output two- or
 /// threefold, and a flat graphic far more. The tiles' sizes are scaled up by pixel count, and the
 /// fixed cost of headers, metadata and the colour profile is added once.
+///
+/// A selection is sampled too: at most `sampledImages` of its images are measured, spread across
+/// their formats, and each of the others is scaled from the measured images of its own format by
+/// pixel count. Decoding a HEIC takes the hardware decoder, which serialises, so measuring ten
+/// 12-megapixel HEICs took about 90 ms and four take about 40.
 struct ImageSizes: Sendable {
+    let pixels: Int
     let png: Int
     let jpeg: [JPEGQuality: Int]
+
+    static let sampledImages = 4
+
+    /// The sizes of every image in `images` that can be decoded.
+    static func of(_ images: [SourceFile]) async -> [URL: ImageSizes] {
+        let sampled = samples(of: images)
+        let measured = await withTaskGroup(of: (SourceFile, ImageSizes?).self) { group in
+            for image in sampled { group.addTask { (image, ImageSizes(of: image.url)) } }
+            return await group.reduce(into: [SourceFile: ImageSizes]()) { $0[$1.0] = $1.1 }
+        }
+        var sizes = Dictionary(uniqueKeysWithValues: measured.map { ($0.key.url, $0.value) })
+        for image in images where sizes[image.url] == nil && !sampled.contains(image) {
+            let sameFormat = measured.filter { $0.key.contentType == image.contentType }.map(\.value)
+            guard let pixels = pixelCount(of: image.url),
+                  let scaled = ImageSizes(scaling: sameFormat.isEmpty ? Array(measured.values) : sameFormat, to: pixels)
+            else { continue }
+            sizes[image.url] = scaled
+        }
+        return sizes
+    }
+
+    /// Up to `sampledImages` images, taking one of each format in turn, in selection order.
+    private static func samples(of images: [SourceFile]) -> Set<SourceFile> {
+        var byFormat: [[SourceFile]] = []
+        for image in images {
+            if let index = byFormat.firstIndex(where: { $0[0].contentType == image.contentType }) {
+                byFormat[index].append(image)
+            } else {
+                byFormat.append([image])
+            }
+        }
+        var picked: Set<SourceFile> = []
+        for round in 0..<sampledImages {
+            for format in byFormat where round < format.count && picked.count < sampledImages {
+                picked.insert(format[round])
+            }
+        }
+        return picked
+    }
+
+    /// From the header alone. Nil when the image can't be decoded.
+    private static func pixelCount(of url: URL) -> Int? {
+        guard let input = CGImageSourceCreateWithURL(url as CFURL, nil),
+              CGImageSourceGetStatus(input) == .statusComplete,
+              let properties = CGImageSourceCopyPropertiesAtIndex(input, CGImageSourceGetPrimaryImageIndex(input), nil) as? [CFString: Any],
+              let width = properties[kCGImagePropertyPixelWidth] as? Int,
+              let height = properties[kCGImagePropertyPixelHeight] as? Int
+        else { return nil }
+        return width * height
+    }
+
+    /// An image of `pixels` pixels, as many bytes per pixel as `measured` together.
+    private init?(scaling measured: [ImageSizes], to pixels: Int) {
+        let measuredPixels = measured.reduce(0) { $0 + $1.pixels }
+        guard measuredPixels > 0 else { return nil }
+        let scale = Double(pixels) / Double(measuredPixels)
+        func scaled(_ bytes: (ImageSizes) -> Int) -> Int { Int(Double(measured.reduce(0) { $0 + bytes($1) }) * scale) }
+        self.pixels = pixels
+        png = scaled(\.png)
+        jpeg = Dictionary(uniqueKeysWithValues: JPEGQuality.allCases.map { quality in (quality, scaled { $0.jpeg[quality]! }) })
+    }
 
     /// Images up to this many pixels are encoded whole (the fixtures are).
     static let wholeImageLimit = tileCount * tileSide * tileSide
@@ -20,7 +87,7 @@ struct ImageSizes: Sendable {
     /// The centre, and the centre of each quarter.
     static let tileCount = 5
 
-    /// Nil when the image can't be decoded.
+    /// Measures one image. Nil when it can't be decoded.
     init?(of url: URL) {
         guard let input = CGImageSourceCreateWithURL(url as CFURL, nil),
               CGImageSourceGetStatus(input) == .statusComplete
@@ -37,7 +104,7 @@ struct ImageSizes: Sendable {
             guard let size = sample.bytes(as: .jpeg, quality: quality.encoderQuality) else { return nil }
             jpeg[quality] = size
         }
-        (self.png, self.jpeg) = (png, jpeg)
+        (self.pixels, self.png, self.jpeg) = (image.width * image.height, png, jpeg)
     }
 
     func bytes(as format: OutputFormat, quality: JPEGQuality) -> Int {
@@ -60,6 +127,7 @@ struct ImageSizes: Sendable {
             tiles = centres.compactMap { x, y in
                 image.cropping(to: CGRect(x: Int(Double(width) * x) - side / 2, y: Int(Double(height) * y) - side / 2,
                                           width: side, height: side))
+                    .flatMap(Self.decoded)
             }
         }
 
@@ -67,7 +135,7 @@ struct ImageSizes: Sendable {
             guard !tiles.isEmpty else { return encodedSize(of: image, as: type, metadata: properties, quality: quality) }
             // The fixed cost, measured on a crop too small for its pixels to matter: with the
             // metadata it is paid once; without it, by every tile.
-            guard let corner = image.cropping(to: CGRect(x: 0, y: 0, width: 8, height: 8)),
+            guard let corner = tiles[0].cropping(to: CGRect(x: 0, y: 0, width: 8, height: 8)),
                   let fixed = encodedSize(of: corner, as: type, metadata: properties, quality: quality),
                   let perTile = encodedSize(of: corner, as: type, metadata: [:], quality: quality)
             else { return nil }
@@ -78,6 +146,26 @@ struct ImageSizes: Sendable {
                 pixels += tile.width * tile.height
             }
             return fixed + Int(Double(pixelBytes) * Double(image.width * image.height) / Double(pixels))
+        }
+
+        /// `crop`'s pixels, decoded once into a bitmap with the same channels and depth, so that
+        /// encoding it four times doesn't decode it four times, and a PNG of it is as big as a
+        /// PNG of the same pixels in the source would be.
+        private static func decoded(_ crop: CGImage) -> CGImage? {
+            let opaque = [.none, .noneSkipFirst, .noneSkipLast].contains(crop.alphaInfo)
+            let depth = crop.bitsPerComponent > 8 ? 16 : 8
+            let space = crop.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
+            let layout: (CGColorSpace, CGImageAlphaInfo) =
+                if space.model == .monochrome && opaque { (space, .none) }
+                else if space.model == .rgb { (space, opaque ? .noneSkipLast : .premultipliedLast) }
+                else { (CGColorSpace(name: CGColorSpace.sRGB)!, opaque ? .noneSkipLast : .premultipliedLast) }
+            let context = CGContext(data: nil, width: crop.width, height: crop.height, bitsPerComponent: depth,
+                                    bytesPerRow: 0, space: layout.0, bitmapInfo: layout.1.rawValue)
+                ?? CGContext(data: nil, width: crop.width, height: crop.height, bitsPerComponent: 8,
+                             bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+            context?.draw(crop, in: CGRect(x: 0, y: 0, width: crop.width, height: crop.height))
+            return context?.makeImage()
         }
 
         private func encodedSize(of image: CGImage, as type: UTType, metadata: [CFString: Any], quality: Double?) -> Int? {

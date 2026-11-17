@@ -60,6 +60,24 @@ import TurnoverTestSupport
         #expect(try isWithinFactorOfTwo(png.estimate, of: real))
     }
 
+    /// Only a few images are sampled, so big selections stay quick; the rest are estimated from
+    /// samples of their own type, scaled by pixel count.
+    @Test func aSelectionBiggerThanTheSampleStillEstimatesEveryFile() async throws {
+        let heic = try (1...5).map { try folder.add(.heicRotated, as: "photo \($0).heic") }
+        let png = try (1...3).map { try folder.add(.png, as: "logo \($0).png") }
+        let large = try folder.addMosaic(of: .webp, width: 1200, height: 900, as: "large.jpg")
+
+        let offers = await Offers(estimating: heic + png + [large])
+
+        let toPNG = try #require(offers.targets.first { $0.format == .png })
+        let toJPEG = try #require(offers.targets.first { $0.format == .jpeg })
+        #expect(toPNG.files == heic + [large])
+        #expect(toJPEG.files == heic + png)
+        let realPNG = try await outputSize(of: heic[0], with: PNGAction()) * 5 + outputSize(of: large, with: PNGAction())
+        let realJPEG = try await outputSize(of: heic[0], with: JPEGAction()) * 5 + outputSize(of: png[0], with: JPEGAction()) * 3
+        #expect(try isWithinFactorOfTwo(toPNG.estimate, of: realPNG))
+        #expect(try isWithinFactorOfTwo(toJPEG.estimate, of: realJPEG))
+    }
 }
 
 /// Camera-sized photos are estimated from a sample, which must stay quick and close enough.
@@ -92,6 +110,35 @@ import TurnoverTestSupport
         }
 
         #expect(times.min()! < .milliseconds(50))
+    }
+}
+
+/// Offers feed live UI (the ring opens mid-drag), so computing them must be quick.
+@Suite struct OffersSpeed {
+    let folder = try! ScratchFolder()
+
+    @Test func tenPhotosAreOfferedAndEstimatedInWellUnder100Milliseconds() async throws {
+        let fixtures: [Fixture] = [.heicRotated, .jpeg, .png, .webp, .heicRotated, .jpeg, .heicRotated, .webp, .png, .heicRotated]
+        let photos = try fixtures.enumerated().map { try folder.add($1, as: "\($0)-\($1.rawValue)") }
+
+        var times: [Duration] = []
+        var offers: Offers?
+        for _ in 1...3 {
+            times.append(await ContinuousClock().measure { offers = await Offers(estimating: photos) })
+        }
+
+        #expect(offers?.groups.first?.files.count == 10)
+        #expect(offers?.targets.allSatisfy { $0.estimate != nil } == true)
+        #expect(times.min()! < .milliseconds(50))
+    }
+
+    @Test func offersWithoutEstimatesTakeUnderAMillisecondPerFile() throws {
+        let photos = try (0..<10).map { try folder.add(.heicRotated, as: "\($0).heic") }
+
+        // The fastest of three rounds: the first pays for loading ImageIO's decoders.
+        let times = (1...3).map { _ in ContinuousClock().measure { _ = Offers(for: photos) } }
+
+        #expect(times.min()! < .milliseconds(10))
     }
 }
 
