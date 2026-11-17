@@ -34,6 +34,27 @@ public struct SourceFile: Sendable, Hashable {
         }
     }
 
+    /// Classifies the file at `url` by `declaredType`, the type the file system gives it (mostly
+    /// from its extension), without opening it. Close to what inspecting the contents gives, as
+    /// long as the extension tells the truth.
+    init(_ url: URL, declaredType: UTType) {
+        self.url = url
+        if declaredType.conforms(to: .image), Self.imageIOTypes.contains(declaredType.identifier) {
+            (kind, contentType) = (.image, declaredType)
+        } else if declaredType.conforms(to: .quickTimeMovie) {
+            (kind, contentType) = (.video, .quickTimeMovie)
+        } else if declaredType.conforms(to: .mpeg4Movie) {
+            // M4V keeps its own type: it is MPEG-4 underneath, but still offered MP4.
+            let m4v = UTType("com.apple.m4v-video")
+            (kind, contentType) = (.video, declaredType == m4v ? declaredType : .mpeg4Movie)
+        } else {
+            (kind, contentType) = (.unsupported, declaredType)
+        }
+    }
+
+    /// The types ImageIO can decode. Not every `public.image` is one of them: SVG isn't.
+    private static let imageIOTypes = Set(CGImageSourceCopyTypeIdentifiers() as? [String] ?? [])
+
     private static func readHeader(_ url: URL) -> Data? {
         guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
         defer { try? handle.close() }

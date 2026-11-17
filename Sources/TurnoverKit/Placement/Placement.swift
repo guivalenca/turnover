@@ -32,16 +32,36 @@ struct Placement {
     /// its final URL. Whatever happens, the temporary folder is removed. If the task is
     /// cancelled, nothing is moved into place and this throws `CancellationError`.
     func place(_ write: (URL) async throws -> Void) async throws -> URL {
-        let fileManager = FileManager.default
-        let scratch = try fileManager.url(
-            for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: folder, create: true)
-        defer { try? fileManager.removeItem(at: scratch) }
+        let scratch = try makeScratchFolder()
+        defer { try? FileManager.default.removeItem(at: scratch) }
 
         let temporary = scratch.appendingPathComponent(name(number: 1))
         try await write(temporary)
         try copyDates(to: temporary)
         try Task.checkCancellation()
         return try moveIntoPlace(temporary)
+    }
+
+    /// A private temporary folder on `folder`'s volume, so the final rename can be atomic.
+    ///
+    /// Usually that is the volume's own temporary-items folder. Where macOS can't make one there
+    /// (a share or drive whose top level the user can't write to) or hands back one on another
+    /// volume (some network shares), it is a hidden folder inside `folder` itself.
+    private func makeScratchFolder() throws -> URL {
+        let fileManager = FileManager.default
+        if let system = try? fileManager.url(
+            for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: folder, create: true) {
+            if let device = Self.device(of: system), device == Self.device(of: folder) { return system }
+            try? fileManager.removeItem(at: system)
+        }
+        let hidden = folder.appendingPathComponent(".turnover-\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(at: hidden, withIntermediateDirectories: false)
+        return hidden
+    }
+
+    private static func device(of url: URL) -> dev_t? {
+        var info = stat()
+        return stat(url.path, &info) == 0 ? info.st_dev : nil
     }
 
     /// Stamps the source's creation and modification dates on `file`. A rename keeps them.
