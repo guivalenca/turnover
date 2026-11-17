@@ -8,6 +8,8 @@ struct Refinement: Sendable {
     let inspection: Offers.Inspection
     let jpegQuality: JPEGQuality
     let cache: SizeCache
+    /// Measuring waits while these run. The quick estimates don't: the ring needs them at once.
+    let conversions: ConversionActivity?
 
     /// The images of the selection.
     var images: [SourceFile] { inspection.files.filter { $0.kind == .image } }
@@ -39,41 +41,53 @@ struct Refinement: Sendable {
     /// Calls `publish` with the quick offers, then again each time an exact size is known.
     /// Stops at the next step when its task is cancelled: an encode in progress finishes, and
     /// nothing else starts.
-    func run(publish: @Sendable (Offers) async -> Void) async {
+    func run(publish: @escaping @Sendable (Offers) async -> Void) async {
         let (known, _) = remembered()
         let unknown = ImageSizes.spread(images.filter { known[$0.url] == nil })
         async let quick = ImageSizes.quick(Array(unknown.prefix(ImageSizes.sampledImages)))
         async let pixelCounts = ImageSizes.pixelCounts(of: unknown)
         let videos = await VideoTime.of(inspection.files.filter { $0.kind == .video })
-        var measured = await quick.merging(known) { quick, _ in quick }
+        let measured = await quick.merging(known) { quick, _ in quick }
         let pixels = await pixelCounts
-        func current() -> Offers {
-            offers(ImageSizes.completing(measured, for: images, pixels: pixels), videos)
-        }
-        await publish(current())
+        await publish(offers(ImageSizes.completing(measured, for: images, pixels: pixels), videos))
 
+        // Measuring is background work: below the quick estimates, the ring and conversions.
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask(priority: .utility) {
+                await measureExactly(unknown, pixels: pixels, from: measured, videos: videos, publish: publish)
+            }
+        }
+    }
+
+    /// Measures `candidates` exactly, in order, while they fit in `exactPixelBudget`, publishing
+    /// the offers after each output. Waits whenever a conversion is running.
+    private func measureExactly(_ candidates: [SourceFile], pixels: [URL: Int], from start: [URL: ImageSizes],
+                                videos: [URL: VideoTime], publish: @Sendable (Offers) async -> Void) async {
+        var measured = start
         var budget = Self.exactPixelBudget
-        for image in unknown {
+        for image in candidates {
+            await conversions?.waitUntilIdle()
             guard !Task.isCancelled else { return }
-            guard let count = pixels[image.url], count <= budget,
-                  let key = SizeCache.Key(image.url)
-            else { continue }
+            guard let count = pixels[image.url], count <= budget, let key = SizeCache.Key(image.url) else { continue }
             budget -= count
             // Sizes remembered for some outputs already, from an earlier, interrupted measurement.
             let remembered = cache.sizes(for: key)?.sizes ?? [:]
-            for (output, size) in remembered { measured[image.url, default: ImageSizes(pixels: count, sizes: [:])].sizes[output] = size }
+            for (output, size) in remembered {
+                measured[image.url, default: ImageSizes(pixels: count, sizes: [:])].sizes[output] = size
+            }
             let outputs = ImageOutput.of(image).filter { remembered[$0] == nil }
             guard !outputs.isEmpty, let decoded = try? ImageConversion.Decoded(image.url) else { continue }
             // The decode read the whole file; if it changed meanwhile, these sizes belong to no key.
             let unchanged = SizeCache.Key(image.url) == key
             for output in outputs {
+                await conversions?.waitUntilIdle()
                 guard !Task.isCancelled else { return }
                 guard let bytes = ImageConversion.encodedSize(of: decoded, as: output.type, quality: output.encoderQuality)
                 else { break }
                 if unchanged { cache.store(output, bytes: bytes, pixels: count, for: key) }
                 measured[image.url, default: ImageSizes(pixels: count, sizes: [:])]
                     .sizes[output] = ImageSizes.Size(bytes: bytes, isExact: true)
-                await publish(current())
+                await publish(offers(ImageSizes.completing(measured, for: images, pixels: pixels), videos))
             }
         }
     }

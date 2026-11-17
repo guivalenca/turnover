@@ -9,11 +9,15 @@ import Observation
 @MainActor
 public final class Estimator {
     private let cache: SizeCache
+    private let conversions: ConversionActivity?
     /// The selection being estimated, until `cancel()` or another selection.
     private var current: (files: [URL], jpegQuality: JPEGQuality, live: LiveOffers)?
 
-    /// `cacheCapacity` is how many files' exact sizes are remembered, most recently used first.
-    public init(cacheCapacity: Int = 1000) {
+    /// Measuring waits while `converter` (the one the app converts with, or a copy of it) runs
+    /// a conversion, so it never slows one down. `cacheCapacity` is how many files' exact sizes
+    /// are remembered, most recently used first.
+    public init(yieldingTo converter: Converter? = nil, cacheCapacity: Int = 1000) {
+        conversions = converter?.activity
         cache = SizeCache(capacity: cacheCapacity)
     }
 
@@ -31,7 +35,7 @@ public final class Estimator {
         }
         current?.live.cancel()
         let live = LiveOffers(Refinement(files: files, inspection: Offers.Inspection(files),
-                                         jpegQuality: jpegQuality, cache: cache))
+                                         jpegQuality: jpegQuality, cache: cache, conversions: conversions))
         current = (files, jpegQuality, live)
         return live
     }

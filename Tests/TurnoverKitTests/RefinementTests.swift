@@ -235,3 +235,48 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
         #expect((1...4).contains(measured.count), "\(measured.count) measured")
     }
 }
+
+/// Refining is background work: it never competes with a conversion the user asked for.
+@MainActor
+@Suite(.timeLimit(.minutes(1))) struct YieldingToConversions {
+    let folder = try! ScratchFolder()
+
+    @Test func refiningWaitsWhileAConversionRunsThenCarriesOn() async throws {
+        let converter = Converter()
+        let turnstile = Turnstile()
+        let busy = try folder.add(.heicRotated, as: "busy.heic")
+        let photo = try folder.addMosaic(of: .heicRotated, width: 2000, height: 1500, as: "photo.jpg")
+        let conversion = Task { try await converter.convert(busy, with: turnstile.holding(PNGAction())) }
+        #expect(await turnstile.waitUntil(running: 1))
+
+        let live = Estimator(yieldingTo: converter).estimate([photo])
+
+        // The quick guess still comes at once; the exact size waits for the conversion.
+        #expect(await eventually { live.offers.targets.first?.estimate != nil })
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(live.offers.targets.first?.estimate?.isExact == false)
+        turnstile.open()
+        _ = try await conversion.value
+        await live.waitUntilFinished()
+        try await expectExact(live.offers, for: photo)
+    }
+
+    @Test func cancellingWhileWaitingForAConversionStopsAtOnce() async throws {
+        let converter = Converter()
+        let turnstile = Turnstile()
+        let busy = try folder.add(.heicRotated, as: "busy.heic")
+        let photo = try folder.addMosaic(of: .heicRotated, width: 2000, height: 1500, as: "photo.jpg")
+        let conversion = Task { try await converter.convert(busy, with: turnstile.holding(PNGAction())) }
+        #expect(await turnstile.waitUntil(running: 1))
+        let live = Estimator(yieldingTo: converter).estimate([photo])
+        #expect(await eventually { live.offers.targets.first?.estimate != nil })
+
+        let cancelled = ContinuousClock.now
+        live.cancel()
+        await live.waitUntilFinished()
+
+        #expect(ContinuousClock.now - cancelled < timeLimit(.milliseconds(200)))
+        turnstile.open()
+        _ = try await conversion.value
+    }
+}
