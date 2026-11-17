@@ -27,9 +27,11 @@ enum ImageConversion {
     }
 
     /// An image decoded for conversion: full size, upright, with the metadata to carry over.
-    struct Decoded: @unchecked Sendable {
+    struct Decoded: Sendable {
         let image: CGImage
-        let properties: [CFString: Any]
+        private let metadata: Metadata
+        /// The source's ImageIO properties, metadata included.
+        var properties: [CFString: Any] { metadata.properties }
         /// The hardware decoder gave an opaque picture an alpha channel (see `opaque(_:)`).
         let hasSpareAlpha: Bool
 
@@ -39,7 +41,7 @@ enum ImageConversion {
                   let image = ImageConversion.uprightImage(header.source, at: header.index,
                                                            longestSide: max(header.width, header.height))
             else { throw ConversionError.damaged(source) }
-            (self.image, self.properties) = (image, header.properties)
+            (self.image, metadata) = (image, Metadata(properties: header.properties))
             hasSpareAlpha = header.decodesInHardware && !header.hasAlpha
         }
 
@@ -53,6 +55,13 @@ enum ImageConversion {
             CGImageDestinationAddImage(output, image, options(for: image, from: properties, quality: quality) as CFDictionary)
             return CGImageDestinationFinalize(output)
         }
+    }
+
+    /// ImageIO's properties of a source: property-list values only (strings, numbers, arrays and
+    /// dictionaries of them), copied out of the source and never changed afterwards, so reading
+    /// them from several threads is safe. Swift can't see that through `Any`, hence unchecked.
+    private struct Metadata: @unchecked Sendable {
+        let properties: [CFString: Any]
     }
 
     /// How every output is written: with `properties`' metadata, at `quality` (0 to 1, for lossy
