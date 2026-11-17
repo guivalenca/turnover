@@ -13,7 +13,19 @@ import TurnoverTestSupport
         #expect(run.status == 0)
         #expect(run.output == folder.url.appendingPathComponent("clip.mp4").path + "\n")
         #expect(run.messages == [])
+        #expect(!run.errors.contains("%"))
         #expect(try folder.fileNames() == ["clip.mov", "clip.mp4"])
+    }
+
+    @Test func showsAPercentageWhileConvertingInATerminal() throws {
+        let clip = try folder.add(.movHEVCHDR, as: "clip.mov")
+
+        let run = try turnoverInTerminal(clip.path, "--to", "mp4")
+
+        #expect(run.status == 0)
+        #expect(run.output == folder.url.appendingPathComponent("clip.mp4").path + "\n")
+        #expect(run.errors.contains("clip.mov"))
+        #expect(run.errors.contains("%"))
     }
 
     @Test func anMP4IsRefusedWithAShortReason() throws {

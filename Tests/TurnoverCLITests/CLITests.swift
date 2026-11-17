@@ -117,4 +117,4 @@ func turnover(_ arguments: [String], in workingDirectory: URL? = nil) throws -> 
 private final class BundleToken {}
 
 /// The build products folder, where the test bundle and the `turnover` binary both live.
-private let productsDirectory = Bundle(for: BundleToken.self).bundleURL.deletingLastPathComponent()
+let productsDirectory = Bundle(for: BundleToken.self).bundleURL.deletingLastPathComponent()

@@ -23,12 +23,17 @@ case .convert(let files, let action):
     var failed = false
     for path in files {
         let source = URL(fileURLWithPath: path).absoluteURL.standardizedFileURL
+        let line = ProgressLine.isAvailable ? ProgressLine(for: source) : nil
         do {
-            print(try await Converter().convert(source, with: action).output.path)
+            let result = try await Converter().convert(source, with: action) { line?.show($0) }
+            line?.clear()
+            print(result.output.path)
         } catch let error as ConversionError {
+            line?.clear()
             printError(error.localizedDescription)
             failed = true
         } catch {
+            line?.clear()
             printError("\(source.lastPathComponent): \(error.localizedDescription)")
             failed = true
         }
