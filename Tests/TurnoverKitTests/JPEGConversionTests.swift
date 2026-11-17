@@ -16,4 +16,12 @@ import TurnoverTestSupport
         #expect(try folder.fileNames() == ["photo.heic", "photo.jpg"])
         #expect(try Data(contentsOf: photo) == Fixture.heicRotated.data)
     }
+
+    @Test func theDefaultQualityIsHigh85Percent() async throws {
+        let photo = try folder.add(.heicRotated)
+
+        let output = try await Converter().convert(photo, with: JPEGAction()).output
+
+        #expect(try JPEGTables(output) == JPEGTables(quality: 0.85))
+    }
 }

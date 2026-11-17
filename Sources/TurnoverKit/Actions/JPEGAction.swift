@@ -15,6 +15,6 @@ public struct JPEGAction: ConversionAction {
     }
 
     public func perform(_ file: SourceFile, writingTo destination: URL) async throws {
-        try ImageConversion.convert(file.url, to: destination, as: outputType)
+        try ImageConversion.convert(file.url, to: destination, as: outputType, quality: 0.85)
     }
 }
