@@ -19,9 +19,13 @@ public struct Offers: Sendable, Hashable {
     /// (text)". Nil when something is offered.
     public var reason: String? {
         guard targets.isEmpty else { return nil }
-        guard let first = skipped.first else { return "No files" }
+        guard let first = skipped.first else {
+            return String(localized: "No files", bundle: .turnoverKit, comment: "Why nothing can be converted: nothing was dragged.")
+        }
         let more = skipped.count - 1
-        return first.localizedDescription + (more == 0 ? "" : ", and \(more) more file\(more == 1 ? "" : "s")")
+        guard more > 0 else { return first.localizedDescription }
+        return String(localized: "\(first.localizedDescription), and \(more) more files", bundle: .turnoverKit,
+                      comment: "Why nothing can be converted: the first file's reason, then how many other files can't be either.")
     }
 
     /// One kind of file in the selection, with the formats offered for it.
@@ -74,8 +78,12 @@ public struct Offers: Sendable, Hashable {
 
         /// The Finder menu item: the format and how many files it converts, e.g. "PNG (3 images)".
         public var menuTitle: String {
-            let noun = kind == .video ? "video" : "image"
-            return "\(format.name) (\(files.count) \(noun)\(files.count == 1 ? "" : "s"))"
+            let count = files.count
+            return kind == .video
+                ? String(localized: "\(format.name) (\(count) videos)", bundle: .turnoverKit,
+                         comment: "A Finder menu item: the format, and how many videos it converts.")
+                : String(localized: "\(format.name) (\(count) images)", bundle: .turnoverKit,
+                         comment: "A Finder menu item: the format, and how many images it converts.")
         }
     }
 

@@ -101,6 +101,13 @@ import TurnoverTestSupport
         #expect(offers.reason == "document.pdf: not an image or a video (PDF document), and 2 more files")
     }
 
+    @Test func oneMoreFileIsSingular() throws {
+        let pdf = try folder.add(.pdf)
+        let text = try folder.add(.text)
+
+        #expect(Offers(for: [pdf, text]).reason == "document.pdf: not an image or a video (PDF document), and 1 more file")
+    }
+
     @Test func unsupportedFilesNextToConvertibleOnesAreReportedWithoutAReason() throws {
         let photo = try folder.add(.heicRotated, as: "photo.heic")
         let movie = try folder.add(.movH264, as: "clip.mov")

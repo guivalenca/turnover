@@ -30,17 +30,26 @@ public enum ConversionError: Error, Sendable, Hashable {
     public var reason: String {
         switch self {
         case .unreadable:
-            "can't be read"
+            String(localized: "can't be read", bundle: .turnoverKit,
+                   comment: "Why a file wasn't converted, after its name: “x.heic: can't be read”.")
         case .damaged:
-            "damaged or incomplete, can't be decoded"
+            String(localized: "damaged or incomplete, can't be decoded", bundle: .turnoverKit,
+                   comment: "Why a file wasn't converted, after its name.")
         case .unsupported(_, let typeDescription):
-            "not an image or a video (\(typeDescription))"
-        case .alreadyInFormat(_, let format):
-            "already \(article(format.name)) \(format.name)"
+            String(localized: "not an image or a video (\(typeDescription))", bundle: .turnoverKit,
+                   comment: "Why a file wasn't converted, after its name. The file's type: “PDF document”.")
+        case .alreadyInFormat(_, .png):
+            String(localized: "already a PNG", bundle: .turnoverKit, comment: "Why a file wasn't converted, after its name.")
+        case .alreadyInFormat(_, .jpeg):
+            String(localized: "already a JPEG", bundle: .turnoverKit, comment: "Why a file wasn't converted, after its name.")
+        case .alreadyInFormat(_, .mp4):
+            String(localized: "already an MP4", bundle: .turnoverKit, comment: "Why a file wasn't converted, after its name.")
         case .notApplicable(_, let format):
-            "can't be converted to \(format.name)"
+            String(localized: "can't be converted to \(format.name)", bundle: .turnoverKit,
+                   comment: "Why a file wasn't converted, after its name. The format: “PNG”.")
         case .notWritten(_, let format, let detail):
-            "couldn't write the \(format.name) (\(detail))"
+            String(localized: "couldn't write the \(format.name) (\(detail))", bundle: .turnoverKit,
+                   comment: "Why a file wasn't converted, after its name. The format, then the system's reason: “couldn't write the PNG (Permission denied)”.")
         }
     }
 }
@@ -59,11 +68,8 @@ extension ConversionError {
 }
 
 extension ConversionError: LocalizedError {
-    public var errorDescription: String? { "\(file.lastPathComponent): \(reason)" }
-}
-
-/// "a PNG", "a JPEG", but "an MP4": the article follows how the first letter is said.
-private func article(_ format: String) -> String {
-    guard let first = format.uppercased().first else { return "a" }
-    return "AEFILMNORSX".contains(first) ? "an" : "a"
+    public var errorDescription: String? {
+        String(localized: "\(file.lastPathComponent): \(reason)", bundle: .turnoverKit,
+               comment: "A file's name, then why it wasn't converted: “x.heic: can't be read”.")
+    }
 }

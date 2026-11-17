@@ -1,0 +1,171 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ and %@" : {
+      "comment" : "Two things in a notice: “a.mp4 and b.mp4”, “2 images to JPEG and 1 video to MP4”."
+    },
+    "%@ and %lld more" : {
+      "comment" : "A slow batch's notice: the first new file's name, and how many others.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%@ and %lld more"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%@ and %lld more"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%@: %@." : {
+      "comment" : "A slow batch's notice, when its new files went to Downloads: “Saved clip.mp4 to Downloads: the folder of clip.mov is read-only.”"
+    },
+    "%lld files to %@" : {
+      "comment" : "Part of a slow batch's notice, after “Converted”: how many files, to which format.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld file to %@"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld files to %@"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld images to %@" : {
+      "comment" : "Part of a slow batch's notice, after “Converted”: how many files, to which format.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld image to %@"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld images to %@"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld videos to %@" : {
+      "comment" : "Part of a slow batch's notice, after “Converted”: how many files, to which format.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld video to %@"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld videos to %@"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Converted %@" : {
+      "comment" : "A slow batch's notice: what it converted, “Converted 2 videos to MP4”."
+    },
+    "Couldn't convert %@" : {
+      "comment" : "The notice for a file that failed: its name."
+    },
+    "Couldn't convert %lld files" : {
+      "comment" : "The notice for several files that failed. Its body lists each one and why.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Couldn't convert %lld file"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Couldn't convert %lld files"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Saved %@ to Downloads" : {
+      "comment" : "The notice for a new file saved to Downloads: its name."
+    },
+    "Saved %lld files to Downloads" : {
+      "comment" : "The notice for new files saved to Downloads: how many.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Saved %lld file to Downloads"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Saved %lld files to Downloads"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "The folder of %@ is read-only." : {
+      "comment" : "Why a new file went to Downloads: the original's name."
+    },
+    "The folders of the originals are read-only." : {
+      "comment" : "Why new files went to Downloads."
+    },
+    "the folder of %@ is read-only" : {
+      "comment" : "Why a new file went to Downloads, after a colon: the original's name."
+    },
+    "the folders of the originals are read-only" : {
+      "comment" : "Why new files went to Downloads, after a colon."
+    }
+  },
+  "version" : "1.0"
+}

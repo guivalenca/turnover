@@ -37,14 +37,16 @@ extension Notice {
         var notices: [Notice] = []
         if duration > slowBatch, !converted.isEmpty {
             let body = if let saved = savedToDownloads(inDownloads) {
-                "\(saved.title): \(saved.reason.prefix(1).lowercased() + saved.reason.dropFirst())"
+                String(localized: "\(saved.title): \(saved.clause).", bundle: .appCore,
+                       comment: "A slow batch's notice, when its new files went to Downloads: “Saved clip.mp4 to Downloads: the folder of clip.mov is read-only.”")
             } else {
                 names(converted.map(\.output))
             }
-            notices.append(Notice(kind: .converted, title: "Converted \(summary(of: converted))",
-                                  body: body, files: converted.map(\.output)))
+            let title = String(localized: "Converted \(summary(of: converted))", bundle: .appCore,
+                               comment: "A slow batch's notice: what it converted, “Converted 2 videos to MP4”.")
+            notices.append(Notice(kind: .converted, title: title, body: body, files: converted.map(\.output)))
         } else if let saved = savedToDownloads(inDownloads) {
-            notices.append(Notice(kind: .savedToDownloads, title: saved.title, body: saved.reason,
+            notices.append(Notice(kind: .savedToDownloads, title: saved.title, body: saved.sentence,
                                   files: inDownloads.map(\.output)))
         }
         // The app only converts files offered for their format, so a file skipped here is one
@@ -57,10 +59,13 @@ extension Notice {
             }
         }
         if let only = failures.first, failures.count == 1 {
-            notices.append(Notice(kind: .failed, title: "Couldn't convert \(only.file.lastPathComponent)",
-                                  body: sentence(only.reason), files: []))
+            let title = String(localized: "Couldn't convert \(only.file.lastPathComponent)", bundle: .appCore,
+                               comment: "The notice for a file that failed: its name.")
+            notices.append(Notice(kind: .failed, title: title, body: sentence(only.reason), files: []))
         } else if !failures.isEmpty {
-            notices.append(Notice(kind: .failed, title: "Couldn't convert \(failures.count) files",
+            let title = String(localized: "Couldn't convert \(failures.count) files", bundle: .appCore,
+                               comment: "The notice for several files that failed. Its body lists each one and why.")
+            notices.append(Notice(kind: .failed, title: title,
                                   body: failures.map(\.localizedDescription).joined(separator: "\n"), files: []))
         }
         return notices
@@ -71,13 +76,25 @@ extension Notice {
         reason.prefix(1).uppercased() + reason.dropFirst()
     }
 
-    /// "Saved photo.png to Downloads" and why, or nil when nothing went there.
-    private static func savedToDownloads(_ results: [ConversionResult]) -> (title: String, reason: String)? {
+    /// "Saved photo.png to Downloads" and why, as a sentence and as a clause to follow a colon;
+    /// nil when nothing went there.
+    private static func savedToDownloads(_ results: [ConversionResult]) -> (title: String, sentence: String, clause: String)? {
         guard let first = results.first else { return nil }
-        return results.count == 1
-            ? ("Saved \(first.output.lastPathComponent) to Downloads",
-               "The folder of \(first.source.lastPathComponent) is read-only.")
-            : ("Saved \(results.count) files to Downloads", "The folders of the originals are read-only.")
+        guard results.count > 1 else {
+            let (output, source) = (first.output.lastPathComponent, first.source.lastPathComponent)
+            return (String(localized: "Saved \(output) to Downloads", bundle: .appCore,
+                           comment: "The notice for a new file saved to Downloads: its name."),
+                    String(localized: "The folder of \(source) is read-only.", bundle: .appCore,
+                           comment: "Why a new file went to Downloads: the original's name."),
+                    String(localized: "the folder of \(source) is read-only", bundle: .appCore,
+                           comment: "Why a new file went to Downloads, after a colon: the original's name."))
+        }
+        return (String(localized: "Saved \(results.count) files to Downloads", bundle: .appCore,
+                       comment: "The notice for new files saved to Downloads: how many."),
+                String(localized: "The folders of the originals are read-only.", bundle: .appCore,
+                       comment: "Why new files went to Downloads."),
+                String(localized: "the folders of the originals are read-only", bundle: .appCore,
+                       comment: "Why new files went to Downloads, after a colon."))
     }
 
     /// "2 videos to MP4", or "3 images to PNG and 1 video to MP4" for a mixed batch.
@@ -90,27 +107,36 @@ extension Notice {
                 groups.append((result.kind, result.format, 1))
             }
         }
-        return groups.map { "\(count($0.count, $0.kind)) to \($0.format.name)" }.joined(separator: " and ")
+        return groups.map { converted($0.count, $0.kind, to: $0.format) }.reduce(nil, and) ?? ""
     }
 
-    /// "1 image", "2 videos", "3 files".
-    private static func count(_ number: Int, _ kind: SourceFile.Kind) -> String {
-        let noun = switch kind {
-        case .image: "image"
-        case .video: "video"
-        case .unsupported: "file"
+    /// "1 image to PNG", "2 videos to MP4".
+    private static func converted(_ count: Int, _ kind: SourceFile.Kind, to format: OutputFormat) -> String {
+        let comment: StaticString = "Part of a slow batch's notice, after “Converted”: how many files, to which format."
+        return switch kind {
+        case .image: String(localized: "\(count) images to \(format.name)", bundle: .appCore, comment: comment)
+        case .video: String(localized: "\(count) videos to \(format.name)", bundle: .appCore, comment: comment)
+        case .unsupported: String(localized: "\(count) files to \(format.name)", bundle: .appCore, comment: comment)
         }
-        return "\(number) \(noun)\(number == 1 ? "" : "s")"
     }
 
     /// "a.mp4", "a.mp4 and b.mp4", or "a.mp4 and 2 more".
     private static func names(_ files: [URL]) -> String {
         let names = files.map(\.lastPathComponent)
-        return switch names.count {
-        case 0: ""
-        case 1: names[0]
-        case 2: "\(names[0]) and \(names[1])"
-        default: "\(names[0]) and \(names.count - 1) more"
-        }
+        guard names.count > 2 else { return names.reduce(nil, and) ?? "" }
+        return String(localized: "\(names[0]) and \(names.count - 1) more", bundle: .appCore,
+                      comment: "A slow batch's notice: the first new file's name, and how many others.")
     }
+
+    /// "a and b"; `b` alone when there's no `a` yet.
+    private static func and(_ first: String?, _ second: String) -> String {
+        guard let first else { return second }
+        return String(localized: "\(first) and \(second)", bundle: .appCore,
+                      comment: "Two things in a notice: “a.mp4 and b.mp4”, “2 images to JPEG and 1 video to MP4”.")
+    }
+}
+
+extension Bundle {
+    /// TurnoverAppCore's strings, from its Localizable.xcstrings.
+    static let appCore = strings(of: "TurnoverAppCore")
 }

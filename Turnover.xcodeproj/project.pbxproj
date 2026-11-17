@@ -19,6 +19,7 @@
 		5C05B6701BE56F9B6416FC35 /* FinderSync.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 27545BF2090D7CF8C3CD1FD7 /* FinderSync.framework */; };
 		6744631416F9DA96D090348C /* FinderSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC2044A17FFCA87022765DA /* FinderSync.swift */; };
 		71F009451EB3B2DD7F2028FA /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CFE1A4F4FD38BDC673D0E7D /* AppDelegate.swift */; };
+		7229503244AE096AE5EFF7C3 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 0BA6FF4333F7083E90F48F79 /* Localizable.xcstrings */; };
 		822634437325DD62BA3E2EE2 /* Ring.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5E48B4CBF2BB72F9350C803 /* Ring.swift */; };
 		826780E2E08784AE032AC556 /* StatusItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 984E4C89E30107C947967E2F /* StatusItem.swift */; };
 		93DE5C807D2EFC9F1AEAE087 /* RingPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51A4BF3AFA4A7C71B80C605C /* RingPanel.swift */; };
@@ -64,6 +65,7 @@
 /* Begin PBXFileReference section */
 		0308915F2C2F7E2AA0E71EC5 /* RingLook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RingLook.swift; sourceTree = "<group>"; };
 		087F5B432461D800C2130B97 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		0BA6FF4333F7083E90F48F79 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		1AC2044A17FFCA87022765DA /* FinderSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinderSync.swift; sourceTree = "<group>"; };
 		1B308C965AF00979AF7C7E44 /* RingPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RingPreview.swift; sourceTree = "<group>"; };
 		27545BF2090D7CF8C3CD1FD7 /* FinderSync.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FinderSync.framework; path = System/Library/Frameworks/FinderSync.framework; sourceTree = SDKROOT; };
@@ -197,6 +199,7 @@
 				50A62B2F57C51D120FEB8816 /* Assets.xcassets */,
 				D03775AE3E5A433705BF218F /* Conversions.swift */,
 				D3116FA8F1F2055913BDBCD7 /* Info.plist */,
+				0BA6FF4333F7083E90F48F79 /* Localizable.xcstrings */,
 				541110B2C69050B416C31167 /* Log.swift */,
 				E4EBF56228EF202D2E3574DB /* Main.swift */,
 				2536FBE43CB469AA56317E48 /* Feedback */,
@@ -309,6 +312,7 @@
 			files = (
 				22D9C7AB4E308CA9354AF965 /* AppIcon.icon in Resources */,
 				D3EFE15020AF3FE3025201D4 /* Assets.xcassets in Resources */,
+				7229503244AE096AE5EFF7C3 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

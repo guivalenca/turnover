@@ -45,9 +45,9 @@ public enum JPEGQuality: String, CaseIterable, Sendable {
     /// The name users see: "Best", "High" or "Small".
     public var name: String {
         switch self {
-        case .best: "Best"
-        case .high: "High"
-        case .small: "Small"
+        case .best: String(localized: "Best", bundle: .turnoverKit, comment: "The JPEG quality of 100%.")
+        case .high: String(localized: "High", bundle: .turnoverKit, comment: "The JPEG quality of 85%, the default.")
+        case .small: String(localized: "Small", bundle: .turnoverKit, comment: "The JPEG quality of 60%.")
         }
     }
 

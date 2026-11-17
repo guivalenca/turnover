@@ -19,7 +19,8 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     override init() {
         super.init()
         center.delegate = self
-        let show = UNNotificationAction(identifier: Self.showAction, title: "Show in Finder")
+        let show = UNNotificationAction(identifier: Self.showAction,
+                                        title: String(localized: "Show in Finder", comment: "A notification's button: selects the new files in Finder."))
         center.setNotificationCategories([
             UNNotificationCategory(identifier: Self.showCategory, actions: [show], intentIdentifiers: [])
         ])

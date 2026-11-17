@@ -6,6 +6,9 @@ import PackageDescription
 
 let package = Package(
     name: "Turnover",
+    // User-facing strings are English, in each target's Localizable.xcstrings, ready for more
+    // languages.
+    defaultLocalization: "en",
     platforms: [.macOS(.v15)],
     products: [
         .library(name: "TurnoverKit", targets: ["TurnoverKit"]),
@@ -16,16 +19,16 @@ let package = Package(
     targets: [
         // The core: inspection, offers and estimates, conversion actions, output placement and
         // the batch runner. Test seam #1. The Finder extension, the app and the CLI all use it.
-        .target(name: "TurnoverKit"),
+        .target(name: "TurnoverKit", resources: [.process("Localizable.xcstrings")]),
 
         // The app's own policy, kept out of the sandboxed Finder extension: how a launch opens
         // the window, the settings and Open at login, and the feedback on batches (the menu bar
         // item's rules and the notifications). Tested with seam #1's suites.
-        .target(name: "TurnoverAppCore", dependencies: ["TurnoverKit"]),
+        .target(name: "TurnoverAppCore", dependencies: ["TurnoverKit"], resources: [.process("Localizable.xcstrings")]),
 
         // The drag + ⇧ ring's behaviour as a state machine: events in, what to show and convert
         // out. No AppKit, so it is tested on its own. Test seam #2.
-        .target(name: "RingModel", dependencies: ["TurnoverKit"]),
+        .target(name: "RingModel", dependencies: ["TurnoverKit"], resources: [.process("Localizable.xcstrings")]),
 
         // The `turnover` command, a thin wrapper over TurnoverKit.
         .executableTarget(name: "TurnoverCLI", dependencies: ["TurnoverKit"]),
