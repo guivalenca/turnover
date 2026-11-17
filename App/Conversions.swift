@@ -4,10 +4,24 @@ import TurnoverKit
 /// Runs every conversion the app is asked for and selects the new files in Finder when a batch
 /// ends. There is one for the app, so the runner's limits (at most two videos at a time) hold
 /// across everything converting at once.
+///
+/// Every batch gets the same feedback, whoever started it: the menu bar item while it is slow,
+/// and notifications when it was slow, failed or saved to Downloads.
 @MainActor
 final class Conversions {
     /// Observe `runner.batches` for what is running now.
     let runner = JobRunner()
+    /// What the menu bar item and notifications say about the batches.
+    let feedback: Feedback
+    private let notifier: Notifier
+    private let statusItem: StatusItem
+
+    init() {
+        let notifier = Notifier()
+        self.notifier = notifier
+        feedback = Feedback(notify: notifier.post)
+        statusItem = StatusItem(feedback: feedback)
+    }
 
     /// A choice from the Finder menu. JPEG converts at the default quality from Settings.
     func convert(_ request: ConversionRequest) {
@@ -20,6 +34,7 @@ final class Conversions {
     @discardableResult
     func convert(_ files: [URL], to actions: [any ConversionAction]) -> Batch {
         let batch = runner.run(files, to: actions)
+        feedback.track(batch)
         Task { await finish(batch) }
         return batch
     }
