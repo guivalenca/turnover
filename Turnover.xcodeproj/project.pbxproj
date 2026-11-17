@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		21E38D62C349DB7D6E297B23 /* TurnoverWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CDF580712E61F8F0158AFED /* TurnoverWindow.swift */; };
 		22D9C7AB4E308CA9354AF965 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = FB6B7D609B3C4676140FA8B5 /* AppIcon.icon */; };
-		35BA8B01E5E269DCBFE1CADA /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC4C1A71B574EBEB56EE643E /* Settings.swift */; };
 		39EAFD21CDF3C0F2B7E34E2E /* TurnoverKit in Frameworks */ = {isa = PBXBuildFile; productRef = 76C12C9F1D3471F0D7C1B5B2 /* TurnoverKit */; };
 		3BD80338DBF51E0BE5141CA5 /* Main.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4EBF56228EF202D2E3574DB /* Main.swift */; };
 		535419A9360015A9B43A7F3E /* TurnoverFinder.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AC1329052DD8DE6C4A250CF9 /* TurnoverFinder.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -17,8 +17,10 @@
 		6744631416F9DA96D090348C /* FinderSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC2044A17FFCA87022765DA /* FinderSync.swift */; };
 		71F009451EB3B2DD7F2028FA /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CFE1A4F4FD38BDC673D0E7D /* AppDelegate.swift */; };
 		C2D8E1B0030AB29ABE1F0673 /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = 541110B2C69050B416C31167 /* Log.swift */; };
+		CF23129BA93E39724639C3F2 /* WindowModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E087F7DBD31A474881819604 /* WindowModel.swift */; };
 		D3EFE15020AF3FE3025201D4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 50A62B2F57C51D120FEB8816 /* Assets.xcassets */; };
 		D97CE7C59B69AD6637471AF5 /* FinderSync.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 27545BF2090D7CF8C3CD1FD7 /* FinderSync.framework */; };
+		DC48C0ADCF81A7D1C7A43EA3 /* TurnoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DD57A25DA23F1E37A3C9C5C /* TurnoverView.swift */; };
 		EF7A8F929AFB31DAD6DA91B3 /* TurnoverKit in Frameworks */ = {isa = PBXBuildFile; productRef = 9AB89533AF9126858F03FCF0 /* TurnoverKit */; };
 /* End PBXBuildFile section */
 
@@ -51,17 +53,19 @@
 		1AC2044A17FFCA87022765DA /* FinderSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinderSync.swift; sourceTree = "<group>"; };
 		27545BF2090D7CF8C3CD1FD7 /* FinderSync.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FinderSync.framework; path = System/Library/Frameworks/FinderSync.framework; sourceTree = SDKROOT; };
 		2CFE1A4F4FD38BDC673D0E7D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		3CDF580712E61F8F0158AFED /* TurnoverWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnoverWindow.swift; sourceTree = "<group>"; };
 		50A62B2F57C51D120FEB8816 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		541110B2C69050B416C31167 /* Log.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
 		5BA307F6BAE8FDF755431170 /* TurnoverFinder.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TurnoverFinder.entitlements; sourceTree = "<group>"; };
+		8DD57A25DA23F1E37A3C9C5C /* TurnoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnoverView.swift; sourceTree = "<group>"; };
 		AC1329052DD8DE6C4A250CF9 /* TurnoverFinder.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TurnoverFinder.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03775AE3E5A433705BF218F /* Conversions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Conversions.swift; sourceTree = "<group>"; };
 		D3116FA8F1F2055913BDBCD7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		E008E4C91D670869435B655B /* turnover */ = {isa = PBXFileReference; lastKnownFileType = folder; name = turnover; path = .; sourceTree = SOURCE_ROOT; };
+		E087F7DBD31A474881819604 /* WindowModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowModel.swift; sourceTree = "<group>"; };
 		E483924A3901F93F84C37DF8 /* Turnover.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Turnover.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E4EBF56228EF202D2E3574DB /* Main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Main.swift; sourceTree = "<group>"; };
 		FB6B7D609B3C4676140FA8B5 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
-		FC4C1A71B574EBEB56EE643E /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -86,6 +90,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		2412C693104B4BF1EEBA32B7 /* Window */ = {
+			isa = PBXGroup;
+			children = (
+				8DD57A25DA23F1E37A3C9C5C /* TurnoverView.swift */,
+				3CDF580712E61F8F0158AFED /* TurnoverWindow.swift */,
+				E087F7DBD31A474881819604 /* WindowModel.swift */,
+			);
+			path = Window;
+			sourceTree = "<group>";
+		};
 		32E8A7D01BD58223C88EFEFD /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -134,7 +148,7 @@
 				D3116FA8F1F2055913BDBCD7 /* Info.plist */,
 				541110B2C69050B416C31167 /* Log.swift */,
 				E4EBF56228EF202D2E3574DB /* Main.swift */,
-				FC4C1A71B574EBEB56EE643E /* Settings.swift */,
+				2412C693104B4BF1EEBA32B7 /* Window */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -254,7 +268,9 @@
 				5804849746040A64AD758F92 /* Conversions.swift in Sources */,
 				C2D8E1B0030AB29ABE1F0673 /* Log.swift in Sources */,
 				3BD80338DBF51E0BE5141CA5 /* Main.swift in Sources */,
-				35BA8B01E5E269DCBFE1CADA /* Settings.swift in Sources */,
+				DC48C0ADCF81A7D1C7A43EA3 /* TurnoverView.swift in Sources */,
+				21E38D62C349DB7D6E297B23 /* TurnoverWindow.swift in Sources */,
+				CF23129BA93E39724639C3F2 /* WindowModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
