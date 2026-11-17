@@ -2,7 +2,7 @@
 
 **Turn the `.heic` photos and `.mov` videos from your iPhone and Mac into PNG, JPEG and MP4, right from Finder.**
 
-![Right-click a photo and choose Turnover › JPEG, then drag a photo and a video, press ⇧ and drop them on the ring](docs/demo.gif)
+![Right-click a photo and choose Turnover › PNG. Then drag a photo and a video, press ⇧, rest on JPEG to add it, and drop on MP4.](docs/demo.gif)
 
 ## Using Turnover
 
@@ -40,7 +40,7 @@ cd turnover
 make install
 ```
 
-This builds Turnover, copies it to `/Applications`, turns on its Finder extension and opens it. To upgrade, run `git pull` and `make install` again.
+This builds Turnover, copies it to `/Applications`, turns on its Finder extension and opens it. To upgrade, run `git pull` and `make install` again. If it stops with "xcodebuild requires Xcode", run `sudo xcode-select -s /Applications/Xcode.app` first.
 
 Turnover runs in the background, with no Dock icon, and opens at login. Open it from Applications or Spotlight to see its window: setup, JPEG quality, Open at login, and Quit.
 

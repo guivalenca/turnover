@@ -42,7 +42,7 @@ install: app
 	rm -rf "$(INSTALLED)"
 	ditto "$(PRODUCT)" "$(INSTALLED)"
 	@# LaunchServices notices app bundles on disk by itself; leave only the installed copy.
-	-@$(LSREGISTER) -u "$(PRODUCT)" 2>/dev/null
+	@$(LSREGISTER) -u "$(PRODUCT)" 2>/dev/null || true
 	rm -rf "$(PRODUCT)"
 	$(LSREGISTER) -f -R -trusted "$(INSTALLED)"
 	pluginkit -a "$(INSTALLED)/$(EXTENSION)"
