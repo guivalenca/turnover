@@ -68,8 +68,10 @@ uninstall:
 	-@defaults delete $(APP_ID) 2>/dev/null
 	@echo "Uninstalled Turnover."
 
+# Swift Build compiles the String Catalogs; SwiftPM's older native build system (the default
+# before Swift 6.4) copies them as they are, and plural strings then fail their tests.
 test:
-	swift test
+	swift test --build-system swiftbuild
 
 # XcodeGen names the package's folder reference after the folder it runs in, so it runs through
 # a link named "turnover" (left in a new temporary folder): every clone, whatever its folder is

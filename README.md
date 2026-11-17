@@ -104,7 +104,7 @@ turnover offers [--exact] <files…>
 | `App`, `FinderExtension` | The app and the Finder Sync extension |
 | `Tests` | Swift Testing suites, and small committed fixtures |
 
-- `make test` runs every test: TurnoverKit, the app core, the ring model and the command line. CI runs them on every push and builds the app.
+- `make test` runs every test: TurnoverKit, the app core, the ring model and the command line. CI runs them on every push and builds the app. Before Swift 6.4 (Xcode 27), a plain `swift test` uses SwiftPM's older build system, which doesn't compile the String Catalogs: run `make test`, or `swift test --build-system swiftbuild`.
 - `Turnover.xcodeproj` is generated with [XcodeGen](https://github.com/yonaskolb/XcodeGen) from `project.yml`, and committed so that building needs only Xcode. After you edit `project.yml`, or add, move or remove a file under `App/` or `FinderExtension/`, run `make project` (`brew install xcodegen`). CI fails if the committed project doesn't match, and changes made in Xcode's project editor are lost on the next `make project`.
 - `make app` builds `build/Turnover.app` without installing it.
 - Running the app from Xcode registers a second copy of it and its Finder extension. Run `make install` afterwards so that only the installed copy answers.

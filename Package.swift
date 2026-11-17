@@ -7,7 +7,8 @@ import PackageDescription
 let package = Package(
     name: "Turnover",
     // User-facing strings are English, in each target's Localizable.xcstrings, ready for more
-    // languages.
+    // languages. Build with Swift Build (`--build-system swiftbuild`, the default from Swift 6.4,
+    // and what `make test` and CI use): the older native build system doesn't compile catalogs.
     defaultLocalization: "en",
     platforms: [.macOS(.v15)],
     products: [
