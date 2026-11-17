@@ -31,7 +31,7 @@ public struct Converter: Sendable {
     ) async throws -> ConversionResult {
         let progress = ConversionProgress(progress)
         let file = try SourceFile(source)
-        guard action.accepts(file) else { throw refusal(of: file, by: action) }
+        guard action.accepts(file) else { throw Self.refusal(of: file, by: action) }
         let placement = Placement(nextTo: source, fileExtension: action.fileExtension)
         let output = try await placement.place { temporary in
             try await action.perform(file, writingTo: temporary, progress: progress)
@@ -40,7 +40,8 @@ public struct Converter: Sendable {
         return ConversionResult(source: source, output: output)
     }
 
-    private func refusal(of file: SourceFile, by action: some ConversionAction) -> ConversionError {
+    /// Why `action` doesn't accept `file`.
+    static func refusal(of file: SourceFile, by action: any ConversionAction) -> ConversionError {
         if file.kind == .unsupported {
             return .unsupported(file.url, typeDescription: file.contentType.localizedDescription ?? file.contentType.identifier)
         }

@@ -32,11 +32,18 @@ public final class JobRunner {
         do {
             let file = try SourceFile(source)
             guard let action = targets.first(where: { $0.accepts(file) }) else {
-                return .failed(reason: "\(source.lastPathComponent): no target")
+                return .skipped(skipReason(file, targets))
             }
             return .converted(try await converter.convert(source, with: action))
         } catch {
             return .failed(reason: error.localizedDescription)
         }
+    }
+
+    /// Why no target fits `file`: "already a PNG" or "not an image or a video" before "can't be
+    /// converted to MP4", which only says that the file is of another kind than that target.
+    private nonisolated static func skipReason(_ file: SourceFile, _ targets: [any ConversionAction]) -> ConversionError {
+        let refusals = targets.map { Converter.refusal(of: file, by: $0) }
+        return refusals.first { if case .notApplicable = $0 { false } else { true } } ?? refusals[0]
     }
 }

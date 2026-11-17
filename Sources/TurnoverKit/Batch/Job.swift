@@ -14,6 +14,9 @@ public final class Job: Identifiable {
         /// Couldn't be converted. The reason is short and starts with the file name, ready for a
         /// notification or a terminal line.
         case failed(reason: String)
+        /// Not converted because none of the batch's targets fits the file: it is of another kind,
+        /// already in the target format, or neither an image nor a video. The error says which.
+        case skipped(ConversionError)
     }
 
     /// The file to convert. It is never modified.
@@ -28,7 +31,7 @@ public final class Job: Identifiable {
     public var isFinished: Bool {
         switch state {
         case .waiting, .running: false
-        case .converted, .failed: true
+        case .converted, .failed, .skipped: true
         }
     }
 }
