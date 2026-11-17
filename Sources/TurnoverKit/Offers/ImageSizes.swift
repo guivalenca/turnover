@@ -170,7 +170,7 @@ struct ImageSizes: Sendable {
             // Decoded lazily, so a piece of a tiled HEIC decodes only its tile.
             guard let image = CGImageSourceCreateImageAtIndex(header.source, header.index,
                                                               [kCGImageSourceShouldCache: false] as CFDictionary),
-                  let sample = Sample(image, properties: header.properties, from: file)
+                  let sample = Sample(image, header: header)
             else { return nil }
             for output in ImageOutput.allCases {
                 guard let bytes = sample.bytes(as: output) else { return nil }
@@ -203,7 +203,8 @@ struct ImageSizes: Sendable {
         /// See `hardwareJPEGRatio`.
         let decodesInHardware: Bool
 
-        init?(_ image: CGImage, properties: [CFString: Any], from file: SourceFile) {
+        init?(_ image: CGImage, header: ImageHeader) {
+            let properties = header.properties
             let tiff = properties[kCGImagePropertyTIFFDictionary] as? [CFString: Any]
             let tile = (tiff?[kCGImagePropertyTIFFTileWidth] as? Int ?? 0, tiff?[kCGImagePropertyTIFFTileLength] as? Int ?? 0)
             let tiled = tile.0 > 0 && tile.1 > 0
@@ -211,9 +212,12 @@ struct ImageSizes: Sendable {
             let pieceWidth = min(512, width, tiled ? tile.0 : width)
             let pieceHeight = min(tiled ? 32 : 16, height, tiled ? tile.1 : height)
             let (columns, rows) = tiled ? (3, 3) : (3, 6)
-            decodesInHardware = Self.decodesInHardware(file)
+            decodesInHardware = header.decodesInHardware
+            // The conversion's decode of a hardware-decoded picture has an alpha channel, which a
+            // PNG stores only if the file has transparency (`ImageConversion.opaque`).
+            let opaque = decodesInHardware ? !header.hasAlpha : [.none, .noneSkipFirst, .noneSkipLast].contains(image.alphaInfo)
             guard let context = Self.context(like: image, width: pieceWidth, height: pieceHeight * columns * rows,
-                                             alpha: decodesInHardware)
+                                             opaque: opaque)
             else { return nil }
             var stacked = 0
             for row in 0..<rows {
@@ -252,20 +256,14 @@ struct ImageSizes: Sendable {
             return fixed + Int(bytes)
         }
 
-        /// HEIC, HEIF and AVIF decode through the hardware path. The conversion's decoded image
-        /// then has an alpha channel (so its PNG has one too), and its JPEGs go through a faster
-        /// encoder that writes smaller files than the same pixels copied into a sample do: on 54
-        /// HEICs, by these factors (geometric means; individual photos ranged ±15%).
+        /// A hardware-decoded picture's JPEGs go through a faster encoder that writes smaller files
+        /// than the same pixels copied into a sample do: on 54 HEICs, by these factors (geometric
+        /// means; individual photos ranged ±15%).
         static let hardwareJPEGRatio: [JPEGQuality: Double] = [.best: 0.82, .high: 0.91, .small: 0.88]
 
-        private static func decodesInHardware(_ file: SourceFile) -> Bool {
-            [UTType.heic, .heif, UTType("public.avif")].contains { $0.map(file.contentType.conforms) ?? false }
-        }
-
-        /// A bitmap for the pieces with the decoded image's channels and depth, plus alpha when
-        /// the conversion's decode adds one, so a PNG of it is as big as the conversion's would be.
-        private static func context(like image: CGImage, width: Int, height: Int, alpha: Bool) -> CGContext? {
-            let opaque = !alpha && [.none, .noneSkipFirst, .noneSkipLast].contains(image.alphaInfo)
+        /// A bitmap for the pieces with the decoded image's channels and depth, and alpha unless
+        /// the conversion's output is `opaque`, so a PNG of it is as big as the conversion's.
+        private static func context(like image: CGImage, width: Int, height: Int, opaque: Bool) -> CGContext? {
             let depth = image.bitsPerComponent > 8 ? 16 : 8
             let space = image.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
             let layout: (CGColorSpace, CGImageAlphaInfo) =

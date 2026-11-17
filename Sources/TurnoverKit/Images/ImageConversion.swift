@@ -10,7 +10,7 @@ enum ImageConversion {
         let decoded = try Decoded(source)
         guard let output = CGImageDestinationCreateWithURL(destination as CFURL, type.identifier as CFString, 1, nil)
         else { throw CocoaError(.fileWriteUnknown, userInfo: [NSURLErrorKey: destination]) }
-        guard decoded.write(to: output, quality: quality) else {
+        guard decoded.write(to: output, as: type, quality: quality) else {
             if decoded.isDamaged { throw ConversionError.damaged(source) }
             throw CocoaError(.fileWriteUnknown, userInfo: [NSURLErrorKey: destination])
         }
@@ -21,7 +21,7 @@ enum ImageConversion {
     static func encodedSize(of decoded: Decoded, as type: UTType, quality: Double?) -> Int? {
         let data = NSMutableData()
         guard let output = CGImageDestinationCreateWithData(data, type.identifier as CFString, 1, nil),
-              decoded.write(to: output, quality: quality)
+              decoded.write(to: output, as: type, quality: quality)
         else { return nil }
         return data.length
     }
@@ -30,6 +30,8 @@ enum ImageConversion {
     struct Decoded: @unchecked Sendable {
         let image: CGImage
         let properties: [CFString: Any]
+        /// The hardware decoder gave an opaque picture an alpha channel (see `opaque(_:)`).
+        let hasSpareAlpha: Bool
 
         /// Throws `ConversionError.damaged` when `source` can't be decoded.
         init(_ source: URL) throws {
@@ -38,12 +40,16 @@ enum ImageConversion {
                                                            longestSide: max(header.width, header.height))
             else { throw ConversionError.damaged(source) }
             (self.image, self.properties) = (image, header.properties)
+            hasSpareAlpha = header.decodesInHardware && !header.hasAlpha
         }
 
         /// Some formats (HEIC) decode lazily, so a truncated file only fails when it is encoded.
         var isDamaged: Bool { image.dataProvider?.data == nil }
 
-        func write(to output: CGImageDestination, quality: Double?) -> Bool {
+        /// Adds the image to `output`, a `type` destination, and finishes it.
+        func write(to output: CGImageDestination, as type: UTType, quality: Double?) -> Bool {
+            // JPEG has no alpha to store, and keeps the hardware decode's faster encoder.
+            let image = hasSpareAlpha && type != .jpeg ? ImageConversion.opaque(image) : image
             CGImageDestinationAddImage(output, image, options(for: image, from: properties, quality: quality) as CFDictionary)
             return CGImageDestinationFinalize(output)
         }
@@ -81,6 +87,27 @@ enum ImageConversion {
             metadata[kCGImagePropertyExifDictionary] = exif
         }
         return metadata
+    }
+
+    /// `image` without its alpha channel, for a source that has none: the hardware decoder (HEIC,
+    /// HEIF, AVIF) adds one, and a PNG would store it, about 10% bigger for nothing. The pixels
+    /// stay where they are, nothing is copied, and only the alpha byte is skipped. Opaque
+    /// premultiplied pixels are the same as plain ones, so nothing changes colour.
+    private static func opaque(_ image: CGImage) -> CGImage {
+        let skipped: CGImageAlphaInfo
+        switch image.alphaInfo {
+        case .premultipliedFirst, .first: skipped = .noneSkipFirst
+        case .premultipliedLast, .last: skipped = .noneSkipLast
+        default: return image  // opaque already, or alpha only (a mask)
+        }
+        let others = image.bitmapInfo.rawValue & ~CGBitmapInfo.alphaInfoMask.rawValue
+        guard let space = image.colorSpace, let pixels = image.dataProvider,
+              let opaque = CGImage(width: image.width, height: image.height, bitsPerComponent: image.bitsPerComponent,
+                                   bitsPerPixel: image.bitsPerPixel, bytesPerRow: image.bytesPerRow, space: space,
+                                   bitmapInfo: CGBitmapInfo(rawValue: others | skipped.rawValue), provider: pixels,
+                                   decode: nil, shouldInterpolate: image.shouldInterpolate, intent: image.renderingIntent)
+        else { return image }
+        return opaque
     }
 
     /// The full-size image with its EXIF orientation applied to the pixels.

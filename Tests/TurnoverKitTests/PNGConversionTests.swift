@@ -1,4 +1,6 @@
 import Foundation
+import ImageIO
+import UniformTypeIdentifiers
 import Testing
 import TurnoverKit
 import TurnoverTestSupport
@@ -84,6 +86,29 @@ import TurnoverTestSupport
         #expect(try Data(contentsOf: photo) == Fixture.jpeg.data)
     }
 
+    /// HEIC decodes with an alpha channel even when the photo has none, which made its PNG
+    /// about 10% bigger for nothing.
+    @Test(arguments: [Fixture.heicRotated, .jpeg, .webp])
+    func anOpaqueImageMakesAPNGWithoutAlpha(fixture: Fixture) async throws {
+        let image = try folder.add(fixture)
+
+        let png = try ImageFacts(try await Converter().convert(image, with: PNGAction()).output)
+
+        #expect(!png.hasAlpha)
+        #expect(png.isMarkerRed(x: 8, y: 8))
+    }
+
+    @Test func transparencyIsKept() async throws {
+        let tiff = try folder.add(try tiff(of: .png), as: "transparent.tiff")
+        let corner = try ImageFacts(Fixture.png.url).pixel(x: 250, y: 2)
+        try #require(corner.alpha < 255, "the fixture is transparent there")
+
+        let png = try ImageFacts(try await Converter().convert(tiff, with: PNGAction()).output)
+
+        #expect(png.hasAlpha)
+        #expect(png.pixel(x: 250, y: 2).alpha == corner.alpha)
+    }
+
     @Test(arguments: [Fixture.jpeg, .webp])
     func otherImageFormatsConvertToo(fixture: Fixture) async throws {
         let image = try folder.add(fixture)
@@ -94,4 +119,15 @@ import TurnoverTestSupport
         #expect((png.width, png.height) == (256, 192))
         #expect(png.isMarkerRed(x: 8, y: 8))
     }
+}
+
+/// `fixture` re-encoded as a TIFF, alpha and all.
+private func tiff(of fixture: Fixture) throws -> Data {
+    let data = NSMutableData()
+    guard let source = CGImageSourceCreateWithURL(fixture.url as CFURL, nil),
+          let output = CGImageDestinationCreateWithData(data, UTType.tiff.identifier as CFString, 1, nil)
+    else { throw CocoaError(.fileWriteUnknown) }
+    CGImageDestinationAddImageFromSource(output, source, 0, nil)
+    guard CGImageDestinationFinalize(output) else { throw CocoaError(.fileWriteUnknown) }
+    return data as Data
 }
