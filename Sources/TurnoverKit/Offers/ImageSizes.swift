@@ -32,25 +32,37 @@ struct ImageSizes: Sendable {
     /// remembered from earlier) are taken as they are, and also serve to scale the others.
     static func of(_ images: [SourceFile], known: [URL: ImageSizes] = [:]) async -> [URL: ImageSizes] {
         let unknown = images.filter { known[$0.url] == nil }
-        let sampled = samples(of: unknown)
-        let measured = await withTaskGroup(of: (SourceFile, ImageSizes?).self) { group in
-            for image in sampled { group.addTask { (image, ImageSizes(of: image.url)) } }
-            return await group.reduce(into: [SourceFile: ImageSizes]()) { $0[$1.0] = $1.1 }
+        let sampled = Array(spread(unknown).prefix(sampledImages))
+        var measured = await quick(sampled)
+        measured.merge(known) { quick, _ in quick }
+        let unsampled = unknown.filter { !sampled.contains($0) }
+        return completing(measured, for: images, pixels: pixelCounts(of: unsampled))
+    }
+
+    /// Quick sizes for `images`, measured side by side; the ones that can't be decoded are left out.
+    static func quick(_ images: [SourceFile]) async -> [URL: ImageSizes] {
+        await withTaskGroup(of: (URL, ImageSizes?).self) { group in
+            for image in images { group.addTask { (image.url, ImageSizes(of: image.url)) } }
+            return await group.reduce(into: [URL: ImageSizes]()) { $0[$1.0] = $1.1 }
         }
-        var sizes = known.filter { url, _ in images.contains { $0.url == url } }
-        for (image, measurement) in measured { sizes[image.url] = measurement }
-        let references = images.compactMap { image in sizes[image.url].map { (image, $0) } }
-        for image in unknown where sizes[image.url] == nil && !sampled.contains(image) {
-            guard let pixels = pixelCount(of: image.url),
-                  let scaled = ImageSizes(scaling: references, to: pixels, like: image)
+    }
+
+    /// `measured`, plus an approximate size for each other image of `images` whose pixel count is
+    /// in `pixels`, scaled from the measured images.
+    static func completing(_ measured: [URL: ImageSizes], for images: [SourceFile], pixels: [URL: Int]) -> [URL: ImageSizes] {
+        let references = images.compactMap { image in measured[image.url].map { (image, $0) } }
+        var sizes = measured.filter { url, _ in images.contains { $0.url == url } }
+        for image in images where sizes[image.url] == nil {
+            guard let count = pixels[image.url], let scaled = ImageSizes(scaling: references, to: count, like: image)
             else { continue }
             sizes[image.url] = scaled
         }
         return sizes
     }
 
-    /// Up to `sampledImages` images, taking one of each format in turn, in selection order.
-    private static func samples(of images: [SourceFile]) -> Set<SourceFile> {
+    /// Every image, taking one of each format in turn, in selection order: the first few are a
+    /// fair sample of a mixed selection.
+    static func spread(_ images: [SourceFile]) -> [SourceFile] {
         var byFormat: [[SourceFile]] = []
         for image in images {
             if let index = byFormat.firstIndex(where: { $0[0].contentType == image.contentType }) {
@@ -59,17 +71,20 @@ struct ImageSizes: Sendable {
                 byFormat.append([image])
             }
         }
-        var picked: Set<SourceFile> = []
-        for round in 0..<sampledImages {
-            for format in byFormat where round < format.count && picked.count < sampledImages {
-                picked.insert(format[round])
-            }
+        var order: [SourceFile] = []
+        for round in 0..<(byFormat.map(\.count).max() ?? 0) {
+            for format in byFormat where round < format.count { order.append(format[round]) }
         }
-        return picked
+        return order
+    }
+
+    /// The pixel count of each image in `images` whose header can be read.
+    static func pixelCounts(of images: [SourceFile]) -> [URL: Int] {
+        images.reduce(into: [:]) { counts, image in counts[image.url] = pixelCount(of: image.url) }
     }
 
     /// From the header alone. Nil when the image can't be decoded.
-    private static func pixelCount(of url: URL) -> Int? {
+    static func pixelCount(of url: URL) -> Int? {
         guard let input = CGImageSourceCreateWithURL(url as CFURL, nil),
               CGImageSourceGetStatus(input) == .statusComplete,
               let properties = CGImageSourceCopyPropertiesAtIndex(input, CGImageSourceGetPrimaryImageIndex(input), nil) as? [CFString: Any],

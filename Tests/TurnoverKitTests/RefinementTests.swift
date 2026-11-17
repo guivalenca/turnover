@@ -206,3 +206,32 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
         try await expectExact(second.offers, for: photos[0])
     }
 }
+
+/// Big selections stay cheap: a few photos are measured exactly and the rest are scaled from them.
+@MainActor
+@Suite(.timeLimit(.minutes(2))) struct BoundedRefinement {
+    let folder = try! ScratchFolder()
+
+    @Test func aLargeSelectionRefinesAFewPhotosAndScalesTheRestFromThem() async throws {
+        // Eight copies of one 12-megapixel photo: scaling from any of them is right for all.
+        let first = try folder.addMosaic(of: .heicRotated, width: 4000, height: 3000, as: "1.jpg")
+        let photos = try [first] + (2...8).map { index in
+            let copy = folder.url.appendingPathComponent("\(index).jpg")
+            try FileManager.default.copyItem(at: first, to: copy)
+            return copy
+        }
+        let real = try await outputSize(of: first, with: PNGAction())
+        let estimator = Estimator()
+
+        let live = estimator.estimate(photos)
+        await live.waitUntilFinished()
+
+        let png = try #require(live.offers.targets.first?.estimate)
+        #expect(!png.isExact)
+        #expect(abs(try bytes(png) - real * 8) * 100 <= real * 8, "within 1%")
+        // Only a few were encoded; the others are remembered as unmeasured.
+        let measured = photos.filter { estimator.estimate([$0]).offers.targets.first?.estimate?.isExact == true }
+        estimator.cancel()
+        #expect((1...4).contains(measured.count), "\(measured.count) measured")
+    }
+}

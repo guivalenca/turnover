@@ -31,35 +31,49 @@ struct Refinement: Sendable {
         return offers(known, [:], pending: pending.union(inspection.files.filter { $0.kind == .video }.map(\.url)))
     }
 
+    /// How many pixels a selection may have measured exactly: one 48-megapixel photo, or four
+    /// 12-megapixel ones. Measuring decodes one image at a time, so this also bounds the memory.
+    /// The other images are scaled from the measured ones.
+    static let exactPixelBudget = 50_000_000
+
     /// Calls `publish` with the quick offers, then again each time an exact size is known.
     /// Stops at the next step when its task is cancelled: an encode in progress finishes, and
     /// nothing else starts.
     func run(publish: @Sendable (Offers) async -> Void) async {
         let (known, _) = remembered()
-        async let quickSizes = ImageSizes.of(images, known: known)
+        let unknown = ImageSizes.spread(images.filter { known[$0.url] == nil })
+        async let quick = ImageSizes.quick(Array(unknown.prefix(ImageSizes.sampledImages)))
+        async let pixelCounts = ImageSizes.pixelCounts(of: unknown)
         let videos = await VideoTime.of(inspection.files.filter { $0.kind == .video })
-        var sizes = await quickSizes
-        await publish(offers(sizes, videos))
+        var measured = await quick.merging(known) { quick, _ in quick }
+        let pixels = await pixelCounts
+        func current() -> Offers {
+            offers(ImageSizes.completing(measured, for: images, pixels: pixels), videos)
+        }
+        await publish(current())
 
-        for image in images where known[image.url] == nil {
+        var budget = Self.exactPixelBudget
+        for image in unknown {
             guard !Task.isCancelled else { return }
-            guard let key = SizeCache.Key(image.url) else { continue }
+            guard let count = pixels[image.url], count <= budget,
+                  let key = SizeCache.Key(image.url)
+            else { continue }
+            budget -= count
             // Sizes remembered for some outputs already, from an earlier, interrupted measurement.
             let remembered = cache.sizes(for: key)?.sizes ?? [:]
-            for (output, size) in remembered { sizes[image.url]?.sizes[output] = size }
+            for (output, size) in remembered { measured[image.url, default: ImageSizes(pixels: count, sizes: [:])].sizes[output] = size }
             let outputs = ImageOutput.of(image).filter { remembered[$0] == nil }
             guard !outputs.isEmpty, let decoded = try? ImageConversion.Decoded(image.url) else { continue }
             // The decode read the whole file; if it changed meanwhile, these sizes belong to no key.
             let unchanged = SizeCache.Key(image.url) == key
-            let pixels = decoded.image.width * decoded.image.height
             for output in outputs {
                 guard !Task.isCancelled else { return }
                 guard let bytes = ImageConversion.encodedSize(of: decoded, as: output.type, quality: output.encoderQuality)
                 else { break }
-                if unchanged { cache.store(output, bytes: bytes, pixels: pixels, for: key) }
-                sizes[image.url, default: ImageSizes(pixels: pixels, sizes: [:])]
+                if unchanged { cache.store(output, bytes: bytes, pixels: count, for: key) }
+                measured[image.url, default: ImageSizes(pixels: count, sizes: [:])]
                     .sizes[output] = ImageSizes.Size(bytes: bytes, isExact: true)
-                await publish(offers(sizes, videos))
+                await publish(current())
             }
         }
     }
