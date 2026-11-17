@@ -73,4 +73,25 @@ import TurnoverTestSupport
         #expect(dates.creationDate == created)
         #expect(dates.contentModificationDate == modified)
     }
+
+    @Test func aJPEGWithAPNGExtensionIsConvertedByItsContent() async throws {
+        let photo = try folder.add(.jpeg, as: "photo.png")
+
+        let result = try await Converter().convert(photo, with: PNGAction())
+
+        #expect(result.output.lastPathComponent == "photo 2.png")
+        #expect(try ImageFacts(result.output).typeIdentifier == "public.png")
+        #expect(try Data(contentsOf: photo) == Fixture.jpeg.data)
+    }
+
+    @Test(arguments: [Fixture.jpeg, .webp])
+    func otherImageFormatsConvertToo(fixture: Fixture) async throws {
+        let image = try folder.add(fixture)
+
+        let png = try ImageFacts(try await Converter().convert(image, with: PNGAction()).output)
+
+        #expect(png.typeIdentifier == "public.png")
+        #expect((png.width, png.height) == (256, 192))
+        #expect(png.isMarkerRed(x: 8, y: 8))
+    }
 }

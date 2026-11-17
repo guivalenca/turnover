@@ -15,4 +15,31 @@ import TurnoverTestSupport
         }
         #expect(try folder.fileNames() == ["logo.png"])
     }
+
+    @Test func aPNGWithAJPGExtensionIsStillRecognisedAndRefused() async throws {
+        let png = try folder.add(.png, as: "logo.jpg")
+
+        await #expect(throws: ConversionError.alreadyInFormat(png, format: "PNG")) {
+            try await Converter().convert(png, with: PNGAction())
+        }
+        #expect(try folder.fileNames() == ["logo.jpg"])
+    }
+
+    @Test(arguments: [Fixture.text, .pdf, .movH264])
+    func filesThatAreNotImagesAreRefused(fixture: Fixture) async throws {
+        let file = try folder.add(fixture)
+
+        await #expect(throws: ConversionError.self) {
+            try await Converter().convert(file, with: PNGAction())
+        }
+        #expect(try folder.fileNames() == [fixture.rawValue])
+    }
+
+    @Test func unsupportedFilesAreNamedByTheirType() async throws {
+        let text = try folder.add(.text)
+
+        await #expect(throws: ConversionError.unsupported(text, typeDescription: "text")) {
+            try await Converter().convert(text, with: PNGAction())
+        }
+    }
 }
