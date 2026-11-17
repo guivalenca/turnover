@@ -22,7 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let launch = AppLaunch(
             isDefaultLaunch: notification.userInfo?[NSApplication.launchIsDefaultUserInfoKey] as? Bool ?? true,
             event: NSAppleEventManager.shared().currentAppleEvent)
-        if launch.opensWindow { window.show() }
+        if launch.opensWindow, !RingPreview.isRunning { window.show() }
     }
 
     /// Turnover opened again (Finder, Spotlight, `open`) while it runs.
