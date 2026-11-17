@@ -30,9 +30,13 @@ import TurnoverTestSupport
         #expect(times.min()! < .milliseconds(50))
     }
 
-    @Test func aDamagedVideoCantBePlanned() async throws {
+    /// Cut at 2 KB the movie's index is gone; cut halfway the index survives, but the samples
+    /// it lists run past the end of the file.
+    @Test(arguments: [(Fixture.movHEVCHDR, 0.06), (.movH264, 0.5), (.movHEVCHDR, 0.5)])
+    func aTruncatedVideoCantBePlanned(fixture: Fixture, kept: Double) async throws {
         let folder = try ScratchFolder()
-        let broken = try folder.add(Fixture.movHEVCHDR.data.prefix(2000), as: "broken.mov")
+        let whole = fixture.data
+        let broken = try folder.add(whole.prefix(Int(Double(whole.count) * kept)), as: "broken.mov")
 
         await #expect(throws: ConversionError.damaged(broken)) {
             try await MP4Action().plan(for: SourceFile(broken))

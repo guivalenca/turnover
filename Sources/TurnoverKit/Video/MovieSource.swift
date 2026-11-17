@@ -47,6 +47,8 @@ struct MovieSource {
             } else {
                 audio = nil
             }
+            guard try await Self.holdsAllSamples(of: [video.track, audio?.track].compactMap { $0 }, in: url)
+            else { throw ConversionError.damaged(url) }
         } catch let error as ConversionError {
             throw error
         } catch is CancellationError {
@@ -54,6 +56,21 @@ struct MovieSource {
         } catch {
             throw ConversionError.damaged(url)
         }
+    }
+
+    /// False when the file was cut short: the movie's index lists samples whose bytes lie past
+    /// the end of the file. Checked up front because AVAssetReader doesn't always notice: it
+    /// sometimes stops at the cut and reports success.
+    private static func holdsAllSamples(of tracks: [AVAssetTrack], in url: URL) async throws -> Bool {
+        guard let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize else { return true }
+        for track in tracks where try await track.load(.canProvideSampleCursors) {
+            guard let last = track.makeSampleCursorAtLastSampleInDecodeOrder() else { continue }
+            // Samples can live in other files (reference movies); only this file's can be cut.
+            if let storage = last.currentChunkStorageURL, storage.standardizedFileURL != url.standardizedFileURL { continue }
+            let range = last.currentSampleStorageRange
+            if range.offset + range.length > Int64(size) { return false }
+        }
+        return true
     }
 
     private static func firstEnabledTrack(of type: AVMediaType, in asset: AVAsset) async throws -> AVAssetTrack? {

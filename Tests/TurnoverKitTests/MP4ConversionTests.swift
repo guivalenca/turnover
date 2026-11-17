@@ -23,11 +23,11 @@ import TurnoverTestSupport
     @Test func h264IsPassedThroughUntouchedInAFractionOfItsDuration() async throws {
         let clip = try folder.add(.movH264, as: "clip.mov")
 
-        // The fastest of three runs: the first pays for loading AVFoundation, and on CI other
-        // tests compete for the CPU.
+        // The fastest of five runs: the first pays for loading AVFoundation, and other tests
+        // (or, on a busy Mac, other programs) compete for the CPU.
         var times: [Duration] = []
         var output: URL!
-        for _ in 1...3 {
+        for _ in 1...5 {
             times.append(try await ContinuousClock().measure {
                 output = try await Converter().convert(clip, with: MP4Action()).output
             })
