@@ -1,0 +1,67 @@
+# Throwaway spike for ticket #2. Never merged into feat/v1.
+# Generate with `xcodegen generate` from this folder, then build with ./build.sh.
+name: TurnoverSpike
+options:
+  bundleIdPrefix: com.guivalenca.turnover
+  deploymentTarget:
+    macOS: "15.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "15.0"
+    # Ad-hoc signing ("Sign to Run Locally"). No team, no provisioning profile.
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    DEVELOPMENT_TEAM: ""
+    ENABLE_HARDENED_RUNTIME: NO
+    GENERATE_INFOPLIST_FILE: NO
+targets:
+  TurnoverSpike:
+    type: application
+    platform: macOS
+    sources: [TurnoverSpike]
+    info:
+      path: TurnoverSpike/Info.plist
+      properties:
+        CFBundleDisplayName: Turnover Spike
+        CFBundleShortVersionString: "0.0.1"
+        CFBundleVersion: "1"
+        LSUIElement: true
+        LSMinimumSystemVersion: "15.0"
+        CFBundleURLTypes:
+          - CFBundleURLName: com.guivalenca.turnover.spike
+            CFBundleURLSchemes: [turnover-spike]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.guivalenca.turnover.spike
+        PRODUCT_NAME: TurnoverSpike
+    dependencies:
+      - target: TurnoverSpikeFinder
+        embed: true
+      - sdk: FinderSync.framework
+  TurnoverSpikeFinder:
+    type: app-extension
+    platform: macOS
+    sources: [TurnoverSpikeFinder]
+    info:
+      path: TurnoverSpikeFinder/Info.plist
+      properties:
+        CFBundleDisplayName: Turnover Spike
+        CFBundleShortVersionString: "0.0.1"
+        CFBundleVersion: "1"
+        LSMinimumSystemVersion: "15.0"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.FinderSync
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).FinderSync
+          NSExtensionAttributes: {}
+    entitlements:
+      path: TurnoverSpikeFinder/TurnoverSpikeFinder.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.guivalenca.turnover.spike.finder
+        PRODUCT_NAME: TurnoverSpikeFinder
+    dependencies:
+      - sdk: FinderSync.framework
