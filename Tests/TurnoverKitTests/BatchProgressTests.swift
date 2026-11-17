@@ -1,11 +1,14 @@
 import Foundation
+import Synchronization
 import Testing
 import TurnoverKit
 import TurnoverTestSupport
 
 /// What a batch reports while it runs, for the menu bar's percentage and job list.
+///
+/// One test at a time: one of them blocks the main actor, which would starve the others' recordings.
 @MainActor
-@Suite(.timeLimit(.minutes(1))) struct BatchProgress {
+@Suite(.serialized, .timeLimit(.minutes(1))) struct BatchProgress {
     let folder = try! ScratchFolder()
 
     @Test func eachJobAndTheWholeBatchGoFromZeroToOne() async throws {
@@ -61,5 +64,39 @@ import TurnoverTestSupport
         #expect(batch.progress == 1)
         #expect(runner.batches.isEmpty)
         await batch.waitUntilFinished()
+    }
+
+    /// For a terminal's progress line: the reports reach the handler on the conversion's thread,
+    /// even while the main actor is too busy to update `progress`.
+    @Test func aReportingHandlerHearsEachJobEvenWhileTheMainActorIsBusy() async throws {
+        let photo = try folder.add(.heicRotated, as: "photo.heic")
+        let clip = try folder.add(.movHEVCHDR, as: "clip.mov")
+        let reports = Reports()
+
+        let batch = JobRunner().run([photo, clip], to: [PNGAction(), MP4Action()], reporting: reports.record)
+        // Once the conversion has started (on the main actor, before it moves off it), hold the
+        // main actor, deliberately, until the video says it is done.
+        #expect(await eventually { !reports.of(1).isEmpty })
+        let deadline = ContinuousClock.now + .seconds(30)
+        while reports.of(1).last != 1, ContinuousClock.now < deadline { usleep(1000) }
+
+        #expect(reports.of(1).last == 1)
+        #expect(reports.of(1).contains { $0 > 0 && $0 < 1 })
+        #expect(batch.jobs[1].progress < 1)
+        await batch.waitUntilFinished()
+        #expect(reports.of(0) == [1])
+    }
+}
+
+/// Every (job index, fraction) a reporting handler received, from any thread.
+private final class Reports: Sendable {
+    private let log = Mutex<[(Int, Double)]>([])
+
+    @Sendable func record(_ job: Int, _ fraction: Double) {
+        log.withLock { $0.append((job, fraction)) }
+    }
+
+    func of(_ job: Int) -> [Double] {
+        log.withLock { $0.filter { $0.0 == job }.map(\.1) }
     }
 }
