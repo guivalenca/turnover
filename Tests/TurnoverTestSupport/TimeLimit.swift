@@ -9,3 +9,23 @@ import Foundation
 public func timeLimit(_ limit: Duration) -> Duration {
     ProcessInfo.processInfo.environment["CI"] == nil ? limit : limit * 4
 }
+
+/// How fast `work` can run: the fastest of up to `rounds` runs, stopping at the first that beats
+/// `limit`.
+///
+/// While other tests share the CPU (on CI, three cores for all of them), any one run may be slowed
+/// many times over, and a few runs back to back can all land in a busy moment. Code that got
+/// slower is slow on every run, so it still fails.
+public func fastestRun(
+    beating limit: Duration, rounds: Int = 20, isolation: isolated (any Actor)? = #isolation,
+    _ work: () async throws -> Void
+) async rethrows -> Duration {
+    var fastest = Duration.seconds(Int64.max)
+    for _ in 1...rounds {
+        let start = ContinuousClock.now
+        try await work()
+        fastest = min(fastest, ContinuousClock.now - start)
+        if fastest < limit { break }
+    }
+    return fastest
+}
