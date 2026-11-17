@@ -106,11 +106,7 @@ final class RingView: NSView {
         turner.frame = tints.bounds
         turner.opacity = 0
         tintLayer.addSublayer(turner)
-        for shape in [body, hue, sheenMask] {
-            shape.frame = tints.bounds
-            shape.lineWidth = Sector.rounding
-            shape.lineJoin = .round
-        }
+        for shape in [body, hue, sheenMask] { configureSector(shape) }
         turner.addSublayer(body)
         if RingMaterial.usesGlass {
             hue.compositingFilter = "colorBlendMode"
@@ -130,19 +126,12 @@ final class RingView: NSView {
 
         let h = Self.hubRadius
         hubContent.wantsLayer = true
-        for field in [hubTitle, hubDetail] {
-            field.alignment = .center
-            field.lineBreakMode = .byTruncatingTail
-            hubContent.addSubview(field)
-        }
+        hubContent.addSubview(hubTitle)
+        hubContent.addSubview(hubDetail)
         hub = RingMaterial.surface(frame: NSRect(x: centre.x - h, y: centre.y - h, width: 2 * h, height: 2 * h),
                                    cornerRadius: h, content: hubContent, lens: true)
 
         let captionContent = NSView()
-        captionLabel.font = .systemFont(ofSize: 11.5)
-        captionLabel.textColor = .secondaryLabelColor
-        captionLabel.alignment = .center
-        captionLabel.lineBreakMode = .byTruncatingTail
         captionContent.addSubview(captionLabel)
         captionSurface = RingMaterial.surface(frame: .zero, cornerRadius: Caption.height / 2, content: captionContent)
         captionSurface.isHidden = true
@@ -235,9 +224,7 @@ final class RingView: NSView {
                 shape = existing
             } else {
                 shape = CAShapeLayer()
-                shape.frame = addedTints.bounds
-                shape.lineWidth = Sector.rounding
-                shape.lineJoin = .round
+                configureSector(shape)
                 addedTints.addSublayer(shape)
             }
             shape.path = sector(entry, around: entry.angle)
@@ -414,6 +401,15 @@ final class RingView: NSView {
 
     // MARK: - Drawing helpers
 
+    /// A layer for a `sector(…)`: its corners rounded by a stroke, and a lone entry's ring
+    /// (two circles) filled between them only.
+    private func configureSector(_ shape: CAShapeLayer) {
+        shape.frame = CGRect(x: 0, y: 0, width: 2 * Self.outerRadius, height: 2 * Self.outerRadius)
+        shape.lineWidth = Sector.rounding
+        shape.lineJoin = .round
+        shape.fillRule = .evenOdd
+    }
+
     /// `radius` from `centre` at `angle` (the model's degrees, y down), in y-up coordinates.
     private func point(_ radius: CGFloat, _ angle: Double, around centre: CGPoint) -> CGPoint {
         CGPoint(x: centre.x + radius * cos(angle * .pi / 180), y: centre.y - radius * sin(angle * .pi / 180))
@@ -509,10 +505,8 @@ private final class EntryLabel: NSView {
     init() {
         super.init(frame: .zero)
         wantsLayer = true
-        for field in [title, subtitle] {
-            field.alignment = .center
-            addSubview(field)
-        }
+        addSubview(title)
+        addSubview(subtitle)
     }
 
     required init?(coder: NSCoder) { fatalError("not used") }
