@@ -14,8 +14,10 @@ public struct Converter: Sendable {
 
     public func convert(_ source: URL, with action: some ConversionAction) async throws -> ConversionResult {
         let file = SourceFile(source)
-        let destination = source.deletingPathExtension().appendingPathExtension(action.outputType.preferredFilenameExtension!)
-        try await action.perform(file, writingTo: destination)
-        return ConversionResult(source: source, output: destination)
+        let placement = Placement(nextTo: source, fileExtension: action.outputType.preferredFilenameExtension!)
+        let output = try await placement.place { temporary in
+            try await action.perform(file, writingTo: temporary)
+        }
+        return ConversionResult(source: source, output: output)
     }
 }
