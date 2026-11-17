@@ -1,8 +1,9 @@
 import AppKit
 import RingModel
 
-/// Draws the ring for a `RingModel`: a plain disc, each entry's format and estimate, the
-/// highlighted entry's arc and the hub's text. #13 replaces this look with glass.
+/// Draws the ring for a `RingModel`: a plain disc, each entry's format and estimate (with ✓ when
+/// added, and a dot on the default JPEG quality), the added and highlighted entries' arcs, the
+/// hub's text and the caption. #13 replaces this look with glass.
 ///
 /// Flipped, so its angles match the model's: clockwise from the right, -90° at the top.
 /// It never takes the drag or a click: hit-testing passes through to the panel's drop view.
@@ -12,7 +13,9 @@ final class RingView: NSView {
     var centre: NSPoint = .zero {
         didSet {
             setNeedsDisplay(ringRect(around: oldValue))
+            setNeedsDisplay(captionRect(around: oldValue))
             setNeedsDisplay(ringRect(around: centre))
+            setNeedsDisplay(captionRect(around: centre))
         }
     }
 
@@ -21,8 +24,10 @@ final class RingView: NSView {
     var model = RingModel() {
         didSet {
             guard oldValue.phase != model.phase || oldValue.entries != model.entries
-                || oldValue.highlighted != model.highlighted || oldValue.hub != model.hub else { return }
+                || oldValue.highlighted != model.highlighted || oldValue.hub != model.hub
+                || oldValue.caption != model.caption else { return }
             setNeedsDisplay(ringRect(around: centre))
+            setNeedsDisplay(captionRect(around: centre))
         }
     }
 
@@ -45,16 +50,13 @@ final class RingView: NSView {
         disc.lineWidth = 1
         disc.stroke()
 
+        for added in model.entries where added.isAdded {
+            NSColor.controlAccentColor.withAlphaComponent(0.2).setFill()
+            band(for: added).fill()
+        }
         if let highlighted = model.highlighted {
-            let gap: CGFloat = model.entries.count == 1 ? 0 : 3.5
-            let band = NSBezierPath()
-            band.appendArc(withCenter: centre, radius: outer - 8.5, startAngle: highlighted.arc.start + gap,
-                           endAngle: highlighted.arc.end - gap, clockwise: false)
-            band.appendArc(withCenter: centre, radius: hub + 9, startAngle: highlighted.arc.end - gap,
-                           endAngle: highlighted.arc.start + gap, clockwise: true)
-            band.close()
             NSColor.controlAccentColor.withAlphaComponent(0.35).setFill()
-            band.fill()
+            band(for: highlighted).fill()
         }
 
         let hubDisc = NSBezierPath(ovalIn: circle(hub))
@@ -66,11 +68,40 @@ final class RingView: NSView {
         for entry in model.entries {
             let radians = entry.angle * .pi / 180
             let at = NSPoint(x: centre.x + Self.labelRadius * cos(radians), y: centre.y + Self.labelRadius * sin(radians))
-            drawLines(entry.title, entry.subtitle, at: at, titleSize: 15)
+            let mark = entry.isAdded ? " ✓" : entry.isDefault ? " •" : ""
+            drawLines(entry.title + mark, entry.subtitle, at: at, titleSize: 15)
         }
         if let text = model.hub {
             drawLines(text.title, text.detail, at: centre, titleSize: text.title.count > 6 ? 13 : 16)
         }
+        if let caption = model.caption {
+            let line = NSAttributedString(string: caption, attributes: [
+                .font: NSFont.systemFont(ofSize: 12, weight: .medium), .foregroundColor: NSColor.labelColor,
+            ])
+            let size = line.size()
+            let box = NSRect(x: centre.x - size.width / 2 - 10, y: centre.y + outer + 12,
+                             width: size.width + 20, height: size.height + 8)
+            NSColor.windowBackgroundColor.withAlphaComponent(0.94).setFill()
+            NSBezierPath(roundedRect: box, xRadius: box.height / 2, yRadius: box.height / 2).fill()
+            line.draw(at: NSPoint(x: box.minX + 10, y: box.minY + 4))
+        }
+    }
+
+    /// The band segment an entry owns, inset from its neighbours.
+    private func band(for entry: RingModel.Entry) -> NSBezierPath {
+        let gap: CGFloat = model.entries.count == 1 ? 0 : 3.5
+        let band = NSBezierPath()
+        band.appendArc(withCenter: centre, radius: Self.outerRadius - 8.5, startAngle: entry.arc.start + gap,
+                       endAngle: entry.arc.end - gap, clockwise: false)
+        band.appendArc(withCenter: centre, radius: Self.hubRadius + 9, startAngle: entry.arc.end - gap,
+                       endAngle: entry.arc.start + gap, clockwise: true)
+        band.close()
+        return band
+    }
+
+    /// Where the caption goes, under the ring.
+    private func captionRect(around point: NSPoint) -> NSRect {
+        NSRect(x: point.x - 220, y: point.y + Self.outerRadius + 8, width: 440, height: 36)
     }
 
     private func ringRect(around point: NSPoint) -> NSRect {

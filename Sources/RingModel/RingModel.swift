@@ -138,11 +138,15 @@ public struct RingModel: Sendable {
 
     /// The text in the ring's centre.
     public struct Hub: Sendable, Hashable {
-        /// The large line: the format a drop converts to ("PNG"), or the file count ("3").
+        /// The large line: what a drop converts to ("PNG", "PNG + MP4", "JPEG"), or the file
+        /// count ("3"), or "JPEG" while ⌥ fans it out.
         public let title: String
-        /// The small line under it: the estimate ("19 MB") or what is counted ("images").
+        /// The small line under it: the estimate ("19 MB"), the quality and its estimate
+        /// ("Best · 5.2 MB"), the files converted ("3 files"), what is counted ("images"), or
+        /// "quality".
         public let detail: String
-        /// Both on one line, for logs and accessibility: "PNG · 19 MB", "3 images".
+        /// Both on one line, for logs and accessibility: "PNG · 19 MB", "PNG + MP4 · 3 files",
+        /// "3 images", "JPEG quality".
         public let text: String
     }
 
