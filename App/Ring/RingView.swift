@@ -613,17 +613,8 @@ final class RingWindow {
     private var shows = 0
 
     init() {
-        panel = NSPanel(contentRect: NSRect(origin: .zero, size: RingView.size),
-                        styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = false
-        panel.level = .popUpMenu
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
-        panel.hidesOnDeactivate = false
-        panel.isReleasedWhenClosed = false
-        // Unlike the catching panels: the drag must go through this one to them.
-        panel.ignoresMouseEvents = true
+        // Unlike the catching panels, it ignores the mouse: the drag must go through it to them.
+        panel = NSPanel.overlay(size: RingView.size, ignoresMouse: true)
         panel.contentView = ringView
         #if DEBUG
         // `-RingAppearance dark` (or light): the ring in that appearance, whatever the Mac's.

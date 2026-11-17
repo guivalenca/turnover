@@ -111,19 +111,8 @@ final class RingPanel {
     }
 
     private func makePanel() -> NSPanel {
-        let panel = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
-                            backing: .buffered, defer: false)
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = false
-        panel.level = .popUpMenu
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
-        panel.hidesOnDeactivate = false
-        panel.isReleasedWhenClosed = false
-        // Set explicitly, or the window server lets drags and clicks through wherever the panel
-        // is fully transparent: the drag left the ring as soon as it left the drawn disc, and
-        // Finder under it took the drop.
-        panel.ignoresMouseEvents = false
+        // Catching the drag everywhere, transparent or not (see `overlay`).
+        let panel = NSPanel.overlay(ignoresMouse: false)
         panel.becomesKeyOnlyIfNeeded = true
         let catcher = DropView()
         catcher.ring = self

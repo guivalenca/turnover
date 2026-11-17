@@ -13,6 +13,7 @@
 		381DD881ECE88E96D3DB8F19 /* RingModel in Frameworks */ = {isa = PBXBuildFile; productRef = 59393087FCD3B3EECF1EEBB9 /* RingModel */; };
 		39EAFD21CDF3C0F2B7E34E2E /* TurnoverKit in Frameworks */ = {isa = PBXBuildFile; productRef = 76C12C9F1D3471F0D7C1B5B2 /* TurnoverKit */; };
 		3BD80338DBF51E0BE5141CA5 /* Main.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4EBF56228EF202D2E3574DB /* Main.swift */; };
+		4821FF95521A2230644FA956 /* OverlayPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57AF6B96525487B25800937B /* OverlayPanel.swift */; };
 		500092B9CEC5382AE41DB03F /* DragWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFEFFB35CDC3839342AD369 /* DragWatcher.swift */; };
 		535419A9360015A9B43A7F3E /* TurnoverFinder.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AC1329052DD8DE6C4A250CF9 /* TurnoverFinder.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		5804849746040A64AD758F92 /* Conversions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03775AE3E5A433705BF218F /* Conversions.swift */; };
@@ -78,6 +79,7 @@
 		50A62B2F57C51D120FEB8816 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		51A4BF3AFA4A7C71B80C605C /* RingPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RingPanel.swift; sourceTree = "<group>"; };
 		541110B2C69050B416C31167 /* Log.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
+		57AF6B96525487B25800937B /* OverlayPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayPanel.swift; sourceTree = "<group>"; };
 		5BA307F6BAE8FDF755431170 /* TurnoverFinder.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TurnoverFinder.entitlements; sourceTree = "<group>"; };
 		8DD57A25DA23F1E37A3C9C5C /* TurnoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnoverView.swift; sourceTree = "<group>"; };
 		8EFEFFB35CDC3839342AD369 /* DragWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragWatcher.swift; sourceTree = "<group>"; };
@@ -181,6 +183,7 @@
 			children = (
 				8EFEFFB35CDC3839342AD369 /* DragWatcher.swift */,
 				40FF5F1C85C2224CC8808FD2 /* HintPanel.swift */,
+				57AF6B96525487B25800937B /* OverlayPanel.swift */,
 				C5E48B4CBF2BB72F9350C803 /* Ring.swift */,
 				0308915F2C2F7E2AA0E71EC5 /* RingLook.swift */,
 				4A2617A1399E95B8F363A55E /* RingMaterial.swift */,
@@ -331,6 +334,7 @@
 				C2D8E1B0030AB29ABE1F0673 /* Log.swift in Sources */,
 				3BD80338DBF51E0BE5141CA5 /* Main.swift in Sources */,
 				98E1B3360E4FA75100F7CB82 /* Notifier.swift in Sources */,
+				4821FF95521A2230644FA956 /* OverlayPanel.swift in Sources */,
 				822634437325DD62BA3E2EE2 /* Ring.swift in Sources */,
 				9585DA56708BCAAB20142EBB /* RingLook.swift in Sources */,
 				DEA71ABAE6648F4C47C2B9C3 /* RingMaterial.swift in Sources */,

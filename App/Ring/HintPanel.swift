@@ -41,16 +41,8 @@ final class HintPanel {
     }
 
     private func makePanel() -> NSPanel {
-        let panel = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
-                            backing: .buffered, defer: false)
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = true
-        panel.level = .popUpMenu
-        panel.ignoresMouseEvents = true
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
-        panel.hidesOnDeactivate = false
-        panel.isReleasedWhenClosed = false
+        // Ignoring the mouse, so the drag carries on to whatever is under it.
+        let panel = NSPanel.overlay(ignoresMouse: true, shadow: true)
 
         let background = NSVisualEffectView()
         background.material = .toolTip
