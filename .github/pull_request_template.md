@@ -85,7 +85,7 @@ With a physical mouse or trackpad, and the keyboard:
 - [ ] macOS 15: the ring uses the translucent material and reads as clearly.
 - [ ] Reduce Transparency, Increase Contrast and Reduce Motion (System Settings › Accessibility › Display): still readable; with Reduce Motion, nothing grows or springs.
 - [ ] Accent colours other than blue, including Graphite, tint the highlight and its label.
-- [ ] Sizes appear within a moment, then lose their "~" when exact. MP4 reads "Instant" for an H.264 video and "About N s" for HEVC.
+- [ ] Sizes appear within a moment, then lose their "~" when exact. MP4 reads "Instant" for a small H.264 video, "About N s" for a large one (copying it takes a few seconds), and "About N s" for HEVC.
 
 ### Menu bar item and stopping
 

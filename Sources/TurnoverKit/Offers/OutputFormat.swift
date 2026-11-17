@@ -1,5 +1,7 @@
 /// A format Turnover can convert files to. The raw values ("png", "jpeg", "mp4") are what
-/// `turnover --to` takes, so they are stable enough to pass between processes.
+/// `turnover --to` takes (the command reads them from here), so they are stable enough to pass
+/// between processes. Adding a case adds the format everywhere: the command, the Finder menu
+/// and the ring.
 public enum OutputFormat: String, CaseIterable, Sendable, Hashable {
     case png
     case jpeg

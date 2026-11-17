@@ -3,7 +3,7 @@
 #   make install     build, sign ad hoc, install to /Applications, enable the Finder menu, launch
 #   make uninstall   quit, disable and unregister everything `make install` set up
 #   make app         build build/Turnover.app only (ad hoc signed; install removes it again)
-#   make test        run the TurnoverKit and CLI tests
+#   make test        run every test: TurnoverKit, the app core, the ring model and the CLI
 #   make project     regenerate Turnover.xcodeproj from project.yml (needs `brew install xcodegen`)
 
 APP_ID      := com.guivalenca.turnover

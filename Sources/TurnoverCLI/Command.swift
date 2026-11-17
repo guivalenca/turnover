@@ -1,13 +1,8 @@
 import TurnoverKit
 
-/// A parsed command line: `turnover <files…> --to <format> [--quality <quality>]`.
+/// A parsed command line: `turnover <files…> --to <format> [--quality <quality>]`. `--to` takes
+/// any `OutputFormat`'s raw value, so a new format needs nothing here.
 struct Command {
-    /// The formats `--to` accepts, each with the action it runs.
-    static let formats: KeyValuePairs<String, any ConversionAction> = [
-        "png": PNGAction(),
-        "jpeg": JPEGAction(),
-        "mp4": MP4Action(),
-    ]
 
     static let usage = """
         usage: turnover <files…> --to <format> [--quality <quality>]
@@ -21,7 +16,7 @@ struct Command {
         and converts nothing. With --exact it measures image sizes exactly (by encoding in
         memory, a few photos at most), as the ring does while you drag.
 
-        formats: \(formats.map(\.key).joined(separator: ", "))
+        formats: \(OutputFormat.allCases.map(\.rawValue).joined(separator: ", "))
         qualities (jpeg only): \(JPEGQuality.allCases.map { quality in
             "\(quality.rawValue) (\(quality.percent)%\(quality == .default ? ", the default" : ""))"
         }.joined(separator: ", "))
@@ -69,15 +64,16 @@ struct Command {
             }
         }
         guard let format else { throw UsageError(message: "missing --to <format>") }
-        guard var action = formats.first(where: { $0.key == format.lowercased() })?.value
+        guard let target = OutputFormat(rawValue: format.lowercased())
         else { throw UsageError(message: "unknown format '\(format)'") }
+        var preset = JPEGQuality.default
         if let quality {
-            guard let preset = JPEGQuality(rawValue: quality.lowercased())
+            guard let chosen = JPEGQuality(rawValue: quality.lowercased())
             else { throw UsageError(message: "unknown quality '\(quality)' (use \(qualityChoices))") }
-            guard action is JPEGAction else { throw UsageError(message: "--quality only applies to jpeg") }
-            action = JPEGAction(quality: preset)
+            guard target == .jpeg else { throw UsageError(message: "--quality only applies to jpeg") }
+            preset = chosen
         }
         guard !files.isEmpty else { throw UsageError(message: "no files given") }
-        return .convert(files: files, action: action)
+        return .convert(files: files, action: target.action(quality: preset))
     }
 }
