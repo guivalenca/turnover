@@ -151,8 +151,11 @@ private final class DropView: NSView {
     }
 
     override func draggingExited(_ sender: NSDraggingInfo?) {
-        guard let ring, !ring.isClosing, ring.isOpen else { return }
-        ring.delegate?.ringPanel(ring, dragLeftWithButtonDown: NSEvent.pressedMouseButtons & 1 != 0)
+        guard let ring, !ring.isClosing, ring.isOpen, let window else { return }
+        let buttonDown = NSEvent.pressedMouseButtons & 1 != 0
+        // Onto another screen's panel: the drag goes on there.
+        if buttonDown, !window.frame.contains(NSEvent.mouseLocation) { return }
+        ring.delegate?.ringPanel(ring, dragLeftWithButtonDown: buttonDown)
     }
 
     /// A drop on an entry is a copy for the source (Finder leaves the file alone); anywhere else

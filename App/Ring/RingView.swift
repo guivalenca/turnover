@@ -9,8 +9,22 @@ import RingModel
 @MainActor
 final class RingView: NSView {
     /// The ring's centre, in this view's coordinates.
-    var centre: NSPoint = .zero { didSet { needsDisplay = true } }
-    var model = RingModel() { didSet { needsDisplay = true } }
+    var centre: NSPoint = .zero {
+        didSet {
+            setNeedsDisplay(ringRect(around: oldValue))
+            setNeedsDisplay(ringRect(around: centre))
+        }
+    }
+
+    /// What to draw. Only the ring's square is redrawn, and only when what it shows changes:
+    /// the view covers the whole screen and the pointer updates it at the drag's rate.
+    var model = RingModel() {
+        didSet {
+            guard oldValue.phase != model.phase || oldValue.entries != model.entries
+                || oldValue.highlighted != model.highlighted || oldValue.hub != model.hub else { return }
+            setNeedsDisplay(ringRect(around: centre))
+        }
+    }
 
     /// The prototype's proportions: the band's outer edge, where labels sit, and the hub.
     static let outerRadius: CGFloat = 128
@@ -57,6 +71,11 @@ final class RingView: NSView {
         if let text = model.hub {
             drawLines(text.title, text.detail, at: centre, titleSize: text.title.count > 6 ? 13 : 16)
         }
+    }
+
+    private func ringRect(around point: NSPoint) -> NSRect {
+        let r = Self.outerRadius + 2
+        return NSRect(x: point.x - r, y: point.y - r, width: r * 2, height: r * 2)
     }
 
     private func circle(_ radius: CGFloat) -> NSRect {

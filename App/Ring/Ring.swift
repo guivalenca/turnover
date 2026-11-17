@@ -39,6 +39,11 @@ final class Ring {
     private func handle(_ event: DragWatcher.Event) {
         switch event {
         case .dragStarted(let shiftDown, let files):
+            if let files {
+                ringLog.notice("Drag started: \(files.count) file(s) read from the drag pasteboard at once")
+            } else {
+                ringLog.notice("Drag started: the drag pasteboard has file URLs but they can't be read yet")
+            }
             send(.dragStarted(shiftDown: shiftDown))
             if let files { estimate(files) }
         case .shift(let down):
@@ -61,10 +66,13 @@ final class Ring {
 
         if model.phase == .open, before.phase != .open {
             panel.open(at: NSEvent.mouseLocation)
-            ringLog.debug("Ring opened")
+            ringLog.notice("Ring opened with \(self.model.entries.map(\.title).joined(separator: ", "), privacy: .public)")
         } else if model.phase != .open, before.phase == .open {
             panel.close()
-            ringLog.debug("Ring closed")
+            ringLog.notice("Ring closed")
+        }
+        if model.highlighted?.title != before.highlighted?.title || model.hub != before.hub {
+            ringLog.debug("Hub: \(self.model.hub?.text ?? "-", privacy: .public)")
         }
         if model.phase == .open { panel.show(model) }
 
@@ -116,7 +124,9 @@ final class Ring {
 extension Ring: RingPanelDelegate {
     func ringPanel(_ panel: RingPanel, draggingFiles files: [URL]) {
         // The drag pasteboard couldn't be read at drag start: the files come from the drag now.
-        if self.files == nil { estimate(files) }
+        guard self.files == nil else { return }
+        ringLog.notice("Files from the panel's draggingEntered: \(files.count)")
+        estimate(files)
     }
 
     func ringPanel(_ panel: RingPanel, pointerAt point: NSPoint) -> Bool {
