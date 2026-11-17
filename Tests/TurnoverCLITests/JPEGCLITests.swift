@@ -33,4 +33,29 @@ import TurnoverTestSupport
         #expect(run.status == 0)
         #expect(try JPEGTables(folder.url.appendingPathComponent("photo.jpg")) == JPEGTables(quality: quality))
     }
+
+    @Test(arguments: [
+        (["--to", "jpeg", "--quality", "huge"], "unknown quality 'huge' (use best, high or small)"),
+        (["--to", "jpeg", "--quality=85"], "unknown quality '85' (use best, high or small)"),
+        (["--to", "jpeg", "--quality"], "--quality needs best, high or small"),
+        (["--to", "png", "--quality", "small"], "--quality only applies to jpeg"),
+    ])
+    func aBadQualityIsAUsageError(arguments: [String], message: String) throws {
+        try folder.add(.heicRotated, as: "photo.heic")
+
+        let run = try turnover(["photo.heic"] + arguments, in: folder.url)
+
+        #expect(run.status == 64)
+        #expect(run.messages == ["turnover: \(message)"])
+        #expect(run.errors.contains("usage: turnover"))
+        #expect(try folder.fileNames() == ["photo.heic"])
+    }
+
+    @Test func theUsageListsTheQualities() throws {
+        let run = try turnover("--help")
+
+        #expect(run.status == 0)
+        #expect(run.output.contains("--quality <quality>"))
+        #expect(run.output.contains("best (100%), high (85%, the default), small (60%)"))
+    }
 }

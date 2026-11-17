@@ -1,6 +1,6 @@
 import TurnoverKit
 
-/// A parsed command line: `turnover <files…> --to <format>`.
+/// A parsed command line: `turnover <files…> --to <format> [--quality <quality>]`.
 struct Command {
     /// The formats `--to` accepts, each with the action it runs.
     static let formats: KeyValuePairs<String, any ConversionAction> = [
@@ -9,14 +9,21 @@ struct Command {
     ]
 
     static let usage = """
-        usage: turnover <files…> --to <format>
+        usage: turnover <files…> --to <format> [--quality <quality>]
 
         Converts each file and saves the result next to it, with the same name and the new
         extension (numbered if that name is taken). Prints the path of each new file.
         Originals are never modified.
 
         formats: \(formats.map(\.key).joined(separator: ", "))
+        qualities (jpeg only): \(JPEGQuality.allCases.map { quality in
+            "\(quality.rawValue) (\(quality.percent)%\(quality == .default ? ", the default" : ""))"
+        }.joined(separator: ", "))
         """
+
+    /// "best, high or small".
+    private static let qualityChoices = JPEGQuality.allCases.map(\.rawValue).dropLast().joined(separator: ", ")
+        + " or " + JPEGQuality.allCases.last!.rawValue
 
     enum Parsed {
         case convert(files: [String], action: any ConversionAction)
@@ -42,7 +49,7 @@ struct Command {
             case _ where argument.hasPrefix("--to="):
                 format = String(argument.dropFirst("--to=".count))
             case "--quality":
-                guard let value = remaining.popFirst() else { throw UsageError(message: "--quality needs a value") }
+                guard let value = remaining.popFirst() else { throw UsageError(message: "--quality needs \(qualityChoices)") }
                 quality = value
             case _ where argument.hasPrefix("--quality="):
                 quality = String(argument.dropFirst("--quality=".count))
@@ -60,7 +67,8 @@ struct Command {
         else { throw UsageError(message: "unknown format '\(format)'") }
         if let quality {
             guard let preset = JPEGQuality(rawValue: quality.lowercased())
-            else { throw UsageError(message: "unknown quality '\(quality)'") }
+            else { throw UsageError(message: "unknown quality '\(quality)' (use \(qualityChoices))") }
+            guard action is JPEGAction else { throw UsageError(message: "--quality only applies to jpeg") }
             action = JPEGAction(quality: preset)
         }
         guard !files.isEmpty else { throw UsageError(message: "no files given") }
