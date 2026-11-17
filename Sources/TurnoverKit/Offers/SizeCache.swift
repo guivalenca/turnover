@@ -15,7 +15,9 @@ final class SizeCache: Sendable {
 
         /// Nil when the file can't be read.
         init?(_ url: URL) {
-            guard let values = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey]),
+            // A fresh URL: one that has been asked before may answer from its own cache.
+            let file = URL(fileURLWithPath: url.path)
+            guard let values = try? file.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey]),
                   let size = values.fileSize, let modified = values.contentModificationDate
             else { return nil }
             (path, self.size, self.modified) = (url.standardizedFileURL.path, size, modified)

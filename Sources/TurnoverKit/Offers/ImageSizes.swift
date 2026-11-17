@@ -51,7 +51,8 @@ struct ImageSizes: Sendable {
     /// in `pixels`, scaled from the measured images.
     static func completing(_ measured: [URL: ImageSizes], for images: [SourceFile], pixels: [URL: Int]) -> [URL: ImageSizes] {
         let references = images.compactMap { image in measured[image.url].map { (image, $0) } }
-        var sizes = measured.filter { url, _ in images.contains { $0.url == url } }
+        let selected = Set(images.map(\.url))
+        var sizes = measured.filter { selected.contains($0.key) }
         for image in images where sizes[image.url] == nil {
             guard let count = pixels[image.url], let scaled = ImageSizes(scaling: references, to: count, like: image)
             else { continue }
