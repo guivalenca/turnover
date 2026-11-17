@@ -34,10 +34,13 @@ struct TurnoverView: View {
                     Text("JPEG quality")
                     Text("Hold ⌥ over the ring to choose just once")
                 }
+                // A label with a second line doesn't reach Accessibility by itself.
+                .accessibilityLabel("JPEG quality")
                 Toggle(isOn: Binding(get: { model.opensAtLogin }, set: model.setOpensAtLogin)) {
                     Text("Open at login")
                     Text("Turnover needs to be running to show the ring")
                 }
+                .accessibilityLabel("Open at login")
             }
 
             Section {
@@ -105,7 +108,8 @@ private struct SetupRow: View {
                 Image(systemName: status == nil ? "circle" : "checkmark.circle.fill")
                     .foregroundStyle(status == nil ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.green))
                     .imageScale(.large)
-                    .accessibilityLabel(status == nil ? "To do" : "Done")
+                    // The row already says "On" or offers its button.
+                    .accessibilityHidden(true)
             }
         }
     }
