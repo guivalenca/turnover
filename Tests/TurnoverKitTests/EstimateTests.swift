@@ -143,16 +143,14 @@ import TurnoverTestSupport
         let fixtures: [Fixture] = [.heicRotated, .jpeg, .png, .webp, .heicRotated, .jpeg, .heicRotated, .webp, .png, .heicRotated]
         let photos = try fixtures.enumerated().map { try folder.add($1, as: "\($0)-\($1.rawValue)") }
 
-        // The fastest of five rounds, as above.
-        var times: [Duration] = []
+        // The first round pays for loading ImageIO, and other tests compete for the CPU.
+        let limit = timeLimit(.milliseconds(50))
         var offers: Offers?
-        for _ in 1...5 {
-            times.append(await ContinuousClock().measure { offers = await Offers(estimating: photos) })
-        }
+        let time = await fastestRun(beating: limit) { offers = await Offers(estimating: photos) }
 
         #expect(offers?.groups.first?.files.count == 10)
         #expect(offers?.targets.allSatisfy { $0.estimate != nil } == true)
-        #expect(times.min()! < timeLimit(.milliseconds(50)))
+        #expect(time < limit)
     }
 
     @Test func offersWithoutEstimatesTakeUnderAMillisecondPerFile() throws {
