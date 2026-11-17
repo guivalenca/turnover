@@ -68,20 +68,31 @@ public struct Offers: Sendable, Hashable {
     /// The same offers, with an estimate for each target: output sizes for images (each JPEG
     /// preset too, with `jpegQuality` the one JPEG uses), and time for videos.
     public init(estimating files: [URL], jpegQuality: JPEGQuality = .default) async {
-        let images = await withTaskGroup(of: (URL, ImageSizes?).self) { group in
-            for url in files where (try? SourceFile(url))?.kind == .image {
-                group.addTask { (url, ImageSizes(of: url)) }
+        let kinds = files.map { (url: $0, kind: (try? SourceFile($0))?.kind) }
+        async let images = withTaskGroup(of: (URL, ImageSizes?).self) { group in
+            for file in kinds where file.kind == .image {
+                group.addTask { (file.url, ImageSizes(of: file.url)) }
             }
             return await group.reduce(into: [URL: ImageSizes]()) { $0[$1.0] = $1.1 }
         }
-        self.init(files, jpegQuality: jpegQuality, estimates: Estimates(images: images))
+        async let videos = withTaskGroup(of: (URL, VideoTime?).self) { group in
+            for file in kinds where file.kind == .video {
+                group.addTask { (file.url, await VideoTime(of: file.url)) }
+            }
+            return await group.reduce(into: [URL: VideoTime]()) { $0[$1.0] = $1.1 }
+        }
+        self.init(files, jpegQuality: jpegQuality, estimates: Estimates(images: await images, videos: await videos))
     }
 
-    /// What is known about each file's output.
+    /// What is known about each file's output. Files that couldn't be measured (damaged ones)
+    /// are left out of the estimates, though they stay in their targets: converting them reports
+    /// the failure.
     struct Estimates {
         var images: [URL: ImageSizes]
+        var videos: [URL: VideoTime]
 
         func estimate(_ format: OutputFormat, quality: JPEGQuality, of files: [URL]) -> Estimate? {
+            if format == .mp4 { return VideoTime.estimate(files.compactMap { videos[$0] }) }
             let sizes = files.compactMap { images[$0] }
             guard !sizes.isEmpty else { return nil }
             return .size(sizes.reduce(0) { $0 + $1.bytes(as: format, quality: quality) })

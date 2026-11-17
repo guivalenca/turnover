@@ -70,6 +70,84 @@ import TurnoverTestSupport
     }
 }
 
+/// How long MP4 says it will take.
+@Suite struct VideoTimeEstimates {
+    let folder = try! ScratchFolder()
+
+    @Test(arguments: [Fixture.movH264, .movH264PCM, .movH264Silent])
+    func h264IsInstant(fixture: Fixture) async throws {
+        let movie = try folder.add(fixture, as: "clip.mov")
+
+        let offers = await Offers(estimating: [movie])
+
+        #expect(offers.targets.map(\.estimate) == [.instant])
+        #expect(offers.targets.first?.estimate?.label == "Instant")
+    }
+
+    @Test func anythingElseTakesAnApproximateTime() async throws {
+        let movie = try folder.add(.movHEVCHDR, as: "clip.mov")
+
+        let offers = await Offers(estimating: [movie])
+
+        let estimate = try #require(offers.targets.first?.estimate)
+        guard case .duration(let seconds) = estimate else { Issue.record("\(estimate)"); return }
+        #expect(seconds > 0 && seconds < 1)
+        #expect(estimate.label == "About 1 s")
+    }
+
+    @Test func oneTranscodeAmongCopiesMakesTheBatchTimed() async throws {
+        let copied = try folder.add(.movH264, as: "copied.mov")
+        let encoded = try folder.add(.movHEVCHDR, as: "encoded.mov")
+
+        let offers = await Offers(estimating: [copied, encoded])
+
+        #expect(offers.targets.first?.files == [copied, encoded])
+        #expect(offers.targets.first?.estimate?.label == "About 1 s")
+    }
+
+    @Test func aDamagedVideoIsStillOfferedButNotEstimated() async throws {
+        let whole = try folder.add(.movH264, as: "whole.mov")
+        let broken = try folder.add(Fixture.movHEVCHDR.data.prefix(20_000), as: "broken.mov")
+
+        let offers = await Offers(estimating: [whole, broken])
+        let onlyBroken = await Offers(estimating: [broken])
+
+        #expect(offers.targets.first?.files == [whole, broken])
+        #expect(offers.targets.first?.estimate == .instant)
+        #expect(onlyBroken.targets.map(\.files) == [[broken]])
+        #expect(onlyBroken.targets.first?.estimate == nil)
+    }
+}
+
+/// How estimates read on screen: every one is marked approximate.
+@Suite struct EstimateLabels {
+    @Test(arguments: [
+        (400, "~1 KB"),
+        (31_000, "~31 KB"),
+        (999_400, "~999 KB"),
+        (999_600, "~1.0 MB"),
+        (1_240_000, "~1.2 MB"),
+        (9_960_000, "~10 MB"),
+        (19_400_000, "~19 MB"),
+        (2_345_000_000, "~2.3 GB"),
+    ])
+    func sizesUseFinderUnitsAndATilde(bytes: Int, label: String) {
+        #expect(Estimate.size(bytes).label == label)
+    }
+
+    @Test(arguments: [
+        (0.2, "About 1 s"),
+        (4.1, "About 5 s"),
+        (59, "About 59 s"),
+        (60, "About 1 min"),
+        (149, "About 2 min"),
+        (3_000, "About 50 min"),
+    ])
+    func durationsSayAbout(seconds: Double, label: String) {
+        #expect(Estimate.duration(seconds).label == label)
+    }
+}
+
 func bytes(_ estimate: Estimate?) throws -> Int {
     guard case .size(let bytes) = estimate else { throw EstimateMismatch(estimate: estimate) }
     return bytes
