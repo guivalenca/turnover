@@ -61,6 +61,10 @@ final class Ring {
 
     /// Feeds `event` to the model, then brings the screen and the conversions in line with it.
     private func send(_ event: RingModel.Event) {
+        switch event {
+        case .pointer, .offers: break
+        default: ringLog.debug("Event: \(String(describing: event), privacy: .public)")
+        }
         let before = model
         model.send(event)
 

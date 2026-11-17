@@ -105,6 +105,10 @@ final class RingPanel {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
+        // Set explicitly, or the window server lets drags and clicks through wherever the panel
+        // is fully transparent: the drag left the ring as soon as it left the drawn disc, and
+        // Finder under it took the drop.
+        panel.ignoresMouseEvents = false
         panel.becomesKeyOnlyIfNeeded = true
         let catcher = DropView()
         catcher.ring = self
@@ -126,6 +130,7 @@ private final class DropView: NSView {
     required init?(coder: NSCoder) { fatalError("not used") }
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        ringLog.debug("draggingEntered: pointer \(NSStringFromPoint(NSEvent.mouseLocation), privacy: .public), seq \(sender.draggingSequenceNumber)")
         if let ring, let files = sender.draggingPasteboard.readObjects(
             forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !files.isEmpty {
             ring.delegate?.ringPanel(ring, draggingFiles: files)
@@ -153,6 +158,7 @@ private final class DropView: NSView {
     override func draggingExited(_ sender: NSDraggingInfo?) {
         guard let ring, !ring.isClosing, ring.isOpen, let window else { return }
         let buttonDown = NSEvent.pressedMouseButtons & 1 != 0
+        ringLog.debug("draggingExited: button \(buttonDown ? "down" : "up", privacy: .public), pointer \(NSStringFromPoint(NSEvent.mouseLocation), privacy: .public), panel \(NSStringFromRect(window.frame), privacy: .public)")
         // Onto another screen's panel: the drag goes on there.
         if buttonDown, !window.frame.contains(NSEvent.mouseLocation) { return }
         ring.delegate?.ringPanel(ring, dragLeftWithButtonDown: buttonDown)
