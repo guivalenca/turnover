@@ -16,10 +16,10 @@ import RingModel
 /// (clockwise from the right), so they are turned round where they are drawn.
 @MainActor
 final class RingView: NSView {
-    /// The prototype's proportions.
-    nonisolated static let outerRadius: CGFloat = 128
-    nonisolated static let labelRadius: CGFloat = 87
-    nonisolated static let hubRadius: CGFloat = 42
+    /// The model hit-tests with the same radii.
+    nonisolated static let outerRadius = RingGeometry.outerRadius
+    nonisolated static let labelRadius = RingGeometry.labelRadius
+    nonisolated static let hubRadius = RingGeometry.hubRadius
     /// The window's size, with the ring's centre in its middle.
     nonisolated static let size = NSSize(width: 400, height: 400)
     /// What the ring draws around its centre (y up): the disc, and the caption under it, at its

@@ -44,6 +44,37 @@ import TurnoverKit
         #expect(ring.outcome == .cancel)
     }
 
+    /// The ring catches drops where it is drawn, and nowhere else: the glass disc is 128 pt
+    /// across from the centre, and the hub lens 42 pt.
+    @Test(arguments: [129.0, 150, 195])
+    func aDropJustOffTheDrawnRingCancels(distance: Double) {
+        var ring = RingModel.opened(with: Sample.images([Sample.photo]))
+        ring.send(.pointer(at: 180, distance: distance))
+
+        ring.send(.drop)
+
+        #expect(ring.outcome == .cancel)
+    }
+
+    @Test func aDropOnTheDrawnHubsEdgeCancels() {
+        var ring = RingModel.opened(with: Sample.images([Sample.photo]))
+        ring.send(.pointer(at: 180, distance: 41))
+
+        ring.send(.drop)
+
+        #expect(ring.outcome == .cancel)
+    }
+
+    @Test(arguments: [43.0, 127])
+    func aDropAnywhereOnTheDrawnBandConverts(distance: Double) {
+        var ring = RingModel.opened(with: Sample.images([Sample.photo]))
+        ring.send(.pointer(at: 180, distance: distance))
+
+        ring.send(.drop)
+
+        #expect(ring.outcome == .convert([.init(kind: .image, format: .png, files: [Sample.photo])]))
+    }
+
     @Test func aDropBeforeThePointerMovedCancels() {
         var ring = RingModel.opened(with: Sample.images([Sample.photo]))
 

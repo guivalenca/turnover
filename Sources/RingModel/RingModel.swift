@@ -86,11 +86,11 @@ public struct RingModel: Sendable {
     }
 
     /// The entry a drop would convert to: the one whose arc the pointer is in, if the pointer is
-    /// between the hub and the outer edge.
+    /// on the drawn band, between the hub and the outer edge (`RingGeometry`'s radii).
     public var highlighted: Entry? {
         guard let pointer else { return nil }
         let distance = (pointer.x * pointer.x + pointer.y * pointer.y).squareRoot()
-        guard distance >= Self.hubRadius, distance <= Self.outerRadius else { return nil }
+        guard distance >= RingGeometry.hubRadius, distance <= RingGeometry.outerRadius else { return nil }
         let angle = atan2(pointer.y, pointer.x) * 180 / .pi
         return entries.first { $0.arc.contains(angle) }
     }
@@ -153,11 +153,6 @@ public struct RingModel: Sendable {
     private static func noun(_ kind: SourceFile.Kind, count: Int) -> String {
         (kind == .video ? "video" : "image") + (count == 1 ? "" : "s")
     }
-
-    /// Inside this distance from the centre, the pointer is on the hub: nothing is highlighted.
-    public static let hubRadius = 38.0
-    /// Beyond this distance from the centre, the pointer is off the ring: nothing is highlighted.
-    public static let outerRadius = 195.0
 
     /// The dragged files' offers, once known.
     private var offers: Offers?
