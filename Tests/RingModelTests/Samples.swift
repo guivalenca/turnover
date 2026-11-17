@@ -51,8 +51,8 @@ enum Sample {
 
 extension RingModel {
     /// A ring opened by ⇧ during a drag whose offers are already known.
-    static func opened(with offers: Offers) -> RingModel {
-        var ring = RingModel()
+    static func opened(with offers: Offers, restDelay: TimeInterval = 0.5) -> RingModel {
+        var ring = RingModel(restDelay: restDelay)
         ring.send(.dragStarted(shiftDown: false))
         ring.send(.offers(offers))
         ring.send(.shift(down: true))

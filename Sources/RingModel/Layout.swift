@@ -20,6 +20,18 @@ extension RingModel {
         public let quality: JPEGQuality?
         /// A JPEG quality fanned out by ⌥ that is the stored default: it is marked.
         public let isDefault: Bool
+        /// Added by resting on it: it stays tinted, with a ✓.
+        public let isAdded: Bool
+
+        /// Which format, or JPEG quality, of which kind of file it is, whatever its estimate.
+        public var id: ID { ID(kind: choices[0].kind, format: choices[0].format, quality: quality) }
+
+        public struct ID: Sendable, Hashable {
+            public let kind: SourceFile.Kind
+            public let format: OutputFormat
+            /// Set for a JPEG quality fanned out by ⌥; nil for JPEG itself.
+            public let quality: JPEGQuality?
+        }
     }
 
     /// A stretch of the circle, clockwise from `start` to `end`, in degrees (`end - start` is at
@@ -45,7 +57,7 @@ extension RingModel {
     /// order (PNG left, JPEG right). Images and videos together: images on the left, centred on
     /// 180° and 74° apart; videos on the right, at 0°. With ⌥, JPEG's qualities fan out around
     /// where JPEG was: 54° apart, or 52° in a mixed ring. Angles are in (-180, 180].
-    static func layout(_ offers: Offers, fannedOut: Bool) -> [Entry] {
+    static func layout(_ offers: Offers, fannedOut: Bool, added: [Choice]) -> [Entry] {
         let groups = offers.groups.map { group in
             (kind: group.kind, spots: group.targets.flatMap { spots(for: $0, fannedOut: fannedOut) })
         }
@@ -71,7 +83,7 @@ extension RingModel {
         return zip(spots, placed).map { spot, angle in
             Entry(title: spot.title, estimate: spot.estimate, angle: angle,
                   arc: arc(around: angle, among: placed), choices: spot.choices,
-                  quality: spot.preset, isDefault: spot.isDefault)
+                  quality: spot.preset, isDefault: spot.isDefault, isAdded: added.contains(spot.choices[0]))
         }
     }
 
