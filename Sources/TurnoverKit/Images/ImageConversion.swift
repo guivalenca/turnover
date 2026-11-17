@@ -6,7 +6,18 @@ import UniformTypeIdentifiers
 /// Decodes an image with ImageIO and re-encodes it in another format.
 enum ImageConversion {
     /// `quality`, from 0 to 1, applies to lossy formats; nil leaves it to ImageIO.
-    static func convert(_ source: URL, to destination: URL, as type: UTType, quality: Double? = nil) throws {
+    ///
+    /// Runs on a dispatch queue, at the calling task's priority (see `blocking`): a conversion
+    /// takes up to seconds, and the batch runner converts one image per core at once, which would
+    /// otherwise hold every one of Swift concurrency's threads until an image finished, so that
+    /// cancelling a video had to wait.
+    static func convert(_ source: URL, to destination: URL, as type: UTType, quality: Double? = nil) async throws {
+        try await blocking(DispatchQoS.QoSClass(Task.currentPriority)) {
+            Result { try convertOnThisThread(source, to: destination, as: type, quality: quality) }
+        }.get()
+    }
+
+    private static func convertOnThisThread(_ source: URL, to destination: URL, as type: UTType, quality: Double?) throws {
         let decoded = try Decoded(source)
         guard let output = CGImageDestinationCreateWithURL(destination as CFURL, type.identifier as CFString, 1, nil)
         else { throw CocoaError(.fileWriteUnknown, userInfo: [NSURLErrorKey: destination]) }

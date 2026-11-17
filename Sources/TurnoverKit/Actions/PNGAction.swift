@@ -13,6 +13,6 @@ public struct PNGAction: ConversionAction {
     }
 
     public func perform(_ file: SourceFile, writingTo destination: URL) async throws {
-        try ImageConversion.convert(file.url, to: destination, as: outputType)
+        try await ImageConversion.convert(file.url, to: destination, as: outputType)
     }
 }

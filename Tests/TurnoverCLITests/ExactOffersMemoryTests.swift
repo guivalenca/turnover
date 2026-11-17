@@ -54,11 +54,3 @@ func peakMemory(ofTurnover arguments: [String]) throws -> (status: Int32, bytes:
     // ru_maxrss is in bytes on macOS.
     return ((status >> 8) & 0xFF, usage.ru_maxrss)
 }
-
-/// Runs `work`, which blocks for seconds, on a dispatch queue, keeping Swift concurrency's few
-/// threads (three on CI) free for the tests running alongside.
-func offThePool<T: Sendable>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
-    try await withCheckedThrowingContinuation { continuation in
-        DispatchQueue.global().async { continuation.resume(with: Result { try work() }) }
-    }
-}

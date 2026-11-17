@@ -6,13 +6,13 @@ import TurnoverTestSupport
 @Suite struct OffersCLI {
     let folder = try! ScratchFolder()
 
-    @Test func printsEachGroupsTargetsWithFileCountsAndEstimates() throws {
+    @Test func printsEachGroupsTargetsWithFileCountsAndEstimates() async throws {
         try folder.add(.heicRotated, as: "photo.heic")
         try folder.add(.png, as: "logo.png")
         try folder.add(.movH264, as: "clip.mov")
         try folder.add(.text)
 
-        let run = try turnover(["offers", "photo.heic", "logo.png", "clip.mov", "notes.txt"], in: folder.url)
+        let run = try await turnover(["offers", "photo.heic", "logo.png", "clip.mov", "notes.txt"], in: folder.url)
 
         #expect(run.status == 0)
         #expect(run.messages == [])
@@ -36,20 +36,20 @@ import TurnoverTestSupport
         #expect(try folder.fileNames() == ["clip.mov", "logo.png", "notes.txt", "photo.heic"])
     }
 
-    @Test func aVideoThatNeedsEncodingShowsAnApproximateTime() throws {
+    @Test func aVideoThatNeedsEncodingShowsAnApproximateTime() async throws {
         let movie = try folder.add(.movHEVCHDR, as: "clip.mov")
 
-        let run = try turnover("offers", movie.path)
+        let run = try await turnover("offers", movie.path)
 
         #expect(run.status == 0)
         #expect(run.output == "Videos (1 file)\n  MP4   1 file   About 1 s\n")
     }
 
-    @Test func nothingToConvertListsWhyAndExitsNonZero() throws {
+    @Test func nothingToConvertListsWhyAndExitsNonZero() async throws {
         let pdf = try folder.add(.pdf)
         let mp4 = try folder.add(.mp4H264, as: "clip.mp4")
 
-        let run = try turnover("offers", pdf.path, mp4.path)
+        let run = try await turnover("offers", pdf.path, mp4.path)
 
         #expect(run.status == 1)
         #expect(run.output == """
@@ -60,10 +60,10 @@ import TurnoverTestSupport
             """)
     }
 
-    @Test func exactWaitsForTheMeasuredSizes() throws {
+    @Test func exactWaitsForTheMeasuredSizes() async throws {
         try folder.add(.heicRotated, as: "photo.heic")
 
-        let run = try turnover(["offers", "--exact", "photo.heic"], in: folder.url)
+        let run = try await turnover(["offers", "--exact", "photo.heic"], in: folder.url)
 
         #expect(run.status == 0)
         let lines = run.output.split(separator: "\n").map(String.init)
@@ -82,18 +82,18 @@ import TurnoverTestSupport
         (["offers"], "no files given"),
         (["offers", "photo.heic", "--to", "png"], "unknown option --to"),
     ])
-    func aBadCommandLineIsAUsageError(arguments: [String], message: String) throws {
+    func aBadCommandLineIsAUsageError(arguments: [String], message: String) async throws {
         try folder.add(.heicRotated, as: "photo.heic")
 
-        let run = try turnover(arguments, in: folder.url)
+        let run = try await turnover(arguments, in: folder.url)
 
         #expect(run.status == 64)
         #expect(run.messages == ["turnover: \(message)"])
         #expect(run.errors.contains("usage: turnover offers [--exact] <files…>"))
     }
 
-    @Test func theUsageListsTheOffersCommand() throws {
-        let run = try turnover("--help")
+    @Test func theUsageListsTheOffersCommand() async throws {
+        let run = try await turnover("--help")
 
         #expect(run.output.contains("turnover offers [--exact] <files…>"))
     }
