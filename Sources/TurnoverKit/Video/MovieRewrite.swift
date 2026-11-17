@@ -1,9 +1,9 @@
 @preconcurrency import AVFoundation
 import Foundation
 
-/// Rewrites a movie as an MP4 by moving samples from an `AVAssetReader` to an `AVAssetWriter`:
-/// the video copied as is when it is already widely playable H.264, re-encoded otherwise; the
-/// audio copied.
+/// Rewrites a movie as an MP4 by moving samples from an `AVAssetReader` to an `AVAssetWriter`.
+/// Each stream is copied as is when it already plays everywhere (H.264, AAC) and re-encoded
+/// otherwise. The movie's metadata, such as where and when it was recorded, comes along.
 struct MovieRewrite {
     let source: URL
     let destination: URL
@@ -19,6 +19,7 @@ struct MovieRewrite {
         do { reader = try AVAssetReader(asset: movie.asset) } catch { throw ConversionError.damaged(source) }
         let writer = try AVAssetWriter(outputURL: destination, fileType: .mp4)
         writer.shouldOptimizeForNetworkUse = true
+        writer.metadata = movie.metadata
 
         var lanes = [videoLane(movie.video)]
         if let audio = movie.audio { lanes.append(audioLane(audio)) }
@@ -54,9 +55,15 @@ struct MovieRewrite {
     }
 
     private func audioLane(_ audio: MovieSource.Audio) -> SamplePump.Lane {
-        SamplePump.Lane(
-            output: AVAssetReaderTrackOutput(track: audio.track, outputSettings: nil),
-            input: AVAssetWriterInput(mediaType: .audio, outputSettings: nil, sourceFormatHint: audio.format),
+        if AAC.isWidelyPlayable(audio.format) {
+            return SamplePump.Lane(
+                output: AVAssetReaderTrackOutput(track: audio.track, outputSettings: nil),
+                input: AVAssetWriterInput(mediaType: .audio, outputSettings: nil, sourceFormatHint: audio.format),
+                reportsProgress: false)
+        }
+        return SamplePump.Lane(
+            output: AVAssetReaderTrackOutput(track: audio.track, outputSettings: AAC.decodingSettings(for: audio.format)),
+            input: AVAssetWriterInput(mediaType: .audio, outputSettings: AAC.encodingSettings(for: audio.format)),
             reportsProgress: false)
     }
 }

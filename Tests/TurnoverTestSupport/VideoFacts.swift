@@ -27,6 +27,10 @@ public struct VideoFacts: Sendable {
     /// The H.264 profile (`profile_idc` from avcC): 66 Baseline, 77 Main, 100 High (all 8-bit
     /// 4:2:0), 110 High 10, …. Nil for other codecs.
     public let h264Profile: Int?
+    /// When the movie was recorded, from its metadata (not the file's dates).
+    public let creationDate: Date?
+    /// Where it was recorded, as an ISO 6709 string such as "+48.8584+002.2945+035.000/".
+    public let location: String?
     private let url: URL
 
     public init(_ url: URL) async throws {
@@ -52,6 +56,10 @@ public struct VideoFacts: Sendable {
         yCbCrMatrix = extensions[kCVImageBufferYCbCrMatrixKey as String] as? String
         let atoms = extensions[kCMFormatDescriptionExtension_SampleDescriptionExtensionAtoms as String] as? [String: Any]
         h264Profile = (atoms?["avcC"] as? Data).flatMap { $0.count > 1 ? Int($0[$0.startIndex + 1]) : nil }
+        creationDate = try await asset.load(.creationDate)?.load(.dateValue)
+        let common = try await asset.load(.commonMetadata)
+        location = try await AVMetadataItem.metadataItems(from: common, withKey: AVMetadataKey.commonKeyLocation, keySpace: .common)
+            .first?.load(.stringValue)
     }
 
     /// A digest of every compressed video sample, in order: equal digests mean the video

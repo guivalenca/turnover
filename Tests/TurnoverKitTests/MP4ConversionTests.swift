@@ -42,6 +42,35 @@ import TurnoverTestSupport
         #expect(abs(mp4.duration - 2) < 0.05)
     }
 
+    @Test func otherAudioIsEncodedToAACWhileTheVideoIsPassedThrough() async throws {
+        let clip = try folder.add(.movH264PCM, as: "clip.mov")
+
+        let output = try await Converter().convert(clip, with: MP4Action()).output
+
+        let mp4 = try await VideoFacts(output)
+        #expect(mp4.audioCodec == "aac ")
+        #expect(try await mp4.videoSamplesDigest() == VideoFacts(clip).videoSamplesDigest())
+        #expect(abs(mp4.duration - 2) < 0.05)
+    }
+
+    @Test func aSilentVideoStaysSilent() async throws {
+        let clip = try folder.add(.movH264Silent, as: "clip.mov")
+
+        let mp4 = try await VideoFacts(try await Converter().convert(clip, with: MP4Action()).output)
+
+        #expect(mp4.videoCodec == "avc1")
+        #expect(mp4.audioCodec == nil)
+    }
+
+    @Test func theRecordingDateAndLocationAreKept() async throws {
+        let clip = try folder.add(.movH264PCM, as: "clip.mov")
+
+        let mp4 = try await VideoFacts(try await Converter().convert(clip, with: MP4Action()).output)
+
+        #expect(mp4.creationDate == Date(timeIntervalSince1970: 1_718_440_200))  // 2024-06-15 08:30:00 UTC
+        #expect(mp4.location?.hasPrefix("+48.8584+002.2945") == true)
+    }
+
     @Test func hdrHEVCIsTranscodedTo8BitSDRH264() async throws {
         let clip = try folder.add(.movHEVCHDR, as: "clip.mov")
 

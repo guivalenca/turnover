@@ -24,6 +24,8 @@ struct MovieSource {
 
     let asset: AVURLAsset
     let duration: CMTime
+    /// Movie-level metadata: recording date, location, camera, ….
+    let metadata: [AVMetadataItem]
     let video: Video
     let audio: Audio?
 
@@ -32,7 +34,7 @@ struct MovieSource {
     init(_ url: URL) async throws {
         asset = AVURLAsset(url: url)
         do {
-            duration = try await asset.load(.duration)
+            (duration, metadata) = try await asset.load(.duration, .metadata)
             guard let track = try await Self.firstEnabledTrack(of: .video, in: asset),
                   let format = try await track.load(.formatDescriptions).first
             else { throw ConversionError.notApplicable(url, format: "MP4") }
