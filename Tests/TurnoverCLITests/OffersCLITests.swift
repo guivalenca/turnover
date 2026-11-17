@@ -59,6 +59,24 @@ import TurnoverTestSupport
             """)
     }
 
+    @Test func exactWaitsForTheMeasuredSizes() throws {
+        try folder.add(.heicRotated, as: "photo.heic")
+
+        let run = try turnover(["offers", "--exact", "photo.heic"], in: folder.url)
+
+        #expect(run.status == 0)
+        let lines = run.output.split(separator: "\n").map(String.init)
+        let expected = [
+            #"Images \(1 file\)"#,
+            #"  PNG   1 file   \d+ KB"#,
+            #"  JPEG  1 file   Best \d+ KB, High \d+ KB \(default\), Small \d+ KB"#,
+        ]
+        #expect(lines.count == expected.count, "\(run.output)")
+        for (line, pattern) in zip(lines, expected) {
+            #expect(try Regex(pattern).wholeMatch(in: line) != nil, "\(line)")
+        }
+    }
+
     @Test(arguments: [
         (["offers"], "no files given"),
         (["offers", "photo.heic", "--to", "png"], "unknown option --to"),
@@ -70,12 +88,12 @@ import TurnoverTestSupport
 
         #expect(run.status == 64)
         #expect(run.messages == ["turnover: \(message)"])
-        #expect(run.errors.contains("usage: turnover offers <files…>"))
+        #expect(run.errors.contains("usage: turnover offers [--exact] <files…>"))
     }
 
     @Test func theUsageListsTheOffersCommand() throws {
         let run = try turnover("--help")
 
-        #expect(run.output.contains("turnover offers <files…>"))
+        #expect(run.output.contains("turnover offers [--exact] <files…>"))
     }
 }

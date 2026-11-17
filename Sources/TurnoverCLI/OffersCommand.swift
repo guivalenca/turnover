@@ -1,35 +1,47 @@
 import Foundation
 import TurnoverKit
 
-/// `turnover offers <files…>`: the formats Turnover offers for the files, as the Finder menu and
-/// the ring would, with their estimates. Converts nothing.
+/// `turnover offers [--exact] <files…>`: the formats Turnover offers for the files, as the Finder
+/// menu and the ring would, with their estimates. Converts nothing. `--exact` waits for the
+/// refined estimates the ring ends up showing: exact sizes for a few photos, the rest scaled.
 ///
 /// Exit codes: 0 when anything is offered, 1 when nothing is, 64 (EX_USAGE) for a bad command line.
 enum OffersCommand {
-    static let usage = "usage: turnover offers <files…>"
+    static let usage = "usage: turnover offers [--exact] <files…>"
 
     static func run(_ arguments: [String]) async -> Int32 {
-        let files: [String]
+        let files: [String], exact: Bool
         do {
             guard !arguments.contains(where: { $0 == "-h" || $0 == "--help" }) else {
                 print(usage)
                 return 0
             }
-            files = try parse(arguments)
+            (files, exact) = try parse(arguments)
         } catch {
             FileHandle.standardError.write(Data("turnover: \(error.message)\n\(usage)\n".utf8))
             return 64
         }
-        let offers = await Offers(estimating: files.map { URL(fileURLWithPath: $0).absoluteURL.standardizedFileURL })
+        let urls = files.map { URL(fileURLWithPath: $0).absoluteURL.standardizedFileURL }
+        let offers = exact ? await refined(urls) : await Offers(estimating: urls)
         print(render(offers), terminator: "")
         return offers.targets.isEmpty ? 1 : 0
     }
 
-    private static func parse(_ arguments: [String]) throws(Command.UsageError) -> [String] {
+    @MainActor
+    private static func refined(_ files: [URL]) async -> Offers {
+        let live = Estimator().estimate(files)
+        await live.waitUntilFinished()
+        return live.offers
+    }
+
+    private static func parse(_ arguments: [String]) throws(Command.UsageError) -> (files: [String], exact: Bool) {
         var files: [String] = []
+        var exact = false
         var remaining = arguments[...]
         while let argument = remaining.popFirst() {
-            if argument == "--" {
+            if argument == "--exact" {
+                exact = true
+            } else if argument == "--" {
                 files.append(contentsOf: remaining)
                 remaining = []
             } else if argument.hasPrefix("-") && argument != "-" {
@@ -39,7 +51,7 @@ enum OffersCommand {
             }
         }
         guard !files.isEmpty else { throw Command.UsageError(message: "no files given") }
-        return files
+        return (files, exact)
     }
 
     /// For example:
