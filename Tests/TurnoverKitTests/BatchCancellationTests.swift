@@ -36,22 +36,24 @@ import TurnoverTestSupport
         let runner = JobRunner()
         let video = runner.run([clip], to: [turnstile.holding(MP4Action())])
         #expect(await turnstile.waitUntil(running: 1))
-        // As many 12-megapixel photos as the runner converts at once.
+        // As many 12-megapixel photos as the runner converts at once, each in a batch of its own
+        // so that the moment each one ends is known.
         let first = try await mosaic(in: folder, of: .heicRotated, width: 4000, height: 3000, as: "photo 1.jpg")
         let photos = try [first] + (2...ProcessInfo.processInfo.activeProcessorCount).map { index in
             let copy = folder.url.appendingPathComponent("photo \(index).jpg")
             try FileManager.default.copyItem(at: first, to: copy)
             return copy
         }
-        let images = runner.run(photos, to: [PNGAction()])
-        #expect(await eventually { images.jobs.allSatisfy { $0.state == .running } })
+        let images = photos.map { runner.run([$0], to: [PNGAction()]) }
+        #expect(await eventually { images.allSatisfy { $0.jobs[0].state == .running } })
 
         video.jobs[0].cancel()
 
-        #expect(await eventually { video.jobs[0].isFinished })
+        await video.waitUntilFinished()
         #expect(video.jobs[0].state == .cancelled)
-        #expect(images.jobs.allSatisfy { !$0.isFinished }, "the cancel waited for a photo to convert")
-        await images.waitUntilFinished()
+        for batch in images { await batch.waitUntilFinished() }
+        let firstPhotoDone = try #require(images.compactMap(\.finishDate).min())
+        #expect(try #require(video.finishDate) < firstPhotoDone, "the cancel waited for a photo to convert")
     }
 
     @Test func aJobCancelledWhileWaitingNeverStarts() async throws {
