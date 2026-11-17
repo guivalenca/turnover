@@ -38,10 +38,16 @@ struct Refinement: Sendable {
     /// The other images are scaled from the measured ones.
     static let exactPixelBudget = 50_000_000
 
-    /// Calls `publish` with the quick offers, then again each time an exact size is known.
-    /// Stops at the next step when its task is cancelled: an encode in progress finishes, and
-    /// nothing else starts.
-    func run(publish: @escaping @Sendable (Offers) async -> Void) async {
+    /// What the quick estimates found, for measuring exactly afterwards.
+    struct Start: Sendable {
+        let candidates: [SourceFile]
+        let pixels: [URL: Int]
+        let measured: [URL: ImageSizes]
+        let videos: [URL: VideoTime]
+    }
+
+    /// Works out the quick estimates and publishes them; returns what measuring needs.
+    func quick(publish: @Sendable (Offers) async -> Void) async -> Start {
         let (known, _) = remembered()
         let unknown = ImageSizes.spread(images.filter { known[$0.url] == nil })
         async let quick = ImageSizes.quick(Array(unknown.prefix(ImageSizes.sampledImages)))
@@ -50,13 +56,15 @@ struct Refinement: Sendable {
         let measured = await quick.merging(known) { quick, _ in quick }
         let pixels = await pixelCounts
         await publish(offers(ImageSizes.completing(measured, for: images, pixels: pixels), videos))
+        return Start(candidates: unknown, pixels: pixels, measured: measured, videos: videos)
+    }
 
-        // Measuring is background work: below the quick estimates, the ring and conversions.
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask(priority: .utility) {
-                await measureExactly(unknown, pixels: pixels, from: measured, videos: videos, publish: publish)
-            }
-        }
+    /// Measures exactly what `quick` left approximate, publishing the offers after each output.
+    /// Stops at the next step when its task is cancelled: an encode in progress finishes, and
+    /// nothing else starts.
+    func exact(from start: Start, publish: @Sendable (Offers) async -> Void) async {
+        await measureExactly(start.candidates, pixels: start.pixels, from: start.measured, videos: start.videos,
+                             publish: publish)
     }
 
     /// Measures `candidates` exactly, in order, while they fit in `exactPixelBudget`, publishing

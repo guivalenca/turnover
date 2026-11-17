@@ -61,13 +61,17 @@ public final class LiveOffers {
     /// Set by `cancel()`. The offers stop changing at once, though the work may take a moment to
     /// wind down.
     @ObservationIgnored private(set) var isCancelled = false
-    @ObservationIgnored private var work: Task<Void, Never>?
+    /// The quick estimates, which the ring is waiting for.
+    @ObservationIgnored private var quickWork: Task<Void, Never>?
+    /// Measuring, started by `quickWork` once it is done. Nothing of higher priority awaits it
+    /// (that would raise its priority), except `waitUntilFinished()`.
+    @ObservationIgnored private var exactWork: Task<Void, Never>?
 
     init(_ refinement: Refinement) {
         offers = refinement.initialOffers()
-        work = Task.detached(priority: .utility) { [self] in
-            await refinement.run { offers in await self.publish(offers) }
-            await self.finish()
+        quickWork = Task.detached(priority: .userInitiated) { [self] in
+            let start = await refinement.quick { offers in await self.publish(offers) }
+            await self.measure(from: start, with: refinement)
         }
     }
 
@@ -75,12 +79,23 @@ public final class LiveOffers {
     /// size is remembered), and nothing else starts. `isFinished` turns true once it's done.
     public func cancel() {
         isCancelled = true
-        work?.cancel()
+        quickWork?.cancel()
+        exactWork?.cancel()
     }
 
     /// Waits until nothing runs in the background any more.
     public func waitUntilFinished() async {
-        await work?.value
+        await quickWork?.value
+        await exactWork?.value
+    }
+
+    private func measure(from start: Refinement.Start, with refinement: Refinement) {
+        guard !isCancelled else { return finish() }
+        // Background work: below the quick estimates, the ring and the conversions.
+        exactWork = Task.detached(priority: .utility) { [self] in
+            await refinement.exact(from: start) { offers in await self.publish(offers) }
+            await self.finish()
+        }
     }
 
     private func publish(_ offers: Offers) {
