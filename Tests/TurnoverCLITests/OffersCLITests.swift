@@ -19,8 +19,9 @@ import TurnoverTestSupport
         let lines = run.output.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         let expected = [
             #"Images \(2 files\)"#,
-            #"  PNG   1 file   ~\d+ KB"#,
-            #"  JPEG  2 files  Best ~\d+ KB, High ~\d+ KB \(default\), Small ~\d+ KB"#,
+            // Small images are measured exactly at once, so their sizes have no "~".
+            #"  PNG   1 file   ~?\d+ KB"#,
+            #"  JPEG  2 files  Best ~?\d+ KB, High ~?\d+ KB \(default\), Small ~?\d+ KB"#,
             #"Videos \(1 file\)"#,
             #"  MP4   1 file   Instant"#,
             #"Skipped"#,

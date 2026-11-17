@@ -100,6 +100,27 @@ import TurnoverTestSupport
         }
     }
 
+    /// HEIC decodes through the hardware path, which gives the conversion an alpha channel and a
+    /// faster JPEG encoder that writes smaller files; the quick sample allows for both. Mosaics
+    /// repeat and are noisier than photos, so this only guards against gross errors; the real
+    /// accuracy is measured on real photos (`QuickEstimateAccuracy`).
+    @Test(arguments: [Fixture.heicRotated, .webp])
+    func aCameraSizedHEICIsEstimatedWithin30Percent(fixture: Fixture) async throws {
+        let photo = try folder.addMosaic(of: fixture, width: 4032, height: 3024, as: "photo.heic", type: .heic)
+
+        let offers = await Offers(estimating: [photo])
+
+        let png = try #require(offers.targets.first { $0.format == .png })
+        let jpeg = try #require(offers.targets.first { $0.format == .jpeg })
+        let estimates = [(PNGAction() as any ConversionAction, png.estimate)]
+            + jpeg.presets.map { (JPEGAction(quality: $0.quality) as any ConversionAction, Optional($0.estimate)) }
+        for (action, estimate) in estimates {
+            let real = try await outputSize(of: photo, with: action)
+            let ratio = Double(try bytes(estimate)) / Double(real)
+            #expect((0.7...1.3).contains(ratio), "\(fixture) \(action.name) \((action as? JPEGAction)?.quality.name ?? ""): \(ratio)")
+        }
+    }
+
     @Test func aSixMegapixelPhotoIsEstimatedInUnder50Milliseconds() async throws {
         let photo = try folder.addMosaic(of: .heicRotated, width: 3000, height: 2000, as: "big.jpg")
 
@@ -244,8 +265,9 @@ func outputSize(of image: URL, with action: some ConversionAction) async throws 
     }
 }
 
+/// The size an estimate gives, exact or not.
 func bytes(_ estimate: Estimate?) throws -> Int {
-    guard case .size(let bytes) = estimate else { throw EstimateMismatch(estimate: estimate) }
+    guard let bytes = estimate?.bytes else { throw EstimateMismatch(estimate: estimate) }
     return bytes
 }
 
