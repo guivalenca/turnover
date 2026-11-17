@@ -25,8 +25,11 @@ case .convert(let files, let action):
         let source = URL(fileURLWithPath: path).absoluteURL.standardizedFileURL
         do {
             print(try await Converter().convert(source, with: action).output.path)
-        } catch {
+        } catch let error as ConversionError {
             printError(error.localizedDescription)
+            failed = true
+        } catch {
+            printError("\(source.lastPathComponent): \(error.localizedDescription)")
             failed = true
         }
     }

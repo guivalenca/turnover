@@ -12,6 +12,15 @@ public struct ConversionResult: Sendable, Hashable {
 public struct Converter: Sendable {
     public init() {}
 
+    /// Converts `source` with `action` and returns where the new file landed.
+    ///
+    /// The output appears next to the source, named like it with the action's extension and a
+    /// Finder-style number if that name is taken, carrying the source's creation and modification
+    /// dates. It appears complete or not at all; the source and existing files are never touched.
+    ///
+    /// Throws `ConversionError` when the file can't be read, isn't something `action` accepts, or
+    /// can't be decoded. File-system failures while writing (for example a read-only folder)
+    /// surface as the underlying Cocoa or POSIX error.
     public func convert(_ source: URL, with action: some ConversionAction) async throws -> ConversionResult {
         let file = try SourceFile(source)
         guard action.accepts(file) else { throw refusal(of: file, by: action) }
