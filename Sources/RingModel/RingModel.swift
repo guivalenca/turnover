@@ -21,6 +21,9 @@ public struct RingModel: Sendable {
         case dragStarted(shiftDown: Bool)
         /// ⇧ went down or up.
         case shift(down: Bool)
+        /// ⌥ went down or up. Send it whenever it changes during a drag, and its state at drag
+        /// start: held while the ring is open, it fans JPEG out into its qualities.
+        case option(down: Bool)
         /// What the dragged files can be converted to, or the same offers with newer estimates.
         /// Send it as soon as the files are known (at drag start if the drag pasteboard can be
         /// read then, otherwise when the open ring first sees the drag), then on every update.
@@ -59,7 +62,13 @@ public struct RingModel: Sendable {
     /// The ring's entries while it is open and the dragged files are known; empty otherwise.
     public var entries: [Entry] {
         guard phase == .open, let offers else { return [] }
-        return Self.layout(offers)
+        return Self.layout(offers, fannedOut: isFannedOut)
+    }
+
+    /// ⌥ is held over the open ring and JPEG is offered: JPEG is fanned out into its qualities.
+    public var isFannedOut: Bool {
+        guard phase == .open, optionDown, let offers else { return false }
+        return offers.targets.contains { $0.format == .jpeg }
     }
 
     /// The entry a drop would convert to: the one whose arc the pointer is in, if the pointer is
@@ -77,14 +86,18 @@ public struct RingModel: Sendable {
     public var hub: Hub? {
         guard phase == .open, let offers else { return nil }
         guard let entry = highlighted, let choice = entry.choices.first else {
+            if isFannedOut { return Hub(title: "JPEG", detail: "quality", text: "JPEG quality") }
             let files = offers.groups.flatMap(\.files)
             let kinds = Set(offers.groups.map(\.kind))
             let noun = kinds.count == 1 ? Self.noun(kinds.first!, count: files.count) : (files.count == 1 ? "file" : "files")
             return Hub(title: "\(files.count)", detail: noun, text: "\(files.count) \(noun)")
         }
         // One format: its size or time, or how many files it converts until that is known.
-        let detail = entry.estimate?.label ?? "\(choice.files.count) \(Self.noun(choice.kind, count: choice.files.count))"
-        return Hub(title: entry.title, detail: detail, text: "\(entry.title) · \(detail)")
+        var detail = entry.estimate?.label ?? "\(choice.files.count) \(Self.noun(choice.kind, count: choice.files.count))"
+        // A JPEG quality: "JPEG", "Best · 5.2 MB".
+        if let quality = entry.quality { detail = "\(quality.name) · \(detail)" }
+        let title = choice.format.name
+        return Hub(title: title, detail: detail, text: "\(title) · \(detail)")
     }
 
     /// The text in the ring's centre.
@@ -113,6 +126,8 @@ public struct RingModel: Sendable {
 
     /// ⇧ was held when the drag started and hasn't been released since: it doesn't count.
     private var shiftHeldSinceDragStart = false
+    /// ⌥ is held.
+    private var optionDown = false
 
     public init() {}
 
@@ -131,6 +146,8 @@ public struct RingModel: Sendable {
             shiftHeldSinceDragStart = false
             hint = nil
             if phase == .open { phase = .dragging }
+        case .option(let down):
+            optionDown = down
         case .offers(let offers):
             self.offers = offers
             // Nothing to convert: a hint instead of the ring, and the drag goes on as usual.

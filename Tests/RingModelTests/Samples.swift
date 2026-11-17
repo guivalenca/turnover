@@ -11,11 +11,15 @@ enum Sample {
     static let lease = URL(fileURLWithPath: "/Users/me/Documents/lease.pdf")
 
     /// Offers for images that aren't PNGs or JPEGs (HEICs, say): PNG and JPEG.
+    /// `presets`: each JPEG quality's estimate, for the ⌥ fan-out.
     static func images(_ files: [URL], png: Estimate? = nil, jpeg: Estimate? = nil,
-                       jpegQuality: JPEGQuality = .default) -> Offers {
+                       jpegQuality: JPEGQuality = .default, presets: [JPEGQuality: Estimate] = [:]) -> Offers {
         Offers(groups: [.init(kind: .image, files: files, targets: [
             .init(format: .png, kind: .image, files: files, estimate: png),
-            .init(format: .jpeg, kind: .image, files: files, quality: jpegQuality, estimate: jpeg),
+            .init(format: .jpeg, kind: .image, files: files, quality: jpegQuality, estimate: jpeg,
+                  presets: JPEGQuality.allCases.compactMap { quality in
+                      presets[quality].map { Offers.Preset(quality: quality, estimate: $0) }
+                  }),
         ])])
     }
 

@@ -16,6 +16,10 @@ extension RingModel {
         public let arc: Arc
         /// What a drop on it converts.
         public let choices: [Choice]
+        /// The JPEG quality it stands for when ⌥ fans JPEG out ("Best", say); nil for a format.
+        public let quality: JPEGQuality?
+        /// A JPEG quality fanned out by ⌥ that is the stored default: it is marked.
+        public let isDefault: Bool
     }
 
     /// A stretch of the circle, clockwise from `start` to `end`, in degrees (`end - start` is at
@@ -38,19 +42,54 @@ extension RingModel {
     }
 
     /// A single entry sits at the top; two sit left and right, in display order (PNG left, JPEG
-    /// right). More (a mixed drag) are spread evenly from the top for now: #12 lays out mixed
-    /// drags, images on the left and videos on the right.
-    static func layout(_ offers: Offers) -> [Entry] {
-        let targets = offers.targets
-        let angles: [Double] = switch targets.count {
-        case 1: [-90]
-        case 2: [180, 0]
-        default: targets.indices.map { -90 + Double($0) * 360 / Double(targets.count) }
+    /// right). With ⌥, JPEG's qualities fan out 54° apart around where JPEG was. More (a mixed
+    /// drag) are spread evenly from the top for now.
+    static func layout(_ offers: Offers, fannedOut: Bool) -> [Entry] {
+        let spots = offers.targets.flatMap { spots(for: $0, fannedOut: fannedOut) }
+        let angles: [Double]
+        if offers.groups.count == 1, spots.contains(where: { $0.preset != nil }) {
+            // JPEG's qualities around where JPEG was: the right, or the top if JPEG was alone.
+            let others = spots.filter { $0.preset == nil }.count
+            angles = others == 1 ? [180] + spread(3, around: 0, step: 54) : spread(3, around: -90, step: 54)
+        } else {
+            angles = switch spots.count {
+            case 1: [-90]
+            case 2: [180, 0]
+            default: spots.indices.map { -90 + Double($0) * 360 / Double(spots.count) }
+            }
         }
-        return zip(targets, angles).map { target, angle in
-            Entry(title: target.format.name, estimate: target.estimate, angle: angle,
-                  arc: arc(around: angle, among: angles), choices: [Choice(target)])
+        return zip(spots, angles).map { spot, angle in
+            Entry(title: spot.title, estimate: spot.estimate, angle: angle,
+                  arc: arc(around: angle, among: angles), choices: spot.choices,
+                  quality: spot.preset, isDefault: spot.isDefault)
         }
+    }
+
+    /// What an entry shows and converts, before it is placed.
+    private struct Spot {
+        let title: String
+        let estimate: Estimate?
+        let choices: [Choice]
+        /// The JPEG quality it stands for, when JPEG is fanned out.
+        let preset: JPEGQuality?
+        var isDefault = false
+    }
+
+    /// One spot per target, except JPEG fanned out: one per quality, Best to Small.
+    private static func spots(for target: Offers.Target, fannedOut: Bool) -> [Spot] {
+        guard fannedOut, target.format == .jpeg else {
+            return [Spot(title: target.format.name, estimate: target.estimate, choices: [Choice(target)], preset: nil)]
+        }
+        return JPEGQuality.allCases.map { quality in
+            Spot(title: quality.name, estimate: target.presets.first { $0.quality == quality }?.estimate,
+                 choices: [Choice(kind: target.kind, format: .jpeg, quality: quality, files: target.files)],
+                 preset: quality, isDefault: quality == target.quality)
+        }
+    }
+
+    /// `count` angles `step` degrees apart, centred on `centre`.
+    private static func spread(_ count: Int, around centre: Double, step: Double) -> [Double] {
+        (0..<count).map { centre + (Double($0) - Double(count - 1) / 2) * step }
     }
 
     /// The arc halfway to the nearest entry on each side; the whole circle for a lone entry.
