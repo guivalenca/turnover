@@ -49,23 +49,12 @@ public struct Converter: Sendable {
         progress: @escaping @Sendable (Double) -> Void = { _ in }
     ) async throws -> ConversionResult {
         let progress = ConversionProgress(progress)
-        guard action.accepts(file) else { throw Self.refusal(of: file, by: action) }
+        guard action.accepts(file) else { throw ConversionError.refusal(of: file, by: action) }
         let placement = Placement(nextTo: file.url, fileExtension: action.fileExtension, fallback: downloads)
         let output = try await placement.place { temporary in
             try await action.perform(file, writingTo: temporary, progress: progress)
         }
         progress.report(1)
         return ConversionResult(source: file.url, output: output, savedToDownloads: placement.usesFallback)
-    }
-
-    /// Why `action` doesn't accept `file`.
-    static func refusal(of file: SourceFile, by action: any ConversionAction) -> ConversionError {
-        if file.kind == .unsupported {
-            return .unsupported(file.url, typeDescription: file.contentType.localizedDescription ?? file.contentType.identifier)
-        }
-        if file.contentType.conforms(to: action.outputType) {
-            return .alreadyInFormat(file.url, format: action.name)
-        }
-        return .notApplicable(file.url, format: action.name)
     }
 }

@@ -124,7 +124,7 @@ public final class JobRunner {
     /// Why no target fits `file`: "already a PNG" or "not an image or a video" before "can't be
     /// converted to MP4", which only says that the file is of another kind than that target.
     private nonisolated static func skipReason(_ file: SourceFile, _ targets: [any ConversionAction]) -> ConversionError {
-        let refusals = targets.map { Converter.refusal(of: file, by: $0) }
+        let refusals = targets.map { ConversionError.refusal(of: file, by: $0) }
         return refusals.first { if case .notApplicable = $0 { false } else { true } } ?? refusals[0]
     }
 }

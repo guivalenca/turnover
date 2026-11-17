@@ -1,0 +1,44 @@
+import Foundation
+
+/// Roughly how long converting one video to MP4 takes, from its plan.
+///
+/// Calibrated on an Apple Silicon Mac with the hardware H.264 encoder (see the #5 notes): copying
+/// the video into the new container runs at about 275 MB/s of file, and re-encoding at about
+/// 550 million pixels per second.
+struct VideoTime: Sendable {
+    /// In seconds.
+    let seconds: Double
+    /// Whether the video is only copied, not re-encoded.
+    let isCopy: Bool
+
+    static let copiedBytesPerSecond = 275e6
+    static let encodedPixelsPerSecond = 550e6
+    /// The batch runner converts at most this many videos at once.
+    static let simultaneousVideos = 2
+
+    /// Nil when the video can't be planned (it is damaged, or has no video track).
+    init?(of url: URL) async {
+        guard let file = try? SourceFile(url), let plan = try? await MP4Action().plan(for: file) else { return nil }
+        isCopy = plan.passesVideoThrough
+        if isCopy {
+            let bytes = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            seconds = Double(bytes) / Self.copiedBytesPerSecond
+        } else {
+            let pixels = Double(plan.frameWidth * plan.frameHeight) * plan.frameRate * plan.duration
+            seconds = pixels / Self.encodedPixelsPerSecond
+        }
+    }
+
+    /// The estimate for converting `videos` as one batch: "Instant" when every video is only
+    /// copied and the whole batch takes under a second.
+    static func estimate(_ videos: [VideoTime]) -> Estimate? {
+        guard !videos.isEmpty else { return nil }
+        // Longest first, each into the lane that frees up first.
+        var lanes = [Double](repeating: 0, count: simultaneousVideos)
+        for video in videos.sorted(by: { $0.seconds > $1.seconds }) {
+            lanes[lanes.indices.min { lanes[$0] < lanes[$1] }!] += video.seconds
+        }
+        let total = lanes.max()!
+        return videos.allSatisfy(\.isCopy) && total < 1 ? .instant : .duration(total)
+    }
+}
