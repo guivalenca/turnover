@@ -239,6 +239,53 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
     }
 }
 
+/// A total is exact only when every file in it is.
+@MainActor
+@Suite(.timeLimit(.minutes(1))) struct HonestTotals {
+    let folder = try! ScratchFolder()
+
+    @Test func aTotalIsNeverExactBeforeEveryOutputOfEveryPhotoIsMeasured() async throws {
+        // More photos than the quick estimate samples, so the last one starts with no estimate of
+        // its own; each has four outputs, measured one at a time.
+        let first = try await mosaic(in: folder, of: .heicRotated, width: 1200, height: 900, as: "1.heic", type: .heic)
+        let photos = try [first] + (2...ImageSizesSampled.count + 1).map { index in
+            let copy = folder.url.appendingPathComponent("\(index).heic")
+            try FileManager.default.copyItem(at: first, to: copy)
+            return copy
+        }
+
+        let live = Estimator().estimate(photos)
+        let png = Recording { live.offers.targets.first { $0.format == .png }?.estimate }
+        let small = Recording { live.offers.targets.first { $0.format == .jpeg }?.presets.last?.estimate }
+        await live.waitUntilFinished()
+
+        for estimates in [png.values, small.values] {
+            let exact = estimates.compactMap { $0 }.filter(\.isExact)
+            #expect(!exact.isEmpty)
+            #expect(Set(exact).count == 1, "\(exact)")
+        }
+    }
+
+    @Test func aFileThatCantBeMeasuredMakesTheTotalApproximate() async throws {
+        let whole = try folder.add(.png, as: "logo.png")
+        // Cut in its header: offered as an image, but it can't be decoded. (Cut later, a HEIC
+        // decodes to whatever ImageIO makes of the missing data, which varies.)
+        let broken = try folder.add(Fixture.heicRotated.data.prefix(1_000), as: "broken.heic")
+
+        let live = Estimator().estimate([whole, broken])
+        await live.waitUntilFinished()
+
+        let jpeg = try #require(live.offers.targets.first { $0.format == .jpeg })
+        #expect(jpeg.files == [whole, broken])
+        #expect(jpeg.estimate?.isExact == false, "\(String(describing: jpeg.estimate))")
+    }
+}
+
+/// How many photos the quick estimate samples (`ImageSizes.sampledImages`, which is internal).
+enum ImageSizesSampled {
+    static let count = 4
+}
+
 /// Refining is background work: it never competes with a conversion the user asked for.
 @MainActor
 @Suite(.timeLimit(.minutes(1))) struct YieldingToConversions {
@@ -298,9 +345,10 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
     func a12MegapixelPhotoIsExactWithinASecond() async throws {
         let photo = try await mosaic(in: folder, of: .heicRotated, width: 4032, height: 3024, as: "photo.heic", type: .heic)
 
-        // The fastest of two, each from scratch: the first pays for loading the HEVC decoder.
+        // The fastest of three, each from scratch: the first pays for loading the HEVC decoder,
+        // and other tests compete for the CPU.
         var png: [Duration] = [], jpeg: [Duration] = []
-        for _ in 1...2 {
+        for _ in 1...3 {
             let (toPNG, toJPEG) = await timeToExact(photo)
             png.append(toPNG)
             jpeg.append(toJPEG)
@@ -345,14 +393,16 @@ func timeToExact(_ photo: URL) async -> (png: Duration, jpeg: Duration) {
     return (times[.png] ?? .zero, times[.jpeg] ?? .zero)
 }
 
-/// `folder.addMosaic(…)`, made off the main actor: a camera-sized photo takes a while to make (on
-/// CI, seconds), and the other tests need the main actor meanwhile.
+/// `folder.addMosaic(…)`, made on a dispatch queue: a camera-sized photo takes a while to make
+/// (on CI, seconds), and the other tests need the main actor and the concurrency threads meanwhile.
 @discardableResult
 func mosaic(in folder: ScratchFolder, of fixture: Fixture, width: Int, height: Int, as name: String,
             type: UTType = .jpeg) async throws -> URL {
-    try await Task.detached {
-        try folder.addMosaic(of: fixture, width: width, height: height, as: name, type: type)
-    }.value
+    try await withCheckedThrowingContinuation { continuation in
+        DispatchQueue.global().async {
+            continuation.resume(with: Result { try folder.addMosaic(of: fixture, width: width, height: height, as: name, type: type) })
+        }
+    }
 }
 
 /// The files of `files` whose sizes `estimator` remembers exactly. Asking cancels the selection in

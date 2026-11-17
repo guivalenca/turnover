@@ -107,7 +107,8 @@ public struct Offers: Sendable, Hashable {
             let sizes = files.compactMap { images[$0]?.sizes[output] }
             guard !sizes.isEmpty else { return nil }
             let total = sizes.reduce(0) { $0 + $1.bytes }
-            return sizes.allSatisfy(\.isExact) ? .exactSize(total) : .size(total)
+            // Exact only if every file was measured: one that couldn't be may still convert.
+            return sizes.count == files.count && sizes.allSatisfy(\.isExact) ? .exactSize(total) : .size(total)
         }
     }
 

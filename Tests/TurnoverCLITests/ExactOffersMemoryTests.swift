@@ -8,16 +8,16 @@ import TurnoverTestSupport
 @Suite(.timeLimit(.minutes(3))) struct ExactOffersMemory {
     let folder = try! ScratchFolder()
 
-    @Test func refiningTenBigPhotosTakesNoMoreMemoryThanOne() throws {
-        let first = try folder.addMosaic(of: .heicRotated, width: 8064, height: 6048, as: "1.jpg")
+    @Test func refiningTenBigPhotosTakesNoMoreMemoryThanOne() async throws {
+        let first = try await offThePool { try folder.addMosaic(of: .heicRotated, width: 8064, height: 6048, as: "1.jpg") }
         let photos = try [first] + (2...10).map { index in
             let copy = folder.url.appendingPathComponent("\(index).jpg")
             try FileManager.default.copyItem(at: first, to: copy)
             return copy
         }
 
-        let one = try peakMemory(ofTurnover: ["offers", "--exact", first.path])
-        let ten = try peakMemory(ofTurnover: ["offers", "--exact"] + photos.map(\.path))
+        let one = try await offThePool { try peakMemory(ofTurnover: ["offers", "--exact", first.path]) }
+        let ten = try await offThePool { try peakMemory(ofTurnover: ["offers", "--exact"] + photos.map(\.path)) }
 
         #expect(one.status == 0 && ten.status == 0)
         // About what converting one of them to PNG takes: the decoded photo plus the PNG (about
@@ -53,4 +53,12 @@ func peakMemory(ofTurnover arguments: [String]) throws -> (status: Int32, bytes:
     while wait4(pid, &status, 0, &usage) == -1 && errno == EINTR {}
     // ru_maxrss is in bytes on macOS.
     return ((status >> 8) & 0xFF, usage.ru_maxrss)
+}
+
+/// Runs `work`, which blocks for seconds, on a dispatch queue, keeping Swift concurrency's few
+/// threads (three on CI) free for the tests running alongside.
+func offThePool<T: Sendable>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
+    try await withCheckedThrowingContinuation { continuation in
+        DispatchQueue.global().async { continuation.resume(with: Result { try work() }) }
+    }
 }

@@ -42,7 +42,7 @@ public final class Estimator {
             return current.live
         }
         current?.live.cancel()
-        let live = LiveOffers(Refinement(files: files, inspection: Offers.Inspection(files),
+        let live = LiveOffers(after: current?.live, Refinement(files: files, inspection: Offers.Inspection(files),
                                          jpegQuality: jpegQuality, cache: cache, conversions: conversions,
                                          exactPixelBudget: exactPixelBudget))
         current = (files, jpegQuality, live)
@@ -76,11 +76,13 @@ public final class LiveOffers {
     /// (that would raise its priority), except `waitUntilFinished()`.
     @ObservationIgnored private var exactWork: Task<Void, Never>?
 
-    init(_ refinement: Refinement) {
+    /// `previous`, the selection this one replaces, is cancelled. Measuring waits for it to wind
+    /// down, so only one image is ever decoded for measuring at a time.
+    init(after previous: LiveOffers? = nil, _ refinement: Refinement) {
         offers = refinement.initialOffers()
         quickWork = Task.detached(priority: .userInitiated) { [self] in
             let start = await refinement.quick { offers in await self.publish(offers) }
-            await self.measure(from: start, with: refinement)
+            await self.measure(from: start, with: refinement, after: previous)
         }
     }
 
@@ -98,10 +100,11 @@ public final class LiveOffers {
         await exactWork?.value
     }
 
-    private func measure(from start: Refinement.Start, with refinement: Refinement) {
+    private func measure(from start: Refinement.Start, with refinement: Refinement, after previous: LiveOffers?) {
         guard !isCancelled else { return finish() }
         // Background work: below the quick estimates, the ring and the conversions.
         exactWork = Task.detached(priority: .utility) { [self] in
+            await previous?.waitUntilFinished()
             await refinement.exact(from: start) { offers in await self.publish(offers) }
             await self.finish()
         }

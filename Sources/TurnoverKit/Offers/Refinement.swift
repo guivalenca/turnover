@@ -71,24 +71,29 @@ struct Refinement: Sendable {
                                 videos: [URL: VideoTime], publish: @Sendable (Offers) async -> Void) async {
         var measured = start
         var budget = exactPixelBudget
-        for image in candidates {
+        var seen: Set<URL> = []
+        for image in candidates where seen.insert(image.url).inserted {
             await conversions?.waitUntilIdle()
             guard !Task.isCancelled else { return }
             guard let count = pixels[image.url], count <= budget, let key = SizeCache.Key(image.url) else { continue }
-            budget -= count
             // Sizes remembered for some outputs already, from an earlier, interrupted measurement.
             let remembered = cache.sizes(for: key)?.sizes ?? [:]
             for (output, size) in remembered {
                 measured[image.url, default: ImageSizes(pixels: count, sizes: [:])].sizes[output] = size
             }
             let outputs = ImageOutput.of(image).filter { remembered[$0] == nil }.sorted { rank($0) < rank($1) }
-            guard !outputs.isEmpty, let decoded = try? ImageConversion.Decoded(image.url) else { continue }
+            guard !outputs.isEmpty,
+                  let decoded = await blocking(.utility, { try? ImageConversion.Decoded(image.url) })
+            else { continue }
+            budget -= count
             // The decode read the whole file; if it changed meanwhile, these sizes belong to no key.
             let unchanged = SizeCache.Key(image.url) == key
             for output in outputs {
                 await conversions?.waitUntilIdle()
                 guard !Task.isCancelled else { return }
-                guard let bytes = ImageConversion.encodedSize(of: decoded, as: output.type, quality: output.encoderQuality)
+                guard let bytes = await blocking(.utility, {
+                    ImageConversion.encodedSize(of: decoded, as: output.type, quality: output.encoderQuality)
+                })
                 else { break }
                 if unchanged { cache.store(output, bytes: bytes, pixels: count, for: key) }
                 measured[image.url, default: ImageSizes(pixels: count, sizes: [:])]

@@ -42,7 +42,9 @@ struct ImageSizes: Sendable {
     /// Quick sizes for `images`, measured side by side; the ones that can't be decoded are left out.
     static func quick(_ images: [SourceFile]) async -> [URL: ImageSizes] {
         await withTaskGroup(of: (URL, ImageSizes?).self) { group in
-            for image in images { group.addTask { (image.url, ImageSizes(of: image)) } }
+            for image in images {
+                group.addTask { (image.url, await blocking(.userInitiated) { ImageSizes(of: image) }) }
+            }
             return await group.reduce(into: [URL: ImageSizes]()) { $0[$1.0] = $1.1 }
         }
     }
@@ -65,11 +67,16 @@ struct ImageSizes: Sendable {
             }
             sizes[image.url] = own
         }
+        // Scale every output an image lacks: all of them for an image not measured, the rest for
+        // one measured exactly so far for some outputs only.
         let references = images.compactMap { image in sizes[image.url].map { (image, $0) } }
-        for image in images where sizes[image.url] == nil {
-            guard let count = pixels[image.url], let scaled = ImageSizes(scaling: references, to: count, like: image)
+        for image in images {
+            let own = sizes[image.url]
+            guard ImageOutput.of(image).contains(where: { own?.sizes[$0] == nil }),
+                  let count = own?.pixels ?? pixels[image.url],
+                  let scaled = ImageSizes(scaling: references, to: count, like: image)
             else { continue }
-            sizes[image.url] = scaled
+            sizes[image.url] = ImageSizes(pixels: count, sizes: scaled.sizes.merging(own?.sizes ?? [:]) { _, own in own })
         }
         return sizes
     }
