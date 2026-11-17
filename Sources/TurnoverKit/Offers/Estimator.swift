@@ -20,10 +20,13 @@ public final class Estimator {
     /// Starts estimating `files` and returns at once.
     ///
     /// Images measured before, and unchanged since, are exact from the start; the other estimates
-    /// fill in and sharpen as the work goes on. Asking again for the same files returns the same
-    /// `LiveOffers`, work and all; asking for other files cancels the previous ones.
+    /// fill in and sharpen as the work goes on. Asking again for the same files while their work
+    /// is in progress returns the same `LiveOffers`; once it has finished, a new one checks the
+    /// files again (from the cache, so it is quick). Asking for other files cancels the previous
+    /// ones.
     public func estimate(_ files: [URL], jpegQuality: JPEGQuality = .default) -> LiveOffers {
-        if let current, current.files == files, current.jpegQuality == jpegQuality, !current.live.isCancelled {
+        if let current, current.files == files, current.jpegQuality == jpegQuality,
+           !current.live.isCancelled, !current.live.isFinished {
             return current.live
         }
         current?.live.cancel()
