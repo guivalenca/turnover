@@ -38,6 +38,15 @@ public enum JPEGQuality: String, CaseIterable, Sendable {
     /// The preset used when none is chosen.
     public static let `default` = JPEGQuality.high
 
+    /// The name users see: "Best", "High" or "Small".
+    public var name: String {
+        switch self {
+        case .best: "Best"
+        case .high: "High"
+        case .small: "Small"
+        }
+    }
+
     /// The encoder quality as a percentage: 100, 85 or 60.
     public var percent: Int {
         switch self {
