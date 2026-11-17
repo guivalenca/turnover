@@ -13,7 +13,7 @@ public struct Converter: Sendable {
     public init() {}
 
     public func convert(_ source: URL, with action: some ConversionAction) async throws -> ConversionResult {
-        let file = SourceFile(source)
+        let file = try SourceFile(source)
         let placement = Placement(nextTo: source, fileExtension: action.outputType.preferredFilenameExtension!)
         let output = try await placement.place { temporary in
             try await action.perform(file, writingTo: temporary)
