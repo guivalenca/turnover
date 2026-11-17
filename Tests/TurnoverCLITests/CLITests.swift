@@ -6,10 +6,10 @@ import TurnoverTestSupport
 @Suite struct CLI {
     let folder = try! ScratchFolder()
 
-    @Test func convertsAPhotoToPNGAndPrintsItsPath() throws {
+    @Test func convertsAPhotoToPNGAndPrintsItsPath() async throws {
         let photo = try folder.add(.heicRotated, as: "photo.heic")
 
-        let run = try turnover(photo.path, "--to", "png")
+        let run = try await turnover(photo.path, "--to", "png")
 
         #expect(run.status == 0)
         #expect(run.output == folder.url.appendingPathComponent("photo.png").path + "\n")
@@ -17,10 +17,10 @@ import TurnoverTestSupport
         #expect(try folder.fileNames() == ["photo.heic", "photo.png"])
     }
 
-    @Test func anUnsupportedFileExitsNonZeroWithAShortReason() throws {
+    @Test func anUnsupportedFileExitsNonZeroWithAShortReason() async throws {
         let text = try folder.add(.text)
 
-        let run = try turnover(text.path, "--to", "png")
+        let run = try await turnover(text.path, "--to", "png")
 
         #expect(run.status == 1)
         #expect(run.output == "")
@@ -28,21 +28,21 @@ import TurnoverTestSupport
         #expect(try folder.fileNames() == ["notes.txt"])
     }
 
-    @Test func aCorruptImageExitsNonZeroAndLeavesNothingBehind() throws {
+    @Test func aCorruptImageExitsNonZeroAndLeavesNothingBehind() async throws {
         let broken = try folder.add(Fixture.heicRotated.data.prefix(2000), as: "broken.heic")
 
-        let run = try turnover(broken.path, "--to", "png")
+        let run = try await turnover(broken.path, "--to", "png")
 
         #expect(run.status == 1)
         #expect(run.messages == ["turnover: broken.heic: damaged or incomplete, can't be decoded"])
         #expect(try folder.fileNames() == ["broken.heic"])
     }
 
-    @Test func goodFilesStillConvertWhenAnotherFails() throws {
+    @Test func goodFilesStillConvertWhenAnotherFails() async throws {
         let photo = try folder.add(.heicRotated, as: "photo.heic")
         let png = try folder.add(.png, as: "logo.png")
 
-        let run = try turnover(png.path, photo.path, "--to", "png")
+        let run = try await turnover(png.path, photo.path, "--to", "png")
 
         #expect(run.status == 1)
         #expect(run.output == folder.url.appendingPathComponent("photo.png").path + "\n")
@@ -56,20 +56,20 @@ import TurnoverTestSupport
         ["--to", "png"],
         ["photo.heic", "--to", "png", "--fast"],
     ])
-    func aBadCommandLineIsAUsageError(arguments: [String]) throws {
+    func aBadCommandLineIsAUsageError(arguments: [String]) async throws {
         try folder.add(.heicRotated, as: "photo.heic")
 
-        let run = try turnover(arguments, in: folder.url)
+        let run = try await turnover(arguments, in: folder.url)
 
         #expect(run.status == 64)
         #expect(run.errors.contains("usage: turnover"))
         #expect(try folder.fileNames() == ["photo.heic"])
     }
 
-    @Test func relativePathsAreResolvedFromTheWorkingDirectory() throws {
+    @Test func relativePathsAreResolvedFromTheWorkingDirectory() async throws {
         try folder.add(.heicRotated, as: "photo.heic")
 
-        let run = try turnover(["photo.heic", "--to=png"], in: folder.url)
+        let run = try await turnover(["photo.heic", "--to=png"], in: folder.url)
 
         #expect(run.status == 0)
         #expect(run.output.hasSuffix("/photo.png\n"))
@@ -92,12 +92,17 @@ struct Run {
     }
 }
 
-/// Runs the `turnover` executable that `swift test` built next to this test bundle.
-func turnover(_ arguments: String...) throws -> Run {
-    try turnover(arguments)
+/// Runs the `turnover` executable that `swift test` built next to this test bundle, and waits
+/// for it off the concurrency threads (see `offThePool`).
+func turnover(_ arguments: String...) async throws -> Run {
+    try await turnover(arguments)
 }
 
-func turnover(_ arguments: [String], in workingDirectory: URL? = nil) throws -> Run {
+func turnover(_ arguments: [String], in workingDirectory: URL? = nil) async throws -> Run {
+    try await offThePool { try runTurnover(arguments, in: workingDirectory) }
+}
+
+private func runTurnover(_ arguments: [String], in workingDirectory: URL?) throws -> Run {
     let process = Process()
     process.executableURL = productsDirectory.appendingPathComponent("turnover")
     process.arguments = arguments

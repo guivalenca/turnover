@@ -6,10 +6,10 @@ import TurnoverTestSupport
 @Suite struct JPEGCLI {
     let folder = try! ScratchFolder()
 
-    @Test func convertsAPhotoToJPGAtHighQualityByDefault() throws {
+    @Test func convertsAPhotoToJPGAtHighQualityByDefault() async throws {
         let photo = try folder.add(.heicRotated, as: "photo.heic")
 
-        let run = try turnover(photo.path, "--to", "jpeg")
+        let run = try await turnover(photo.path, "--to", "jpeg")
 
         let output = folder.url.appendingPathComponent("photo.jpg")
         #expect(run.status == 0)
@@ -25,10 +25,10 @@ import TurnoverTestSupport
         (["--quality", "small"], 0.6),
         (["--quality=Small"], 0.6),
     ])
-    func qualityPicksThePreset(option: [String], quality: Double) throws {
+    func qualityPicksThePreset(option: [String], quality: Double) async throws {
         let photo = try folder.add(.heicRotated, as: "photo.heic")
 
-        let run = try turnover([photo.path, "--to", "jpeg"] + option)
+        let run = try await turnover([photo.path, "--to", "jpeg"] + option)
 
         #expect(run.status == 0)
         #expect(try JPEGTables(folder.url.appendingPathComponent("photo.jpg")) == JPEGTables(quality: quality))
@@ -40,10 +40,10 @@ import TurnoverTestSupport
         (["--to", "jpeg", "--quality"], "--quality needs best, high or small"),
         (["--to", "png", "--quality", "small"], "--quality only applies to jpeg"),
     ])
-    func aBadQualityIsAUsageError(arguments: [String], message: String) throws {
+    func aBadQualityIsAUsageError(arguments: [String], message: String) async throws {
         try folder.add(.heicRotated, as: "photo.heic")
 
-        let run = try turnover(["photo.heic"] + arguments, in: folder.url)
+        let run = try await turnover(["photo.heic"] + arguments, in: folder.url)
 
         #expect(run.status == 64)
         #expect(run.messages == ["turnover: \(message)"])
@@ -51,8 +51,8 @@ import TurnoverTestSupport
         #expect(try folder.fileNames() == ["photo.heic"])
     }
 
-    @Test func theUsageListsTheQualities() throws {
-        let run = try turnover("--help")
+    @Test func theUsageListsTheQualities() async throws {
+        let run = try await turnover("--help")
 
         #expect(run.status == 0)
         #expect(run.output.contains("--quality <quality>"))
