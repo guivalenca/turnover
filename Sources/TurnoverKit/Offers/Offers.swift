@@ -62,21 +62,36 @@ public struct Offers: Sendable, Hashable {
     /// Inspects `files` by their contents and works out what is offered. It only sniffs each
     /// file's type, without decoding it, so it is quick enough to build a menu.
     public init(for files: [URL]) {
-        self.init(files, jpegQuality: .default, estimates: nil)
+        self.init(files, Inspection(files), jpegQuality: .default, estimates: nil)
     }
 
     /// The same offers, with an estimate for each target: output sizes for images (each JPEG
     /// preset too, with `jpegQuality` the one JPEG uses), and time for videos.
     public init(estimating files: [URL], jpegQuality: JPEGQuality = .default) async {
-        let inspected = files.compactMap { try? SourceFile($0) }
-        async let images = ImageSizes.of(inspected.filter { $0.kind == .image })
+        let inspection = Inspection(files)
+        async let images = ImageSizes.of(inspection.files.filter { $0.kind == .image })
         async let videos = withTaskGroup(of: (URL, VideoTime?).self) { group in
-            for file in inspected where file.kind == .video {
+            for file in inspection.files where file.kind == .video {
                 group.addTask { (file.url, await VideoTime(of: file.url)) }
             }
             return await group.reduce(into: [URL: VideoTime]()) { $0[$1.0] = $1.1 }
         }
-        self.init(files, jpegQuality: jpegQuality, estimates: Estimates(images: await images, videos: await videos))
+        self.init(files, inspection, jpegQuality: jpegQuality,
+                  estimates: Estimates(images: await images, videos: await videos))
+    }
+
+    /// Every file of a selection, inspected by content.
+    private struct Inspection {
+        var files: [SourceFile] = []
+        var unreadable: [URL: ConversionError] = [:]
+
+        init(_ urls: [URL]) {
+            for url in urls {
+                do { files.append(try SourceFile(url)) } catch {
+                    unreadable[url] = error as? ConversionError ?? .unreadable(url)
+                }
+            }
+        }
     }
 
     /// What is known about each file's output. Files that couldn't be measured (damaged ones)
@@ -94,14 +109,8 @@ public struct Offers: Sendable, Hashable {
         }
     }
 
-    private init(_ files: [URL], jpegQuality: JPEGQuality, estimates: Estimates?) {
-        var inspected: [SourceFile] = []
-        var unreadable: [URL: ConversionError] = [:]
-        for url in files {
-            do { inspected.append(try SourceFile(url)) } catch {
-                unreadable[url] = error as? ConversionError ?? .unreadable(url)
-            }
-        }
+    private init(_ files: [URL], _ inspection: Inspection, jpegQuality: JPEGQuality, estimates: Estimates?) {
+        let inspected = inspection.files
         let actions = OutputFormat.allCases.map { ($0, $0.action()) }
         groups = [SourceFile.Kind.image, .video].compactMap { kind in
             let members = inspected.filter { $0.kind == kind }
@@ -123,6 +132,6 @@ public struct Offers: Sendable, Hashable {
             let reasons = actions.map { ConversionError.refusal(of: file, by: $0.1) }
             return (file.url, reasons.first { if case .alreadyInFormat = $0 { true } else { false } } ?? reasons[0])
         }, uniquingKeysWith: { first, _ in first })
-        skipped = files.filter { !offered.contains($0) }.compactMap { unreadable[$0] ?? refusals[$0] }
+        skipped = files.filter { !offered.contains($0) }.compactMap { inspection.unreadable[$0] ?? refusals[$0] }
     }
 }
