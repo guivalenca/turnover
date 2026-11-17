@@ -17,16 +17,41 @@ public final class Job: Identifiable {
         /// Not converted because none of the batch's targets fits the file: it is of another kind,
         /// already in the target format, or neither an image nor a video. The error says which.
         case skipped(ConversionError)
+        /// Stopped by `cancel()`. Nothing was written.
+        case cancelled
     }
 
     /// The file to convert. It is never modified.
     public let source: URL
-    public internal(set) var state: State = .waiting
+    public private(set) var state: State = .waiting
 
+    /// The batch to tell when the job ends.
+    @ObservationIgnored weak var batch: Batch?
+    /// The conversion, while it runs.
+    @ObservationIgnored var task: Task<Void, Never>?
     @ObservationIgnored private var waiters: [CheckedContinuation<Void, Never>] = []
 
     init(source: URL) {
         self.source = source
+    }
+
+    /// Whether the job has ended, whatever the outcome.
+    public var isFinished: Bool {
+        switch state {
+        case .waiting, .running: false
+        case .converted, .failed, .skipped, .cancelled: true
+        }
+    }
+
+    /// Stops the job. A waiting job never starts. A running one stops within moments, and its
+    /// partial output is deleted; if it was already moving its output into place, it ends
+    /// converted instead. Does nothing to a job that has ended.
+    public func cancel() {
+        switch state {
+        case .waiting: end(as: .cancelled)
+        case .running: task?.cancel()
+        default: break
+        }
     }
 
     /// Returns once the job has ended.
@@ -35,19 +60,19 @@ public final class Job: Identifiable {
         await withCheckedContinuation { waiters.append($0) }
     }
 
-    /// Ends the job: sets its final state and wakes whoever waits for it.
+    func start(_ task: Task<Void, Never>) {
+        state = .running
+        self.task = task
+    }
+
+    /// Ends the job, unless it has already ended: sets its final state and wakes whoever waits.
     func end(as state: State) {
+        guard !isFinished else { return }
         self.state = state
+        task = nil
         let waiters = waiters
         self.waiters = []
         waiters.forEach { $0.resume() }
-    }
-
-    /// Whether the job has ended, whatever the outcome.
-    public var isFinished: Bool {
-        switch state {
-        case .waiting, .running: false
-        case .converted, .failed, .skipped: true
-        }
+        batch?.jobEnded()
     }
 }

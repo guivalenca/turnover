@@ -12,6 +12,7 @@ public final class Batch: Identifiable {
 
     init(jobs: [Job]) {
         self.jobs = jobs
+        for job in jobs { job.batch = self }
     }
 
     /// Whether every job has ended.
@@ -24,13 +25,18 @@ public final class Batch: Identifiable {
         }
     }
 
+    /// Cancels every job that hasn't ended. See `Job.cancel()`.
+    public func cancel() {
+        for job in jobs { job.cancel() }
+    }
+
     /// Returns once every job has ended.
     public func waitUntilFinished() async {
         guard !isFinished else { return }
         await withCheckedContinuation { waiters.append($0) }
     }
 
-    /// Called by the runner each time a job ends.
+    /// Called by each job when it ends.
     func jobEnded() {
         guard isFinished else { return }
         let waiters = waiters

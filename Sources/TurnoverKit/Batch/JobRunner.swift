@@ -26,13 +26,15 @@ public final class JobRunner {
         Task {
             // One file at a time, so jobs start in the order given.
             for job in batch.jobs {
-                switch await Self.route(job.source, to: targets) {
+                let route = await Self.route(job.source, to: targets)
+                guard !job.isFinished else { continue }  // cancelled meanwhile
+                switch route {
                 case .convert(let file, let action):
                     let lane: Lane = file.kind == .video ? .videos : .images
-                    lanes[lane]!.queue.append(Queued(job: job, batch: batch, file: file, action: action))
+                    lanes[lane]!.queue.append(Queued(job: job, file: file, action: action))
                     startQueuedJobs()
                 case .end(let state):
-                    end(job, in: batch, as: state)
+                    job.end(as: state)
                 }
             }
         }
@@ -51,7 +53,6 @@ public final class JobRunner {
 
     private struct Queued {
         let job: Job
-        let batch: Batch
         let file: SourceFile
         let action: any ConversionAction
     }
@@ -59,26 +60,22 @@ public final class JobRunner {
     private func startQueuedJobs() {
         for lane in lanes.keys {
             while lanes[lane]!.running < lanes[lane]!.limit, !lanes[lane]!.queue.isEmpty {
-                start(lanes[lane]!.queue.removeFirst(), in: lane)
+                let queued = lanes[lane]!.queue.removeFirst()
+                guard !queued.job.isFinished else { continue }  // cancelled while it waited
+                start(queued, in: lane)
             }
         }
     }
 
     private func start(_ queued: Queued, in lane: Lane) {
         lanes[lane]!.running += 1
-        queued.job.state = .running
         let converter = converter
-        Task {
+        queued.job.start(Task {
             let state = await Self.convert(queued.file, with: queued.action, by: converter)
             lanes[lane]!.running -= 1
-            end(queued.job, in: queued.batch, as: state)
+            queued.job.end(as: state)
             startQueuedJobs()
-        }
-    }
-
-    private func end(_ job: Job, in batch: Batch, as state: Job.State) {
-        job.end(as: state)
-        batch.jobEnded()
+        })
     }
 
     // MARK: - Converting, off the main actor
@@ -105,6 +102,8 @@ public final class JobRunner {
     ) async -> Job.State {
         do {
             return .converted(try await converter.convert(file, with: action))
+        } catch is CancellationError {
+            return .cancelled
         } catch {
             return .failed(reason: error.localizedDescription)
         }

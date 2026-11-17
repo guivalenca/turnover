@@ -13,6 +13,7 @@ import UniformTypeIdentifiers
 public final class Turnstile: Sendable {
     private struct State {
         var running = 0
+        var started = 0
         var mostAtOnce = 0
         var isOpen = false
     }
@@ -30,6 +31,9 @@ public final class Turnstile: Sendable {
 
     /// How many conversions are running now.
     public var running: Int { state.withLock { $0.running } }
+
+    /// How many conversions have started in all.
+    public var started: Int { state.withLock { $0.started } }
 
     /// The most that ever ran at once.
     public var mostAtOnce: Int { state.withLock { $0.mostAtOnce } }
@@ -52,6 +56,7 @@ public final class Turnstile: Sendable {
     fileprivate func run(_ work: () async throws -> Void) async throws {
         state.withLock { state in
             state.running += 1
+            state.started += 1
             state.mostAtOnce = max(state.mostAtOnce, state.running)
         }
         defer { state.withLock { $0.running -= 1 } }
