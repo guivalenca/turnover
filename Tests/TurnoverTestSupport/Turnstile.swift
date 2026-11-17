@@ -94,7 +94,7 @@ private struct Held<Wrapped: ConversionAction>: ConversionAction {
     let wrapped: Wrapped
     let turnstile: Turnstile
 
-    var name: String { wrapped.name }
+    var format: OutputFormat { wrapped.format }
     var outputType: UTType { wrapped.outputType }
     var fileExtension: String { wrapped.fileExtension }
 

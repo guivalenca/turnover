@@ -70,7 +70,7 @@ import TurnoverTestSupport
         let offers = Offers(for: [movie])
 
         #expect(offers.groups == [])
-        #expect(offers.skipped == [.alreadyInFormat(movie, format: "MP4")])
+        #expect(offers.skipped == [.alreadyInFormat(movie, format: .mp4)])
         #expect(offers.reason == "clip.mp4: already an MP4")
     }
 
@@ -114,7 +114,7 @@ import TurnoverTestSupport
         #expect(offers.targets.last?.files == [movie])
         #expect(offers.skipped == [
             .unsupported(pdf, typeDescription: "PDF document"),
-            .alreadyInFormat(mp4, format: "MP4"),
+            .alreadyInFormat(mp4, format: .mp4),
         ])
         #expect(offers.reason == nil)
     }

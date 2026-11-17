@@ -49,7 +49,7 @@ final class Conversions {
             case .converted(let result):
                 log.notice("Converted \(result.source.path, privacy: .public) → \(result.output.path, privacy: .public)")
             case .failed(let reason):
-                log.error("Failed: \(reason, privacy: .public)")
+                log.error("Failed: \(reason.localizedDescription, privacy: .public)")
             case .skipped(let reason):
                 log.notice("Skipped: \(reason.localizedDescription, privacy: .public)")
             case .cancelled, .waiting, .running:

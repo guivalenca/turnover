@@ -10,7 +10,7 @@ import TurnoverTestSupport
     @Test func aPNGIsNotConvertedToPNG() async throws {
         let png = try folder.add(.png, as: "logo.png")
 
-        await #expect(throws: ConversionError.alreadyInFormat(png, format: "PNG")) {
+        await #expect(throws: ConversionError.alreadyInFormat(png, format: .png)) {
             try await Converter().convert(png, with: PNGAction())
         }
         #expect(try folder.fileNames() == ["logo.png"])
@@ -19,7 +19,7 @@ import TurnoverTestSupport
     @Test func aPNGWithAJPGExtensionIsStillRecognisedAndRefused() async throws {
         let png = try folder.add(.png, as: "logo.jpg")
 
-        await #expect(throws: ConversionError.alreadyInFormat(png, format: "PNG")) {
+        await #expect(throws: ConversionError.alreadyInFormat(png, format: .png)) {
             try await Converter().convert(png, with: PNGAction())
         }
         #expect(try folder.fileNames() == ["logo.jpg"])
@@ -64,7 +64,7 @@ import TurnoverTestSupport
     @Test func anMP4IsNotConvertedToMP4() async throws {
         let mp4 = try folder.add(.mp4H264, as: "clip.mp4")
 
-        await #expect(throws: ConversionError.alreadyInFormat(mp4, format: "MP4")) {
+        await #expect(throws: ConversionError.alreadyInFormat(mp4, format: .mp4)) {
             try await Converter().convert(mp4, with: MP4Action())
         }
         #expect(try folder.fileNames() == ["clip.mp4"])

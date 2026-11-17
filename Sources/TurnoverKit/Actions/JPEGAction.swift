@@ -9,7 +9,7 @@ public struct JPEGAction: ConversionAction {
         self.quality = quality
     }
 
-    public var name: String { "JPEG" }
+    public var format: OutputFormat { .jpeg }
     public var outputType: UTType { .jpeg }
     /// "jpg", the extension people expect, rather than UTType's preferred "jpeg".
     public var fileExtension: String { "jpg" }

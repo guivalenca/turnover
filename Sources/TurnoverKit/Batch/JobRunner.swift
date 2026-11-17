@@ -112,7 +112,7 @@ public final class JobRunner {
             }
             return .convert(file, action)
         } catch {
-            return .end(.failed(reason: error.localizedDescription))
+            return .end(.failed(error as? ConversionError ?? .unreadable(source)))
         }
     }
 
@@ -122,15 +122,10 @@ public final class JobRunner {
     ) async -> Job.State {
         do {
             return .converted(try await converter.convert(file, with: action, progress: progress))
-        } catch is CancellationError {
-            return .cancelled
         } catch let error as ConversionError {
-            return .failed(reason: error.localizedDescription)
+            return .failed(error)
         } catch {
-            // Writing failed: no room, no permission, an encoder missing, …
-            let detail = (error as? POSIXError).map { String(cString: strerror($0.code.rawValue)) }
-                ?? error.localizedDescription
-            return .failed(reason: "\(file.url.lastPathComponent): couldn't write the \(action.name) (\(detail))")
+            return .cancelled  // Converter throws only those two
         }
     }
 

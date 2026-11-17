@@ -46,25 +46,23 @@ extension Notice {
             notices.append(Notice(kind: .savedToDownloads, title: saved.title, body: saved.reason,
                                   files: inDownloads.map(\.output)))
         }
-        let failures = batch.jobs.compactMap { job -> (file: String, reason: String)? in
-            guard case .failed(let reason) = job.state else { return nil }
-            return (job.source.lastPathComponent, reason)
+        let failures = batch.jobs.compactMap { job -> ConversionError? in
+            guard case .failed(let error) = job.state else { return nil }
+            return error
         }
         if let only = failures.first, failures.count == 1 {
-            notices.append(Notice(kind: .failed, title: "Couldn't convert \(only.file)",
-                                  body: sentence(only.reason, about: only.file), files: []))
+            notices.append(Notice(kind: .failed, title: "Couldn't convert \(only.file.lastPathComponent)",
+                                  body: sentence(only.reason), files: []))
         } else if !failures.isEmpty {
             notices.append(Notice(kind: .failed, title: "Couldn't convert \(failures.count) files",
-                                  body: failures.map(\.reason).joined(separator: "\n"), files: []))
+                                  body: failures.map(\.localizedDescription).joined(separator: "\n"), files: []))
         }
         return notices
     }
 
-    /// A failure's reason without the file name it starts with, as a sentence: "x.heic: damaged
-    /// or incomplete, …" becomes "Damaged or incomplete, …", for a notice whose title names the file.
-    private static func sentence(_ reason: String, about file: String) -> String {
-        let text = reason.hasPrefix("\(file): ") ? String(reason.dropFirst(file.count + 2)) : reason
-        return text.prefix(1).uppercased() + text.dropFirst()
+    /// "damaged or incomplete, …" as a sentence, for a notice whose title names the file.
+    private static func sentence(_ reason: String) -> String {
+        reason.prefix(1).uppercased() + reason.dropFirst()
     }
 
     /// "Saved photo.png to Downloads" and why, or nil when nothing went there.
@@ -78,7 +76,7 @@ extension Notice {
 
     /// "2 videos to MP4", or "3 images to PNG and 1 video to MP4" for a mixed batch.
     private static func summary(of results: [ConversionResult]) -> String {
-        var groups: [(kind: SourceFile.Kind, format: String, count: Int)] = []
+        var groups: [(kind: SourceFile.Kind, format: OutputFormat, count: Int)] = []
         for result in results {
             if let index = groups.firstIndex(where: { $0.kind == result.kind && $0.format == result.format }) {
                 groups[index].count += 1
@@ -86,7 +84,7 @@ extension Notice {
                 groups.append((result.kind, result.format, 1))
             }
         }
-        return groups.map { "\(count($0.count, $0.kind)) to \($0.format)" }.joined(separator: " and ")
+        return groups.map { "\(count($0.count, $0.kind)) to \($0.format.name)" }.joined(separator: " and ")
     }
 
     /// "1 image", "2 videos", "3 files".

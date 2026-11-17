@@ -6,7 +6,13 @@ public enum OutputFormat: String, CaseIterable, Sendable, Hashable {
     case mp4
 
     /// The short name users see: "PNG", "JPEG" or "MP4".
-    public var name: String { action().name }
+    public var name: String {
+        switch self {
+        case .png: "PNG"
+        case .jpeg: "JPEG"
+        case .mp4: "MP4"
+        }
+    }
 
     /// The action that converts to this format. `quality` applies to JPEG only.
     public func action(quality: JPEGQuality = .default) -> any ConversionAction {
