@@ -34,6 +34,9 @@ final class Ring {
         panel.delegate = self
         watcher.onEvent = { [weak self] event in self?.handle(event) }
         watcher.start()
+        #if DEBUG
+        RingPreview.showIfAsked()
+        #endif
     }
 
     private func handle(_ event: DragWatcher.Event) {

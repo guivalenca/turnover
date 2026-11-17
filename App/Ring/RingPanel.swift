@@ -17,7 +17,8 @@ protocol RingPanelDelegate: AnyObject {
 
 /// While the ring is open: a transparent, non-activating panel over every screen that is the
 /// drop destination everywhere, so a drop anywhere off the ring's entries is refused and the drag
-/// slides back. The ring itself is drawn on the screen it opened on.
+/// slides back. The ring itself is drawn above them in its own window (`RingWindow`), which the
+/// drag goes through, on the screen it opened on and kept fully on it.
 ///
 /// The spike's (#2) findings, kept here:
 /// - A fully clear panel still catches drags over every pixel; no fill is needed.
@@ -29,48 +30,62 @@ final class RingPanel {
     weak var delegate: RingPanelDelegate?
 
     private(set) var isOpen = false
-    /// The ring's centre, in screen coordinates.
+    /// The ring's centre, in screen coordinates: where the pointer was, unless that is too near an
+    /// edge for the whole ring to show.
     private(set) var centre: NSPoint = .zero
     /// True while `close()` orders the panels out, so their `draggingExited` is ignored.
     fileprivate var isClosing = false
 
     private var panels: [NSPanel] = []
-    private var ringView: RingView?
+    private let ring = RingWindow()
     private var watchdog: Timer?
+    /// The pointer's angle around the centre (the model's degrees), for the highlight's turn.
+    private var pointerAngle: Double?
+    /// The drag image has been made small for this opening.
+    fileprivate var dragImageShrunk = false
 
-    /// Shows the panels, with the ring centred on `point` (screen coordinates).
+    /// Keeps this far from a screen's edges, menu bar and Dock.
+    private static let edgeMargin: CGFloat = 8
+
+    /// Shows the panels, with the ring centred on `point` (screen coordinates), or as near it as
+    /// keeps the ring on screen.
     func open(at point: NSPoint) {
-        centre = point
         let screens = NSScreen.screens
+        let screen = screens.first { NSMouseInRect(point, $0.frame, false) } ?? NSScreen.main
+        // The visible frame leaves out the menu bar (and a notch) and the Dock.
+        let area = (screen?.visibleFrame ?? NSRect(origin: point, size: .zero)).insetBy(dx: Self.edgeMargin, dy: Self.edgeMargin)
+        centre = RingGeometry.centre(openingAt: point, drawing: RingView.drawing, within: area)
         while panels.count < screens.count { panels.append(makePanel()) }
         for (panel, screen) in zip(panels, screens) {
             panel.setFrame(screen.frame, display: false)
-            let catcher = panel.contentView as! DropView
-            if NSMouseInRect(point, screen.frame, false) {
-                let view = ringView ?? RingView()
-                view.frame = catcher.bounds
-                view.centre = NSPoint(x: point.x - screen.frame.minX, y: screen.frame.maxY - point.y)
-                catcher.addSubview(view)
-                ringView = view
-            }
             panel.orderFrontRegardless()
         }
+        ring.show(at: centre)
+        pointerAngle = nil
+        dragImageShrunk = false
         isOpen = true
         startWatchdog()
     }
 
     /// Redraws the ring for the model's current state.
     func show(_ model: RingModel) {
-        ringView?.model = model
+        ring.ringView.pointerAngle = pointerAngle
+        ring.ringView.look = RingLook(model)
+    }
+
+    /// The drag is at `point` (screen coordinates).
+    fileprivate func pointerMoved(to point: NSPoint) {
+        // The model's angles grow clockwise on screen, where AppKit's y grows upwards.
+        pointerAngle = atan2(centre.y - point.y, point.x - centre.x) * 180 / .pi
     }
 
     func close() {
         guard isOpen else { return }
         isClosing = true
         for panel in panels { panel.orderOut(nil) }
-        ringView?.removeFromSuperview()
         isClosing = false
         isOpen = false
+        ring.hide()
         watchdog?.invalidate()
         watchdog = nil
     }
@@ -169,7 +184,44 @@ private final class DropView: NSView {
     private func update(_ sender: NSDraggingInfo) -> NSDragOperation {
         guard let ring, let window else { return [] }
         let point = window.convertPoint(toScreen: sender.draggingLocation)
+        ring.pointerMoved(to: point)
+        if !ring.dragImageShrunk {
+            ring.dragImageShrunk = true
+            shrinkDragImage(sender)
+        }
         guard ring.delegate?.ringPanel(ring, pointerAt: point) == true else { return [] }
         return sender.draggingSourceOperationMask.contains(.copy) ? .copy : .generic
     }
+
+    /// Makes the drag image small while the ring is open, so it hides less of the ring: the
+    /// dragged files' own icons, without their names, shrunk around the pointer (the spike's
+    /// approach, #2). The source's image comes back by itself when the panels close.
+    private func shrinkDragImage(_ sender: NSDraggingInfo) {
+        sender.animatesToDestination = false
+        sender.draggingFormation = .stack
+        let pointer = convert(sender.draggingLocation, from: nil)
+        sender.enumerateDraggingItems(options: [.clearNonenumeratedImages], for: self, classes: [NSURL.self],
+                                      searchOptions: [.urlReadingFileURLsOnly: true]) { item, index, _ in
+            let components = item.imageComponents ?? []
+            let frame: NSRect, contents: Any?
+            // Finder's icon component is the real thumbnail, readable from another process.
+            if let icon = components.first(where: { $0.key == .icon }) ?? components.first {
+                let iconFrame = icon.frame.offsetBy(dx: item.draggingFrame.minX, dy: item.draggingFrame.minY)
+                frame = RingGeometry.shrink(iconFrame, toward: pointer, side: Self.dragImageSide)
+                contents = icon.contents
+            } else if let url = item.item as? URL {
+                let side = Self.dragImageSide
+                frame = NSRect(x: pointer.x - side / 2, y: pointer.y - side / 2, width: side, height: side)
+                contents = NSWorkspace.shared.icon(forFile: url.path)
+            } else {
+                return
+            }
+            // A small stack for several files.
+            let offset = CGFloat(min(index, 3)) * 3
+            item.setDraggingFrame(frame.offsetBy(dx: offset, dy: -offset), contents: contents)
+        }
+    }
+
+    /// The drag image's size over the ring: about the prototype's (a thumbnail at 45%).
+    private static let dragImageSide: CGFloat = 32
 }
