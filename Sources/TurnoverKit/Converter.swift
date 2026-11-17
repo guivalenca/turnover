@@ -18,6 +18,8 @@ public struct ConversionResult: Sendable, Hashable {
 public struct Converter: Sendable {
     /// Where outputs go when the original's folder can't be written to.
     public let downloads: URL
+    /// The conversions this converter and its copies are running.
+    let activity = ConversionActivity()
 
     /// A converter that falls back to `downloads`, the user's Downloads folder unless a test
     /// gives another.
@@ -52,6 +54,8 @@ public struct Converter: Sendable {
         _ file: SourceFile, with action: some ConversionAction,
         progress: @escaping @Sendable (Double) -> Void = { _ in }
     ) async throws -> ConversionResult {
+        activity.begin()
+        defer { activity.end() }
         let progress = ConversionProgress(progress)
         guard action.accepts(file) else { throw ConversionError.refusal(of: file, by: action) }
         let placement = Placement(nextTo: file.url, fileExtension: action.fileExtension, fallback: downloads)

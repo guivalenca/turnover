@@ -44,8 +44,9 @@ final class StatusItem: NSObject, NSMenuDelegate {
 
     private func makeItem() -> NSStatusItem {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.image = MenuBarGlyph.image
+        item.button?.image = NSImage(named: "MenuBarGlyph")  // already a template (#14)
         item.button?.imagePosition = .imageLeading
+        item.button?.setAccessibilityLabel("Turnover")
         item.button?.font = .monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
         item.menu = menu
         self.item = item
