@@ -21,6 +21,7 @@ let package = Package(
         // Committed fixtures and helpers shared by every test target. Not shipped.
         .target(
             name: "TurnoverTestSupport",
+            dependencies: ["TurnoverKit"],
             path: "Tests/TurnoverTestSupport",
             resources: [.copy("Fixtures")]),
 

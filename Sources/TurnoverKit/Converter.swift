@@ -6,37 +6,55 @@ public struct ConversionResult: Sendable, Hashable {
     public let source: URL
     /// The new file.
     public let output: URL
+    /// True when the original's folder couldn't be written to, so the new file went to Downloads.
+    public let savedToDownloads: Bool
 }
 
 /// Converts single files with an action and places the output next to the original.
 public struct Converter: Sendable {
-    public init() {}
+    /// Where outputs go when the original's folder can't be written to.
+    public let downloads: URL
+
+    /// A converter that falls back to `downloads`, the user's Downloads folder unless a test
+    /// gives another.
+    public init(downloads: URL = .downloadsDirectory) {
+        self.downloads = downloads
+    }
 
     /// Converts `source` with `action` and returns where the new file landed.
     ///
     /// The output appears next to the source, named like it with the action's extension and a
     /// Finder-style number if that name is taken, carrying the source's creation and modification
     /// dates. It appears complete or not at all; the source and existing files are never touched.
+    /// When the source's folder can't be written to, the output goes to `downloads` instead, under
+    /// the same naming rules, and the result's `savedToDownloads` is true.
     ///
     /// `progress` receives the fraction done, from 0 to 1, on an arbitrary thread. Values never
     /// go backwards and the last one is 1 when the conversion succeeds. Quick actions (images)
     /// report only that final 1; videos report along the way.
     ///
     /// Throws `ConversionError` when the file can't be read, isn't something `action` accepts, or
-    /// can't be decoded. File-system failures while writing (for example a read-only folder)
-    /// surface as the underlying Cocoa or POSIX error.
+    /// can't be decoded. File-system failures while writing (for example a full disk) surface
+    /// as the underlying Cocoa or POSIX error.
     public func convert(
         _ source: URL, with action: some ConversionAction,
         progress: @escaping @Sendable (Double) -> Void = { _ in }
     ) async throws -> ConversionResult {
+        try await convert(SourceFile(source), with: action, progress: progress)
+    }
+
+    /// The same, for a file already inspected.
+    func convert(
+        _ file: SourceFile, with action: some ConversionAction,
+        progress: @escaping @Sendable (Double) -> Void = { _ in }
+    ) async throws -> ConversionResult {
         let progress = ConversionProgress(progress)
-        let file = try SourceFile(source)
         guard action.accepts(file) else { throw ConversionError.refusal(of: file, by: action) }
-        let placement = Placement(nextTo: source, fileExtension: action.fileExtension)
+        let placement = Placement(nextTo: file.url, fileExtension: action.fileExtension, fallback: downloads)
         let output = try await placement.place { temporary in
             try await action.perform(file, writingTo: temporary, progress: progress)
         }
         progress.report(1)
-        return ConversionResult(source: source, output: output)
+        return ConversionResult(source: file.url, output: output, savedToDownloads: placement.usesFallback)
     }
 }
