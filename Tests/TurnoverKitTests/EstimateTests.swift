@@ -216,6 +216,19 @@ func outputSize(of image: URL, with action: some ConversionAction) async throws 
     ])
     func sizesUseFinderUnitsAndATilde(bytes: Int, label: String) {
         #expect(Estimate.size(bytes).label == label)
+        #expect(!Estimate.size(bytes).isExact)
+    }
+
+    @Test(arguments: [
+        (400, "1 KB"),
+        (31_000, "31 KB"),
+        (1_240_000, "1.2 MB"),
+        (19_400_000, "19 MB"),
+    ])
+    func exactSizesDropTheTilde(bytes: Int, label: String) {
+        #expect(Estimate.exactSize(bytes).label == label)
+        #expect(Estimate.exactSize(bytes).isExact)
+        #expect(Estimate.exactSize(bytes).bytes == bytes)
     }
 
     @Test(arguments: [
