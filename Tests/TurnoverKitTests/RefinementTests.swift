@@ -88,6 +88,48 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
             await live.waitUntilFinished()
         }
 
-        #expect(times.min()! < timeLimit(.milliseconds(50)))
+        #expect(times.min()! < timeLimit(.milliseconds(50)), "\(times)")
+    }
+}
+
+/// Exact sizes are remembered per file, so dragging the same photo again shows them at once.
+@MainActor
+@Suite(.timeLimit(.minutes(1))) struct RememberedSizes {
+    let folder = try! ScratchFolder()
+
+    @Test func aSecondRequestForAnUnchangedFileIsExactAtOnce() async throws {
+        let photo = try folder.addMosaic(of: .heicRotated, width: 2000, height: 1500, as: "photo.heic", type: .heic)
+        let estimator = Estimator()
+        await estimator.estimate([photo]).waitUntilFinished()
+
+        let again = estimator.estimate([photo])
+
+        // Before any background work: straight from the cache.
+        try await expectExact(again.offers, for: photo)
+    }
+
+    @Test func aChangedFileIsMeasuredAgain() async throws {
+        let photo = try folder.addMosaic(of: .heicRotated, width: 1200, height: 900, as: "photo.jpg")
+        let estimator = Estimator()
+        await estimator.estimate([photo]).waitUntilFinished()
+        try FileManager.default.removeItem(at: photo)
+        try folder.addMosaic(of: .webp, width: 1600, height: 1000, as: "photo.jpg")
+
+        let again = estimator.estimate([photo])
+
+        #expect(again.offers.targets.allSatisfy { $0.estimate == nil })
+        await again.waitUntilFinished()
+        try await expectExact(again.offers, for: photo)
+    }
+
+    @Test func onlyTheMostRecentFilesAreRemembered() async throws {
+        let first = try folder.add(.heicRotated, as: "first.heic")
+        let second = try folder.add(.webp, as: "second.webp")
+        let estimator = Estimator(cacheCapacity: 1)
+        await estimator.estimate([first]).waitUntilFinished()
+        await estimator.estimate([second]).waitUntilFinished()
+
+        #expect(estimator.estimate([second]).offers.targets.allSatisfy { $0.estimate?.isExact == true })
+        #expect(estimator.estimate([first]).offers.targets.allSatisfy { $0.estimate == nil })
     }
 }

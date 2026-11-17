@@ -28,18 +28,21 @@ struct ImageSizes: Sendable {
 
     static let sampledImages = 4
 
-    /// The sizes of every image in `images` that can be decoded.
-    static func of(_ images: [SourceFile]) async -> [URL: ImageSizes] {
-        let sampled = samples(of: images)
+    /// The sizes of every image in `images` that can be decoded. Images in `known` (exact sizes
+    /// remembered from earlier) are taken as they are, and also serve to scale the others.
+    static func of(_ images: [SourceFile], known: [URL: ImageSizes] = [:]) async -> [URL: ImageSizes] {
+        let unknown = images.filter { known[$0.url] == nil }
+        let sampled = samples(of: unknown)
         let measured = await withTaskGroup(of: (SourceFile, ImageSizes?).self) { group in
             for image in sampled { group.addTask { (image, ImageSizes(of: image.url)) } }
             return await group.reduce(into: [SourceFile: ImageSizes]()) { $0[$1.0] = $1.1 }
         }
-        var sizes = Dictionary(uniqueKeysWithValues: measured.map { ($0.key.url, $0.value) })
-        for image in images where sizes[image.url] == nil && !sampled.contains(image) {
-            let sameFormat = measured.filter { $0.key.contentType == image.contentType }.map(\.value)
+        var sizes = known.filter { url, _ in images.contains { $0.url == url } }
+        for (image, measurement) in measured { sizes[image.url] = measurement }
+        let references = images.compactMap { image in sizes[image.url].map { (image, $0) } }
+        for image in unknown where sizes[image.url] == nil && !sampled.contains(image) {
             guard let pixels = pixelCount(of: image.url),
-                  let scaled = ImageSizes(scaling: sameFormat.isEmpty ? Array(measured.values) : sameFormat, to: pixels)
+                  let scaled = ImageSizes(scaling: references, to: pixels, like: image)
             else { continue }
             sizes[image.url] = scaled
         }
@@ -76,16 +79,22 @@ struct ImageSizes: Sendable {
         return width * height
     }
 
-    /// An image of `pixels` pixels, as many bytes per pixel as `measured` together.
-    private init?(scaling measured: [ImageSizes], to pixels: Int) {
-        let measuredPixels = measured.reduce(0) { $0 + $1.pixels }
-        guard measuredPixels > 0 else { return nil }
-        let scale = Double(pixels) / Double(measuredPixels)
-        func scaled(_ bytes: (ImageSizes) -> Int) -> Int { Int(Double(measured.reduce(0) { $0 + bytes($1) }) * scale) }
-        self.pixels = pixels
-        sizes = Dictionary(uniqueKeysWithValues: ImageOutput.allCases.map { output in
-            (output, Size(bytes: scaled { $0.sizes[output]?.bytes ?? 0 }, isExact: false))
-        })
+    /// An image like `image`, of `pixels` pixels, with as many bytes per pixel in each output as
+    /// the `references` of its own format together, or all of them when none has its format.
+    /// Always approximate.
+    private init?(scaling references: [(SourceFile, ImageSizes)], to pixels: Int, like image: SourceFile) {
+        var sizes: [ImageOutput: Size] = [:]
+        for output in ImageOutput.allCases {
+            let having = references.filter { $0.1.sizes[output] != nil && $0.1.pixels > 0 }
+            let sameFormat = having.filter { $0.0.contentType == image.contentType }
+            let basis = (sameFormat.isEmpty ? having : sameFormat).map(\.1)
+            let basisPixels = basis.reduce(0) { $0 + $1.pixels }
+            guard basisPixels > 0 else { continue }
+            let bytes = basis.reduce(0) { $0 + $1.sizes[output]!.bytes }
+            sizes[output] = Size(bytes: Int(Double(bytes) * Double(pixels) / Double(basisPixels)), isExact: false)
+        }
+        guard !sizes.isEmpty else { return nil }
+        (self.pixels, self.sizes) = (pixels, sizes)
     }
 
     /// Images up to this many pixels are encoded whole (the fixtures are).

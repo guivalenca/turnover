@@ -95,11 +95,15 @@ public struct Offers: Sendable, Hashable {
     struct Estimates: Sendable {
         var images: [URL: ImageSizes]
         var videos: [URL: VideoTime]
+        /// Images not estimated yet. A target with any of them has no estimate: a total of the
+        /// others would look complete.
+        var pending: Set<URL> = []
 
         func estimate(_ format: OutputFormat, quality: JPEGQuality, of files: [URL]) -> Estimate? {
             guard let output = ImageOutput(format, quality: quality) else {
                 return VideoTime.estimate(files.compactMap { videos[$0] })
             }
+            guard pending.isDisjoint(with: files) else { return nil }
             let sizes = files.compactMap { images[$0]?.sizes[output] }
             guard !sizes.isEmpty else { return nil }
             let total = sizes.reduce(0) { $0 + $1.bytes }
