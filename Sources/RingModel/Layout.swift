@@ -41,28 +41,44 @@ extension RingModel {
         }
     }
 
-    /// A single entry sits at the top; two sit left and right, in display order (PNG left, JPEG
-    /// right). With ⌥, JPEG's qualities fan out 54° apart around where JPEG was. More (a mixed
-    /// drag) are spread evenly from the top for now.
+    /// One kind of file: a single entry sits at the top; two sit left and right, in display
+    /// order (PNG left, JPEG right). Images and videos together: images on the left, centred on
+    /// 180° and 74° apart; videos on the right, at 0°. With ⌥, JPEG's qualities fan out around
+    /// where JPEG was: 54° apart, or 52° in a mixed ring. Angles are in (-180, 180].
     static func layout(_ offers: Offers, fannedOut: Bool) -> [Entry] {
-        let spots = offers.targets.flatMap { spots(for: $0, fannedOut: fannedOut) }
+        let groups = offers.groups.map { group in
+            (kind: group.kind, spots: group.targets.flatMap { spots(for: $0, fannedOut: fannedOut) })
+        }
         let angles: [Double]
-        if offers.groups.count == 1, spots.contains(where: { $0.preset != nil }) {
-            // JPEG's qualities around where JPEG was: the right, or the top if JPEG was alone.
-            let others = spots.filter { $0.preset == nil }.count
-            angles = others == 1 ? [180] + spread(3, around: 0, step: 54) : spread(3, around: -90, step: 54)
+        if groups.count == 1 {
+            let spots = groups[0].spots
+            if spots.contains(where: { $0.preset != nil }) {
+                // JPEG's qualities around where JPEG was: the right, or the top if JPEG was alone.
+                let others = spots.filter { $0.preset == nil }.count
+                angles = others == 1 ? [180] + spread(3, around: 0, step: 54) : spread(3, around: -90, step: 54)
+            } else {
+                angles = spots.count == 1 ? [-90] : [180, 0]
+            }
         } else {
-            angles = switch spots.count {
-            case 1: [-90]
-            case 2: [180, 0]
-            default: spots.indices.map { -90 + Double($0) * 360 / Double(spots.count) }
+            angles = groups.flatMap { group in
+                group.kind == .video
+                    ? spread(group.spots.count, around: 0, step: 74)
+                    : spread(group.spots.count, around: 180, step: fannedOut ? 52 : 74)
             }
         }
-        return zip(spots, angles).map { spot, angle in
+        let spots = groups.flatMap(\.spots)
+        let placed = angles.map(normalized)
+        return zip(spots, placed).map { spot, angle in
             Entry(title: spot.title, estimate: spot.estimate, angle: angle,
-                  arc: arc(around: angle, among: angles), choices: spot.choices,
+                  arc: arc(around: angle, among: placed), choices: spot.choices,
                   quality: spot.preset, isDefault: spot.isDefault)
         }
+    }
+
+    /// `angle` turned into (-180, 180].
+    private static func normalized(_ angle: Double) -> Double {
+        let turned = angle.truncatingRemainder(dividingBy: 360)
+        return turned > 180 ? turned - 360 : turned <= -180 ? turned + 360 : turned
     }
 
     /// What an entry shows and converts, before it is placed.

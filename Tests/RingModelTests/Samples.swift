@@ -30,6 +30,17 @@ enum Sample {
         ])])
     }
 
+    /// Offers for images that aren't PNGs or JPEGs and movies dragged together.
+    static func mixed(_ images: [URL], _ movies: [URL], png: Estimate? = nil, jpeg: Estimate? = nil,
+                      mp4: Estimate? = nil) -> Offers {
+        Offers(groups: Sample.images(images, png: png, jpeg: jpeg).groups + Sample.movies(movies, mp4: mp4).groups)
+    }
+
+    /// Offers for PNGs and movies dragged together.
+    static func mixed(pngs: [URL], _ movies: [URL]) -> Offers {
+        Offers(groups: Sample.pngs(pngs).groups + Sample.movies(movies).groups)
+    }
+
     /// Offers for movies: MP4.
     static func movies(_ files: [URL], mp4: Estimate? = nil) -> Offers {
         Offers(groups: [.init(kind: .video, files: files, targets: [
