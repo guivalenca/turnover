@@ -1,0 +1,111 @@
+# XcodeGen spec for Turnover.app and its Finder Sync extension.
+#
+# Turnover.xcodeproj is generated from this file and committed, so a clone needs only Xcode.
+# After editing this file (or adding, moving or removing a file under App/ or FinderExtension/),
+# run `make project` (needs `brew install xcodegen`) and commit both. CI fails if they disagree.
+name: Turnover
+options:
+  bundleIdPrefix: com.guivalenca.turnover
+  deploymentTarget:
+    macOS: "15.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "15.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # Ad-hoc signing ("Sign to Run Locally"): no Apple account, team or provisioning profile.
+    # The spike (#2) showed Finder loads an ad-hoc-signed Finder Sync extension.
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    DEVELOPMENT_TEAM: ""
+    ENABLE_HARDENED_RUNTIME: NO
+    GENERATE_INFOPLIST_FILE: NO
+    DEAD_CODE_STRIPPING: YES
+
+# The repository's own Swift package, for TurnoverKit.
+packages:
+  Turnover:
+    path: .
+
+targets:
+  # The background agent. It owns every conversion; the extension only forwards choices.
+  Turnover:
+    type: application
+    platform: macOS
+    sources: [App]
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Turnover
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        LSApplicationCategoryType: public.app-category.utilities
+        # No Dock icon and no menu bar of its own.
+        LSUIElement: true
+        NSPrincipalClass: NSApplication
+        NSHumanReadableCopyright: Copyright © 2026 Guilherme Valença. MIT License.
+        # The Finder extension hands conversions over as turnover://convert?to=…&file=… URLs.
+        CFBundleURLTypes:
+          - CFBundleURLName: com.guivalenca.turnover
+            CFBundleURLSchemes: [turnover]
+        # Shown in the one-time prompts macOS makes before the app reads a protected location.
+        NSDesktopFolderUsageDescription: Turnover converts the files you choose on your Desktop and saves the new files next to them.
+        NSDocumentsFolderUsageDescription: Turnover converts the files you choose in Documents and saves the new files next to them.
+        NSDownloadsFolderUsageDescription: Turnover converts the files you choose in Downloads, and saves new files there when the original's folder is read-only.
+        NSRemovableVolumesUsageDescription: Turnover converts the files you choose on external drives and saves the new files next to them.
+        NSNetworkVolumesUsageDescription: Turnover converts the files you choose on network shares and saves the new files next to them.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.guivalenca.turnover
+        PRODUCT_NAME: Turnover
+    dependencies:
+      - target: TurnoverFinder
+        embed: true
+      - package: Turnover
+        product: TurnoverKit
+      - sdk: FinderSync.framework
+
+  # The Finder Sync extension: the right-click "Turnover ›" submenu. Sandboxed, as app
+  # extensions must be: it reads the selection's types, never its contents, and writes nothing.
+  TurnoverFinder:
+    type: app-extension
+    platform: macOS
+    sources: [FinderExtension]
+    info:
+      path: FinderExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Turnover
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        NSHumanReadableCopyright: Copyright © 2026 Guilherme Valença. MIT License.
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.FinderSync
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).FinderSync
+          NSExtensionAttributes: {}
+    entitlements:
+      path: FinderExtension/TurnoverFinder.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.guivalenca.turnover.finder
+        PRODUCT_NAME: TurnoverFinder
+    dependencies:
+      - package: Turnover
+        product: TurnoverKit
+      - sdk: FinderSync.framework
+
+schemes:
+  Turnover:
+    build:
+      targets:
+        Turnover: all
+    run:
+      config: Debug
+    archive:
+      config: Release
