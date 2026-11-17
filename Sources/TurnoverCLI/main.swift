@@ -26,31 +26,41 @@ case .help:
     print(Command.usage)
 case .convert(let files, let action):
     let sources = files.map { URL(fileURLWithPath: $0).absoluteURL.standardizedFileURL }
-    let batch = JobRunner().run(sources, to: [action])
-    let interrupted = Interruption.onCtrlC { batch.cancel() }
     let line = ProgressLine.isAvailable
-        ? ProgressLine(label: sources.count == 1 ? sources[0].lastPathComponent : "\(sources.count) files")
+        ? ProgressLine(label: sources.count == 1 ? sources[0].lastPathComponent : "\(sources.count) files", jobs: sources.count)
         : nil
-    line?.follow(batch)
+    var reporting: (@Sendable (Int, Double) -> Void)?
+    if let line { reporting = { job, fraction in line.report(job, fraction) } }
+    let batch = JobRunner().run(sources, to: [action], reporting: reporting)
+    let interrupted = Interruption.onCtrlC { batch.cancel() }
 
     // Report in the order given, as each job ends; the others keep running meanwhile.
     var failed = false
-    for job in batch.jobs {
+    for (index, job) in batch.jobs.enumerated() {
         await job.waitUntilFinished()
-        line?.clear()
+        var skipped = false
+        let report: () -> Void
         switch job.state {
         case .converted(let result):
-            print(result.output.path)
+            report = { print(result.output.path) }
         case .skipped(.notApplicable(let file, let format)):
-            printError("\(file.lastPathComponent): skipped, can't be converted to \(format)")
+            skipped = true
+            report = { printError("\(file.lastPathComponent): skipped, can't be converted to \(format)") }
         case .skipped(let reason):
-            printError(reason.localizedDescription)
+            skipped = true
             failed = true
+            report = { printError(reason.localizedDescription) }
         case .failed(let reason):
-            printError(reason)
             failed = true
+            report = { printError(reason) }
         case .cancelled, .waiting, .running:
-            break
+            report = {}
+        }
+        if let line {
+            line.clearing(report)
+            line.ended(index, skipped: skipped)
+        } else {
+            report()
         }
     }
     exit(interrupted.happened ? 130 : failed ? 1 : 0)

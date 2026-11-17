@@ -1,44 +1,64 @@
 import Foundation
-import Observation
-import TurnoverKit
+import Synchronization
 
 /// A one-line "clip.mov  42%" (or "3 files  42%") on standard error, redrawn in place while a
 /// batch runs. Shown only when standard error is a terminal; scripts and pipes never see it.
-@MainActor
-final class ProgressLine {
+///
+/// It is drawn from the conversions' own threads, as they report, so it keeps moving even when
+/// the main thread gets little time (as on a loaded machine running turnover at low priority).
+final class ProgressLine: Sendable {
     static let isAvailable = isatty(STDERR_FILENO) == 1
 
+    private struct State {
+        /// Each job's fraction done.
+        var fractions: [Double]
+        /// Whether each job counts towards the total: skipped files don't.
+        var counted: [Bool]
+        /// The percentage on screen, or nil while nothing is.
+        var shown: Int?
+    }
+
     private let label: String
-    /// The percentage on screen, or nil while nothing is.
-    private var shown: Int?
+    private let state: Mutex<State>
 
-    init(label: String) {
+    init(label: String, jobs: Int) {
         self.label = label
+        state = Mutex(State(fractions: Array(repeating: 0, count: jobs), counted: Array(repeating: true, count: jobs)))
     }
 
-    /// Shows `batch`'s progress from now on, each time it changes.
-    func follow(_ batch: Batch) {
-        let fraction = withObservationTracking { batch.progress } onChange: {
-            Task { @MainActor in self.follow(batch) }
+    /// Takes job `job`'s progress, from any thread, and redraws if the percentage changed.
+    /// Nothing is shown at 0 (quick jobs never draw) or at 1 (the new files' paths are printed).
+    func report(_ job: Int, _ fraction: Double) {
+        state.withLock { state in
+            state.fractions[job] = max(state.fractions[job], fraction)
+            let counted = state.fractions.indices.filter { state.counted[$0] }
+            guard !counted.isEmpty else { return }
+            let total = counted.map { state.fractions[$0] }.reduce(0, +) / Double(counted.count)
+            guard total > 0, total < 1 else { return }
+            let percent = Int(total * 100)
+            guard state.shown != percent else { return }
+            state.shown = percent
+            write("\r\u{1B}[K\(label)  \(percent)%")
         }
-        show(fraction)
     }
 
-    /// Shows `fraction` done. Nothing is shown at 0 (quick jobs never draw) or at 1 (the new
-    /// files' paths are printed instead).
-    func show(_ fraction: Double) {
-        guard fraction > 0, fraction < 1 else { return }
-        let percent = Int(fraction * 100)
-        guard shown != percent else { return }
-        shown = percent
-        write("\r\u{1B}[K\(label)  \(percent)%")
+    /// Records that job `job` ended: done, or left out of the total if it was skipped.
+    func ended(_ job: Int, skipped: Bool) {
+        state.withLock { state in
+            if skipped { state.counted[job] = false } else { state.fractions[job] = 1 }
+        }
     }
 
-    /// Erases the line, if anything was shown. It comes back with the next change.
-    func clear() {
-        guard shown != nil else { return }
-        shown = nil
-        write("\r\u{1B}[K")
+    /// Erases the line, runs `body` (which prints a result), and lets the next report redraw,
+    /// so that a redraw never lands in the middle of a printed line.
+    func clearing(_ body: () -> Void) {
+        state.withLock { state in
+            if state.shown != nil {
+                write("\r\u{1B}[K")
+                state.shown = nil
+            }
+            body()
+        }
     }
 
     private func write(_ text: String) {
