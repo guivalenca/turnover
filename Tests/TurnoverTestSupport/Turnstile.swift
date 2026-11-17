@@ -13,6 +13,7 @@ import UniformTypeIdentifiers
 public final class Turnstile: Sendable {
     private struct State {
         var running = 0
+        var held = 0
         var started = 0
         var mostAtOnce = 0
         var isOpen = false
@@ -33,6 +34,10 @@ public final class Turnstile: Sendable {
     /// How many conversions are running now.
     public var running: Int { state.withLock { $0.running } }
 
+    /// How many conversions have written their whole output and are waiting here. Cancelling one
+    /// of these tests only the stop itself: none of its own work is left to do.
+    public var held: Int { state.withLock { $0.held } }
+
     /// How many conversions have started in all.
     public var started: Int { state.withLock { $0.started } }
 
@@ -50,8 +55,18 @@ public final class Turnstile: Sendable {
 
     /// Waits until at least `count` conversions are running. False if that doesn't happen in time.
     public func waitUntil(running count: Int, timeout: Duration = .seconds(10)) async -> Bool {
+        await poll(timeout: timeout) { $0.running >= count }
+    }
+
+    /// Waits until at least `count` conversions are held here, their output written. False if that
+    /// doesn't happen in time.
+    public func waitUntil(held count: Int, timeout: Duration = .seconds(10)) async -> Bool {
+        await poll(timeout: timeout) { $0.held >= count }
+    }
+
+    private func poll(timeout: Duration, until condition: (State) -> Bool) async -> Bool {
         let deadline = ContinuousClock.now + timeout
-        while running < count {
+        while !state.withLock({ condition($0) }) {
             guard ContinuousClock.now < deadline else { return false }
             try? await Task.sleep(for: .milliseconds(2))
         }
@@ -67,6 +82,8 @@ public final class Turnstile: Sendable {
         }
         defer { state.withLock { $0.running -= 1 } }
         try await work()
+        state.withLock { $0.held += 1 }
+        defer { state.withLock { $0.held -= 1 } }
         while !state.withLock({ $0.isOpen }) {
             try await Task.sleep(for: .milliseconds(2))
         }

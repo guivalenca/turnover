@@ -149,20 +149,23 @@ func isExact(_ estimate: Estimate?, of real: Int) -> Bool {
         }
     }
 
+    /// Each photo has one output, PNG. The encode under way when the drag ends can't be stopped,
+    /// so one more photo may become measured; nothing else may. (How long that encode takes to
+    /// finish, at utility priority, depends on what else the machine is doing, so it isn't timed.)
     @Test func cancellingStopsTheWorkAndLeavesNothingRunning() async throws {
         let photos = try await photos()
         let estimator = Estimator()
         let live = estimator.estimate(photos)
         #expect(await eventually { live.offers.targets.first?.estimate != nil })
 
-        let cancelled = ContinuousClock.now
         live.cancel()
+        let measuredAtCancel = remembered(photos, by: estimator)
         await live.waitUntilFinished()
 
-        #expect(ContinuousClock.now - cancelled < timeLimit(.seconds(1)))
         #expect(live.isFinished)
         let offers = live.offers
         let measured = remembered(photos, by: estimator)
+        #expect(measured.count <= measuredAtCancel.count + 1, "\(measuredAtCancel.count) measured at the cancel, \(measured.count) once stopped")
         try await Task.sleep(for: .milliseconds(300))
         // Nothing changes any more: neither the offers nor what is remembered.
         #expect(live.offers == offers)
