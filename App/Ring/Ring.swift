@@ -12,6 +12,11 @@ let ringLog = Logger(subsystem: "com.guivalenca.turnover", category: "ring")
 /// on what the model says (show or hide the ring, show a hint, convert). Every event goes to the
 /// model with the time before it, and a timer sends the time again when a rest on a format is
 /// due to add it.
+///
+/// An image dragged as a picture, out of a web page, has no file. When ⇧ first opens the ring
+/// for it, its bytes are read from the drag pasteboard and staged as a temporary file
+/// (`StagedImage`); from there the ring treats it as a drag of that one file, offered Original
+/// too, and a drop saves it where the ring was dropped (`SaveDestination`).
 @MainActor
 final class Ring {
     private var model = RingModel(restDelay: Ring.restDelay())
@@ -26,6 +31,18 @@ final class Ring {
     /// The dragged files, once known, and their offers with the estimates refining.
     private var files: [URL]?
     private var live: LiveOffers?
+    /// The image this drag carries as a picture, if it is such a drag.
+    private var picture: Picture?
+
+    /// An image dragged as a picture: what the pasteboard says it is, the process it was dragged
+    /// from, and its file once it has been staged.
+    private struct Picture {
+        let id = UUID()
+        let dragged: DraggedImage
+        let source: pid_t?
+        var isStaging = false
+        var staged: StagedImage?
+    }
     /// After the button goes up over the open ring: the panels' drop callbacks are still to
     /// come, and closing before them could lose the drop. This ends the drag if they never do.
     private var dropDeadline: DispatchWorkItem?
@@ -58,6 +75,7 @@ final class Ring {
         switch event {
         case .dragStarted(let shiftDown, let optionDown, let files, let source):
             self.source = source
+            picture = nil
             if let files {
                 ringLog.notice("Drag started: \(files.count) file(s) read from the drag pasteboard at once")
             } else {
@@ -67,6 +85,14 @@ final class Ring {
             send(.dragStarted(shiftDown: shiftDown))
             send(.option(down: optionDown))
             if let files { estimate(files) }
+        case .imageDragStarted(let shiftDown, let optionDown, let image, let owner):
+            source = .elsewhere
+            picture = Picture(dragged: image, source: owner)
+            panel.pictureThumbnail = nil
+            ringLog.notice("Drag started: an image, \(image.contentType.identifier, privacy: .public), to be read when ⇧ opens the ring")
+            if model.phase == .idle { model = RingModel(restDelay: Self.restDelay()) }
+            send(.dragStarted(shiftDown: shiftDown))
+            send(.option(down: optionDown))
         case .shift(let down):
             send(.shift(down: down))
         case .option(let down):
@@ -94,7 +120,8 @@ final class Ring {
         model.send(event)
 
         if model.phase == .open, before.phase != .open {
-            panel.open(at: NSEvent.mouseLocation)
+            panel.open(at: NSEvent.mouseLocation,
+                       pictureTypes: picture == nil ? [] : NSPasteboard(name: .drag).types ?? [])
             ringLog.notice("Ring opened with \(self.model.entries.map(\.title).joined(separator: ", "), privacy: .public)")
         } else if model.phase != .open, before.phase == .open {
             panel.close()
@@ -125,6 +152,43 @@ final class Ring {
             estimator.cancel()
             live = nil
             files = nil
+            // A staged image that wasn't dropped on an entry is of no more use. One still being
+            // staged removes itself when it finds the drag gone.
+            picture?.staged?.remove()
+            picture = nil
+            panel.pictureThumbnail = nil
+        }
+        if model.phase == .open { stagePicture() }
+    }
+
+    /// The first time the ring is open for an image dragged as a picture: reads its bytes from
+    /// the drag pasteboard, where the browser put them, and stages them as a file. The offers
+    /// follow as for a drag of that file, with Original; until then the ring is empty.
+    ///
+    /// Not before ⇧: most image drags never open the ring, and their bytes are none of
+    /// Turnover's business.
+    private func stagePicture() {
+        guard var picture, !picture.isStaging, picture.staged == nil else { return }
+        picture.isStaging = true
+        self.picture = picture
+        let (id, name) = (picture.id, picture.dragged.fileName)
+        let data = NSPasteboard(name: .drag).data(forType: .init(picture.dragged.pasteboardType))
+        Task {
+            do {
+                guard let data, !data.isEmpty else { throw CocoaError(.fileReadNoSuchFile) }
+                let staged = try await StagedImage.write(data, named: name)
+                guard self.picture?.id == id else { return staged.remove() }  // the drag ended meanwhile
+                self.picture?.staged = staged
+                ringLog.notice("Staged the dragged image: \(data.count) bytes as \(name, privacy: .public)")
+                estimate([staged.file], keepingOriginal: true)
+                let thumbnail = await staged.thumbnail(side: RingPanel.dragImageSide)
+                if self.picture?.id == id { panel.pictureThumbnail = thumbnail }
+            } catch {
+                ringLog.error("Couldn't read the dragged image from the drag pasteboard: \(error.localizedDescription, privacy: .public)")
+                guard self.picture?.id == id else { return }
+                // A hint instead of the ring, as for a file that can't be read.
+                send(.offers(Offers(groups: [], skipped: [.unreadable(URL(fileURLWithPath: name))])))
+            }
         }
     }
 
@@ -154,6 +218,15 @@ final class Ring {
         switch outcome {
         case .convert(let choices):
             let summary = choices.map { "\($0.files.count) to \($0.format.name)\($0.quality.map { " \($0.percent)%" } ?? "")" }
+            if let staged = picture?.staged {
+                // The conversion owns the staged file from here, and removes it when it is done.
+                picture?.staged = nil
+                let point = NSEvent.mouseLocation
+                let destination = SaveDestination.current(droppedAt: point, draggedFrom: picture?.source)
+                ringLog.notice("Ring drop: an image, \(summary.joined(separator: ", "), privacy: .public), saved to \(String(describing: destination), privacy: .public)")
+                conversions.save(staged, as: choices.map(\.action), to: destination, droppedAt: point)
+                return
+            }
             let origin = source.origin(drop: DesktopCoordinates.current.topLeft(NSEvent.mouseLocation))
             ringLog.notice("Ring drop: \(summary.joined(separator: ", "), privacy: .public), from \(String(describing: origin), privacy: .public)")
             conversions.convert(choices.flatMap(\.files), to: choices.map(\.action), origin: origin)
@@ -165,12 +238,12 @@ final class Ring {
     /// Starts working out the offers for `files` and feeds them, and every refinement of their
     /// estimates, to the model. The files are looked at off the main actor, so the drag never
     /// waits for them.
-    private func estimate(_ files: [URL]) {
+    private func estimate(_ files: [URL], keepingOriginal: Bool = false) {
         guard files != self.files else { return }
         self.files = files
         let quality = AppSettings().jpegQuality
         Task {
-            let live = await estimator.estimate(files, jpegQuality: quality)
+            let live = await estimator.estimate(files, jpegQuality: quality, keepingOriginal: keepingOriginal)
             guard files == self.files else { return }  // the drag ended, or other files came
             self.live = live
             follow(live)

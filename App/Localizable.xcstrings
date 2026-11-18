@@ -75,6 +75,12 @@
     "Quit Turnover" : {
       "comment" : "Menu item and button that quit the app."
     },
+    "Saved to Downloads" : {
+      "comment" : "A short note by the pointer: an image dragged out of a web page was saved to Downloads."
+    },
+    "Saved to Downloads · Copied" : {
+      "comment" : "A short note by the pointer: an image dragged out of a web page was saved to Downloads and put on the clipboard, ready to paste."
+    },
     "Settings" : {
       "comment" : "Heading of the window's settings."
     },

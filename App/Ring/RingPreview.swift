@@ -7,7 +7,8 @@ import RingModel
 ///
 ///     Turnover.app/Contents/MacOS/Turnover -RingPreview photos -RingHighlight 1
 ///
-/// States: `movie`, `photos`, `fanned` (⌥ over images), `mixed` (images and a video),
+/// States: `movie`, `photos`, `fanned` (⌥ over images), `web` (an image dragged out of a web
+/// page), `web-fanned`, `mixed` (images and a video),
 /// `mixed-added` (PNG added), `mixed-fanned`, `long` (the longest texts), and `none` (no
 /// preview: for trying the real ring with drags, without the window).
 /// Also: `-RingHighlight <index>` (none: the hub's resting text), `-RingTour YES` (moves the
@@ -99,6 +100,14 @@ enum RingPreview {
         case "fanned":
             var entries = placed([("PNG", "~19 MB", 180), ("Best", "~6.1 MB", -54), ("High", "2.4 MB", 0),
                                   ("Small", "~1.1 MB", 54)])
+            entries[2].isDefault = true
+            return RingLook(entries: entries, hub: .init(title: "JPEG", detail: "quality"))
+        case "web":
+            return RingLook(entries: placed([("PNG", "~3.1 MB", -150), ("JPEG", "~480 KB", -30), ("Original", "WebP · 212 KB", 90)]),
+                            hub: .init(title: "WebP", detail: "1600 × 1067"))
+        case "web-fanned":
+            var entries = placed([("PNG", "~3.1 MB", -150), ("Best", "~1.9 MB", -84), ("High", "480 KB", -30),
+                                  ("Small", "~210 KB", 24), ("Original", "WebP · 212 KB", 90)])
             entries[2].isDefault = true
             return RingLook(entries: entries, hub: .init(title: "JPEG", detail: "quality"))
         case "mixed":

@@ -41,15 +41,31 @@ final class RingPanel {
     private var watchdog: Timer?
     /// The pointer's angle around the centre (the model's degrees), for the highlight's turn.
     private var pointerAngle: Double?
-    /// The drag image has been made small for this opening.
-    fileprivate var dragImageShrunk = false
+    /// How many more of the drag's updates make the drag image small, for this opening.
+    fileprivate var dragImageShrinks = 0
+    /// The pasteboard types an image dragged as a picture carries; empty for a drag of files.
+    /// The panels take the drag whatever it carries, and its drag image is the picture's.
+    fileprivate var pictureTypes: [NSPasteboard.PasteboardType] = []
+    /// A small picture of the dragged image, once there is one: the drag image over the ring.
+    var pictureThumbnail: NSImage? {
+        // Shrunk again at the next update, with the picture.
+        didSet { dragImageShrinks = Self.pictureShrinks }
+    }
 
     /// Keeps this far from a screen's edges, menu bar and Dock.
     private static let edgeMargin: CGFloat = 8
+    /// The drag image's size over the ring: about the prototype's (a thumbnail at 45%).
+    static let dragImageSide: CGFloat = 32
+    /// How many updates in a row make a dragged picture's image small. Done once, as for files,
+    /// the browser's large image stayed over the ring until the pointer moved again (seen with
+    /// real drags from Chrome); done on the next few updates, it is small at once.
+    fileprivate static let pictureShrinks = 4
 
     /// Shows the panels, with the ring centred on `point` (screen coordinates), or as near it as
-    /// keeps the ring on screen.
-    func open(at point: NSPoint) {
+    /// keeps the ring on screen. `pictureTypes`: what the drag pasteboard holds, for an image
+    /// dragged as a picture rather than as a file, so that the panels are its destination too.
+    func open(at point: NSPoint, pictureTypes: [NSPasteboard.PasteboardType] = []) {
+        self.pictureTypes = pictureTypes
         let screens = NSScreen.screens
         let screen = screens.first { NSMouseInRect(point, $0.frame, false) } ?? NSScreen.main
         // The visible frame leaves out the menu bar (and a notch) and the Dock.
@@ -58,11 +74,13 @@ final class RingPanel {
         while panels.count < screens.count { panels.append(makePanel()) }
         for (panel, screen) in zip(panels, screens) {
             panel.setFrame(screen.frame, display: false)
+            panel.contentView?.unregisterDraggedTypes()
+            panel.contentView?.registerForDraggedTypes([.fileURL] + pictureTypes)
             panel.orderFrontRegardless()
         }
         ring.show(at: centre)
         pointerAngle = nil
-        dragImageShrunk = false
+        dragImageShrinks = pictureTypes.isEmpty ? 1 : Self.pictureShrinks
         isOpen = true
         startWatchdog()
     }
@@ -174,8 +192,8 @@ private final class DropView: NSView {
         guard let ring, let window else { return [] }
         let point = window.convertPoint(toScreen: sender.draggingLocation)
         ring.pointerMoved(to: point)
-        if !ring.dragImageShrunk {
-            ring.dragImageShrunk = true
+        if ring.dragImageShrinks > 0 {
+            ring.dragImageShrinks -= 1
             shrinkDragImage(sender)
         }
         guard ring.delegate?.ringPanel(ring, pointerAt: point) == true else { return [] }
@@ -189,6 +207,16 @@ private final class DropView: NSView {
         sender.animatesToDestination = false
         sender.draggingFormation = .stack
         let pointer = convert(sender.draggingLocation, from: nil)
+        if let ring, !ring.pictureTypes.isEmpty {
+            // An image dragged as a picture: the browser's drag image is the picture itself,
+            // often large. Our own small picture of it replaces it, once it has been decoded.
+            sender.enumerateDraggingItems(options: [], for: self, classes: [NSPasteboardItem.self], searchOptions: [:]) { item, _, _ in
+                guard let contents = ring.pictureThumbnail ?? item.imageComponents?.first?.contents else { return }
+                let frame = RingGeometry.shrink(item.draggingFrame, toward: pointer, side: Self.dragImageSide)
+                item.setDraggingFrame(frame, contents: contents)
+            }
+            return
+        }
         sender.enumerateDraggingItems(options: [.clearNonenumeratedImages], for: self, classes: [NSURL.self],
                                       searchOptions: [.urlReadingFileURLsOnly: true]) { item, index, _ in
             let components = item.imageComponents ?? []
@@ -212,5 +240,5 @@ private final class DropView: NSView {
     }
 
     /// The drag image's size over the ring: about the prototype's (a thumbnail at 45%).
-    private static let dragImageSide: CGFloat = 32
+    private static var dragImageSide: CGFloat { RingPanel.dragImageSide }
 }
