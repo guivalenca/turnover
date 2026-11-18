@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and test (macOS)
+    # The newest stable macOS image. Its default Xcode is older than a developer Mac usually
+    # has, so keep Package.swift's tools version and the APIs used compatible with it.
+    runs-on: macos-26
+    timeout-minutes: 20
+    env:
+      # Pinned so an image update can't silently change the toolchain. `Xcode_26.6.app` stays
+      # valid when a 26.6.x patch replaces 26.6 (the image keeps the minor-version path).
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          swift --version
+
+      # Swift Build, not SwiftPM's older native build system (the default before Swift 6.4),
+      # which copies String Catalogs into the bundles without compiling them: every plural
+      # would read "1 files".
+      - name: Build
+        run: swift build --build-tests --build-system swiftbuild
+
+      - name: Test
+        run: swift test --build-system swiftbuild
+
+  app:
+    name: Build the app and Finder extension (macOS)
+    runs-on: macos-26
+    timeout-minutes: 20
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v5
+
+      # Turnover.xcodeproj is committed so a clone needs only Xcode; make sure it is the one
+      # project.yml generates. XcodeGen is pinned (the runner's Homebrew lags behind, and each
+      # version writes slightly different files); keep it in step with the Makefile.
+      - name: Check the Xcode project matches project.yml
+        env:
+          XCODEGEN_VERSION: "2.47.0"
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/xcodegen.zip" \
+            "https://github.com/yonaskolb/XcodeGen/releases/download/$XCODEGEN_VERSION/xcodegen.zip"
+          unzip -q "$RUNNER_TEMP/xcodegen.zip" -d "$RUNNER_TEMP"
+          make project XCODEGEN="$RUNNER_TEMP/xcodegen/bin/xcodegen"
+          git status --porcelain
+          git diff --exit-code
+
+      # Unsigned here; `make install` signs ad hoc on the user's Mac.
+      - name: Build
+        run: >
+          xcodebuild -project Turnover.xcodeproj -scheme Turnover -configuration Release
+          -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO build

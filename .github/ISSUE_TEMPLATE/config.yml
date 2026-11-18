@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Install and troubleshooting
+    url: https://github.com/guivalenca/turnover#troubleshooting
+    about: The common problems and their fixes.

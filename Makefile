@@ -1,0 +1,100 @@
+# Build, install and test Turnover. Only Xcode is needed, except for `make project`.
+#
+#   make install     build, sign, install to /Applications, enable the Finder menu, launch
+#   make uninstall   quit, disable and unregister everything `make install` set up
+#   make app         build and sign build/Turnover.app only (install removes it again)
+#   make test        run every test: TurnoverKit, the app core, the ring model and the CLI
+#   make project     regenerate Turnover.xcodeproj from project.yml (needs `brew install xcodegen`)
+
+APP_ID      := com.guivalenca.turnover
+EXTENSION_ID := com.guivalenca.turnover.finder
+DERIVED     := build/DerivedData
+BUILT       := $(DERIVED)/Build/Products/Release/Turnover.app
+PRODUCT     := build/Turnover.app
+INSTALLED   := /Applications/Turnover.app
+EXTENSION   := Contents/PlugIns/TurnoverFinder.appex
+LSREGISTER  := /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+# The XcodeGen CI checks Turnover.xcodeproj with (.github/workflows/ci.yml); keep them in step.
+XCODEGEN_VERSION := 2.47.0
+XCODEGEN    ?= xcodegen
+
+# What `make app` signs with (#19). macOS remembers what you allowed an app (folders, controlling
+# Finder) by its signature. Signed with a certificate, Turnover keeps its identity from one build
+# to the next, so each permission is asked once. Signed ad hoc, every build is a new app to macOS,
+# and it asks again after each reinstall. The default is the keychain's first Apple Development
+# certificate (free with any Apple ID: Xcode › Settings › Accounts › Manage Certificates), else
+# ad hoc. Override with SIGN_IDENTITY=<certificate name or SHA-1>, or SIGN_IDENTITY=- for ad hoc.
+ifndef SIGN_IDENTITY
+SIGN_IDENTITY := $(or $(shell security find-identity -v -p codesigning 2>/dev/null | awk '/"Apple Development: / {print $$2; exit}'),-)
+endif
+CODESIGN    := codesign --force --sign "$(SIGN_IDENTITY)" --timestamp=none --preserve-metadata=entitlements
+
+.PHONY: app install uninstall test project clean
+
+# Xcode registers what it builds with LaunchServices and pluginkit. Turnover's URL scheme and
+# Finder extension must resolve to one copy only, so the build copy is moved out of
+# DerivedData and unregistered; only the installed app stays registered.
+app:
+	xcodebuild -project Turnover.xcodeproj -scheme Turnover -configuration Release \
+		-derivedDataPath $(DERIVED) -quiet build
+	-pluginkit -r "$(BUILT)/$(EXTENSION)" 2>/dev/null
+	-$(LSREGISTER) -u "$(BUILT)" 2>/dev/null
+	rm -rf "$(PRODUCT)"
+	ditto "$(BUILT)" "$(PRODUCT)"
+	rm -rf "$(BUILT)"
+	@# Inside out: the extension, keeping its sandbox entitlement, then the app around it.
+	$(CODESIGN) "$(PRODUCT)/$(EXTENSION)"
+	$(CODESIGN) "$(PRODUCT)"
+	codesign --verify --deep --strict "$(PRODUCT)"
+	@echo "Built $(PRODUCT), signed $(if $(filter -,$(SIGN_IDENTITY)),ad hoc: macOS will ask for permissions again after each reinstall,with a certificate: macOS remembers what you allow)"
+
+# Re-running upgrades in place: the old copy is quit and replaced, and Finder restarts the
+# extension from the new one.
+install: app
+	@pkill -x Turnover || true
+	@pkill -x TurnoverFinder || true
+	rm -rf "$(INSTALLED)"
+	ditto "$(PRODUCT)" "$(INSTALLED)"
+	@# LaunchServices notices app bundles on disk by itself; leave only the installed copy.
+	@$(LSREGISTER) -u "$(PRODUCT)" 2>/dev/null || true
+	rm -rf "$(PRODUCT)"
+	$(LSREGISTER) -f -R -trusted "$(INSTALLED)"
+	pluginkit -a "$(INSTALLED)/$(EXTENSION)"
+	@for attempt in 1 2 3 4 5 6 7 8 9 10; do \
+		pluginkit -m -i $(EXTENSION_ID) | grep -q $(EXTENSION_ID) && break; sleep 1; \
+	done
+	pluginkit -e use -i $(EXTENSION_ID)
+	@# A plain launch opens the Turnover window (setup and settings) in front.
+	open "$(INSTALLED)"
+	@echo "Installed $(INSTALLED). Right-click a photo or video in Finder: Turnover ›"
+
+# macOS keeps the extension's empty sandbox container (~/Library/Containers/$(EXTENSION_ID))
+# and won't let a shell without Full Disk Access delete it; remove it in Finder if you like.
+uninstall:
+	@pkill -x Turnover || true
+	-pluginkit -e ignore -i $(EXTENSION_ID)
+	@pkill -x TurnoverFinder || true
+	-pluginkit -r "$(INSTALLED)/$(EXTENSION)"
+	-$(LSREGISTER) -u "$(INSTALLED)"
+	rm -rf "$(INSTALLED)"
+	-tccutil reset All $(APP_ID) >/dev/null
+	@# Its settings too, so that a reinstall is a first launch again (Open at login turns on).
+	-@defaults delete $(APP_ID) 2>/dev/null
+	@echo "Uninstalled Turnover."
+
+# Swift Build compiles the String Catalogs; SwiftPM's older native build system (the default
+# before Swift 6.4) copies them as they are, and plural strings then fail their tests.
+test:
+	swift test --build-system swiftbuild
+
+# XcodeGen names the package's folder reference after the folder it runs in, so it runs through
+# a link named "turnover" (left in a new temporary folder): every clone, whatever its folder is
+# called, then gets the same project.
+project:
+	@$(XCODEGEN) --version | grep -q "$(XCODEGEN_VERSION)" || \
+		echo "warning: CI checks the project with XcodeGen $(XCODEGEN_VERSION); this is $$($(XCODEGEN) --version)"
+	@link="$$(mktemp -d)/turnover" && ln -s "$(CURDIR)" "$$link" && \
+		$(XCODEGEN) generate --spec "$$link/project.yml"
+
+clean:
+	rm -rf build

@@ -1,0 +1,116 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ (%lld%%)" : {
+      "comment" : "A JPEG quality in the setting's menu: “High (85%)”."
+    },
+    "%lld more waiting" : {
+      "comment" : "The menu bar item's menu: conversions queued beyond the rows shown.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld more waiting"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld more waiting"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Adds Turnover to the right-click menu" : {
+      "comment" : "What the Finder extension setup step is for."
+    },
+    "Allowed" : {
+      "comment" : "The notifications setup step, when notifications are allowed."
+    },
+    "Allow…" : {
+      "comment" : "Button that asks for permission to post notifications."
+    },
+    "Close" : {
+      "comment" : "File menu item that closes the window."
+    },
+    "Done" : {
+      "comment" : "A conversion in the menu bar item's menu, finished; or the whole menu once everything has."
+    },
+    "Drag a file, press ⇧, choose a format." : {
+      "comment" : "The app's tagline, in its window."
+    },
+    "Failed" : {
+      "comment" : "A conversion in the menu bar item's menu, failed."
+    },
+    "File" : {
+      "comment" : "The File menu."
+    },
+    "Finder extension" : {
+      "comment" : "A setup step: Turnover's Finder extension."
+    },
+    "Hold ⌥ over the ring to choose just once" : {
+      "comment" : "What the JPEG quality setting's ⌥ shortcut does."
+    },
+    "JPEG quality" : {
+      "comment" : "Setting: the JPEG quality the Finder menu and the ring use."
+    },
+    "Notifications" : {
+      "comment" : "A setup step: notifications."
+    },
+    "On" : {
+      "comment" : "A setup step that is done."
+    },
+    "Open Settings…" : {
+      "comment" : "Button that opens the step's page in System Settings."
+    },
+    "Open at login" : {
+      "comment" : "Setting: start the app when you log in."
+    },
+    "Quit Turnover" : {
+      "comment" : "Menu item and button that quit the app."
+    },
+    "Settings" : {
+      "comment" : "Heading of the window's settings."
+    },
+    "Setup" : {
+      "comment" : "Heading of the window's setup steps."
+    },
+    "Show in Finder" : {
+      "comment" : "A notification's button: selects the new files in Finder."
+    },
+    "Skipped" : {
+      "comment" : "A conversion in the menu bar item's menu, not done: the file doesn't fit the format."
+    },
+    "Stop All" : {
+      "comment" : "Stops every conversion in the menu bar item's menu."
+    },
+    "Stop converting %@" : {
+      "comment" : "The ✕ next to a conversion in the menu bar item's menu: the file's name."
+    },
+    "Stopped" : {
+      "comment" : "A conversion in the menu bar item's menu, stopped with ✕."
+    },
+    "Tells you when longer conversions finish" : {
+      "comment" : "What the notifications setup step is for."
+    },
+    "Turnover" : {
+      "comment" : "The app's name."
+    },
+    "Turnover needs to be running to show the ring" : {
+      "comment" : "Why the Open at login setting matters."
+    },
+    "Version %@ · MIT License" : {
+      "comment" : "The window's footer: the app's version."
+    },
+    "Waiting" : {
+      "comment" : "A conversion in the menu bar item's menu, queued."
+    }
+  },
+  "version" : "1.0"
+}

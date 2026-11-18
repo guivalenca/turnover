@@ -1,0 +1,138 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ (%lld images)" : {
+      "comment" : "A Finder menu item: the format, and how many images it converts.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%@ (%lld image)"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%@ (%lld images)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%@ (%lld videos)" : {
+      "comment" : "A Finder menu item: the format, and how many videos it converts.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%@ (%lld video)"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%@ (%lld videos)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%@ GB" : {
+      "comment" : "A size in Finder's units (1 KB = 1000 bytes): “19 MB”."
+    },
+    "%@ KB" : {
+      "comment" : "A size in Finder's units (1 KB = 1000 bytes): “19 MB”."
+    },
+    "%@ MB" : {
+      "comment" : "A size in Finder's units (1 KB = 1000 bytes): “19 MB”."
+    },
+    "%@ TB" : {
+      "comment" : "A size in Finder's units (1 KB = 1000 bytes): “19 MB”."
+    },
+    "%@, and %lld more files" : {
+      "comment" : "Why nothing can be converted: the first file's reason, then how many other files can't be either.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%@, and %lld more file"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%@, and %lld more files"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%@: %@" : {
+      "comment" : "A file's name, then why it wasn't converted: “x.heic: can't be read”."
+    },
+    "About %lld min" : {
+      "comment" : "How long converting takes, in minutes, abbreviated."
+    },
+    "About %lld s" : {
+      "comment" : "How long converting takes, in seconds, abbreviated."
+    },
+    "Best" : {
+      "comment" : "The JPEG quality of 100%."
+    },
+    "High" : {
+      "comment" : "The JPEG quality of 85%, the default."
+    },
+    "Instant" : {
+      "comment" : "How long converting takes when the video is only copied into the new file."
+    },
+    "No files" : {
+      "comment" : "Why nothing can be converted: nothing was dragged."
+    },
+    "Small" : {
+      "comment" : "The JPEG quality of 60%."
+    },
+    "already a JPEG" : {
+      "comment" : "Why a file wasn't converted, after its name."
+    },
+    "already a PNG" : {
+      "comment" : "Why a file wasn't converted, after its name."
+    },
+    "already an MP4" : {
+      "comment" : "Why a file wasn't converted, after its name."
+    },
+    "can't be converted to %@" : {
+      "comment" : "Why a file wasn't converted, after its name. The format: “PNG”."
+    },
+    "can't be read" : {
+      "comment" : "Why a file wasn't converted, after its name: “x.heic: can't be read”."
+    },
+    "couldn't write the %@ (%@)" : {
+      "comment" : "Why a file wasn't converted, after its name. The format, then the system's reason: “couldn't write the PNG (Permission denied)”."
+    },
+    "damaged or incomplete, can't be decoded" : {
+      "comment" : "Why a file wasn't converted, after its name."
+    },
+    "not an image or a video (%@)" : {
+      "comment" : "Why a file wasn't converted, after its name. The file's type: “PDF document”."
+    },
+    "~%@" : {
+      "comment" : "An approximate size, from a guess: “~19 MB”."
+    }
+  },
+  "version" : "1.0"
+}

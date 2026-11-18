@@ -1,0 +1,192 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ %lld%%" : {
+      "comment" : "A JPEG quality added by resting on it, in the caption: “JPEG 100%”."
+    },
+    "%@ added · drop to convert" : {
+      "comment" : "Under the ring once formats are added by resting on them: “PNG + MP4 added · drop to convert”."
+    },
+    "%@ · %@" : {
+      "comment" : "Two parts of the hub on one line: the format and its size, “PNG · 19 MB”."
+    },
+    "%lld files" : {
+      "comment" : "How many files a drop converts.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld file"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld files"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld images" : {
+      "comment" : "How many images a drop converts.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld image"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld images"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld videos" : {
+      "comment" : "How many videos a drop converts.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld video"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld videos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "JPEG quality" : {
+      "comment" : "The hub while ⌥ fans out JPEG's qualities, on one line."
+    },
+    "Rest on a format to add it, then drop on another" : {
+      "comment" : "Under the ring when photos and videos are dragged together."
+    },
+    "files under a count of %lld" : {
+      "comment" : "The hub's small line under the count of dragged files: the noun alone, agreeing with the count above it.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%#@count@"
+          },
+          "substitutions" : {
+            "count" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "file"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "files"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "images under a count of %lld" : {
+      "comment" : "The hub's small line under the count of dragged files: the noun alone, agreeing with the count above it.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%#@count@"
+          },
+          "substitutions" : {
+            "count" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "image"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "images"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "quality" : {
+      "comment" : "The hub's small line under “JPEG” while ⌥ fans out JPEG's qualities."
+    },
+    "videos under a count of %lld" : {
+      "comment" : "The hub's small line under the count of dragged files: the noun alone, agreeing with the count above it.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%#@count@"
+          },
+          "substitutions" : {
+            "count" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "video"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "videos"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
