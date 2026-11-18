@@ -10,7 +10,7 @@ The product decisions behind it are in the spec, [issue #1](https://github.com/g
 flowchart LR
     menu["Finder's right-click menu"] --> ext["Finder extension<br/>(sandboxed)"]
     ext -- "turnover://convert?to=png&file=…" --> delegate
-    drag["A drag of files, then ⇧"] --> watcher
+    drag["A drag of files, or of a web image, then ⇧"] --> watcher
 
     subgraph app ["Turnover.app (background agent)"]
         delegate["AppDelegate<br/>checks each request"] --> conversions
@@ -49,12 +49,26 @@ The libraries and the command are a Swift package (`Package.swift`); the app and
 4. **Choosing.** ⌥ fans JPEG out into Best, High and Small. Resting on a format for the system's spring-loading delay adds it, for selections of photos and videos together.
 5. **Dropping** on a format starts a batch in `Conversions`, with where the drag came from (see [After the conversion](#after-the-conversion)).
 
+## An image dragged out of a web page
+
+Such an image is dragged as a picture, not as a file. Safari and Chrome both put its own bytes on the drag pasteboard under its type (`org.webmproject.webp`, `public.jpeg`), next to a promise of a file, its address and its title. That comes from the browsers' sources (Chromium's `web_drag_source_mac.mm`, WebKit's `WebViewImpl::writePromisedImageDragDataToPasteboard`), and any process can read the drag pasteboard, so nothing is downloaded and no browser extension is needed.
+
+1. **Noticing it.** A drag with no file URLs whose pasteboard lists an image type is a `DraggedImage`. Only the types are looked at, and then the promised type, the address and the title. The bytes aren't read: most image drags never open the ring.
+2. **Staging.** When ⇧ first opens the ring, the bytes are read and written to a private temporary folder as `mountain-lake.webp` (`StagedImage`). From there the ring treats the drag as one of that file: the same estimates, the same entries, plus **Original** (`OutputFormat.original`, `OriginalAction`), which copies it as it is. `Offers.original` says what the image is, for the ring's centre. The panels register for the types the drag carries, so they are its destination too.
+3. **Where it is saved** (`SaveDestination`) is read from the windows under the drop, the way a drag's source is. Below the normal window level there is only the Desktop: the file goes there, placed where it was dropped like any Desktop drop. A Finder window means its folder, which Finder is asked for over Apple Events (`FinderWindows`). Anything else means Downloads, with a note by the pointer, and `com.apple.DownloadFileFinished` posted for the Dock's Downloads stack, as browsers post it for a finished download.
+4. **Another app.** The drop lands on the ring, so the app under it never receives it. When that app isn't the one the image came from, the new file is put on the clipboard, ready to paste there. The Dock, the menu bar, Finder and the browser itself leave the clipboard alone.
+5. **The drag image.** A browser's drag image is the picture itself, often large. Over the ring it is replaced by a small thumbnail made from the staged file. That is done on the first few updates of the drag rather than once: done once, the large image stayed until the pointer moved again.
+
+This was checked with real drags from Chrome, Safari and Dia (which is Chromium underneath).
+
+The conversion runs as any other batch, with the destination folder passed down to `Placement` in place of "next to the source", and the staged file is removed when the batch ends.
+
 ## Converting (TurnoverKit)
 
-- **Offers** say which formats fit each kind of file: PNG and JPEG for images, MP4 for videos, never a file's own format. Files nothing fits come with a reason, which the ring shows as a hint.
+- **Offers** say which formats fit each kind of file: PNG and JPEG for images, MP4 for videos, never a file's own format. Files nothing fits come with a reason, which the ring shows as a hint. Original is offered only when asked for, for a staged web image; the command and the Finder menu never take it.
 - **Estimates** come in two steps. A quick one, from sampling a few tiles at full resolution, arrives in under 50 ms. Then each image's exact size is measured by encoding it in memory, a few photos at a time with the rest scaled from them, and remembered in a cache keyed by the file's size and date. Measuring waits while conversions run.
 - **Actions** convert one file. Images go through ImageIO, keep their EXIF, location, dates and colour profile, and have their orientation applied. For video, `MP4Plan` reads the tracks without decoding anything: H.264 that plays everywhere is copied into an MP4 as is; anything else, HEVC and HDR included, is re-encoded to 8-bit H.264 tagged BT.709, with AAC audio.
-- **Placement** writes each output to a private temporary folder on the same volume, then moves it into place with an exclusive rename. A new file appears whole or not at all, never replaces another, and is numbered on a collision (`photo 2.png`). A read-only folder falls back to Downloads.
+- **Placement** writes each output to a private temporary folder on the same volume, then moves it into place with an exclusive rename. A new file appears whole or not at all, never replaces another, and is numbered on a collision (`photo 2.png`). A read-only folder falls back to Downloads. The folder is the source's own, unless the batch is given one.
 - **`JobRunner`** runs batches: images side by side, one per processor core, and at most two videos at a time, across every batch. Cancelling a job leaves nothing behind.
 
 ## After the conversion
@@ -67,6 +81,7 @@ What happens to the new files depends on where the conversion started (`Conversi
 | The ring, dropped on the Desktop | The new files are moved to where the ring was dropped. |
 | The menu, on Desktop files | Nothing: Finder places them. |
 | Anywhere else (a Dock stack, another app) | Nothing. |
+| A web image, on the ring | See [An image dragged out of a web page](#an-image-dragged-out-of-a-web-page). |
 
 **Where a drag started** (`DragSource`) is read when it starts, from `CGWindowListCopyWindowInfo`. That gives each window's owner, level and frame without any permission, since window names aren't read. A Finder window at the normal level under the pointer means a Finder window. The drag image and full-screen overlays, like the one the Dock puts up during a drag, are seen through. The Desktop can't be told by its window, which recent macOS doesn't always list, so a drag is the Desktop's when every dragged file sits directly in `~/Desktop`.
 
@@ -80,8 +95,8 @@ What happens to the new files depends on where the conversion started (`Conversi
 
 | Permission | Why |
 | --- | --- |
-| Files & Folders (Desktop, Documents, Downloads, removable and network volumes) | Reading originals and writing next to them. |
-| Automation › Finder | Placing new files on the Desktop. Optional: without it, Finder places them. |
+| Files & Folders (Desktop, Documents, Downloads, removable and network volumes) | Reading originals and writing next to them, and saving web images where they are dropped. |
+| Automation › Finder | Placing new files on the Desktop, and asking which folder a Finder window shows for a web image dropped over it. Optional: without it, Finder places them, and the web image goes to Downloads. |
 | Notifications | Optional. |
 
 Turnover needs no Accessibility, Input Monitoring or Screen Recording access: the ring uses global mouse monitors, and window names are never read.
@@ -92,6 +107,6 @@ macOS stores each answer against the app's code signature, by its designated req
 
 - **TurnoverKit** is tested against real files: small committed photos and clips, converted for real and checked byte for byte where it matters.
 - **RingModel** is a pure state machine, tested by feeding it events and times.
-- **TurnoverAppCore** holds the decisions the app makes, such as feedback timing, drag sources and Desktop grid spots, so they are tested without AppKit.
+- **TurnoverAppCore** holds the decisions the app makes, such as feedback timing, drag sources, Desktop grid spots, what a drag pasteboard's types say it carries and where a web image is saved, so they are tested without AppKit.
 - **TurnoverCLI** is tested end to end by running the built command.
 - Finder, the ring's windows and the system prompts are checked by hand, with the checklist in the [pull request template](../.github/pull_request_template.md).

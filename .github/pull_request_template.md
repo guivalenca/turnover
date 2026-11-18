@@ -80,6 +80,23 @@ With a physical mouse or trackpad, and the keyboard:
 - [ ] Dropping straight on MP4 converts only the video. Adding JPEG after PNG replaces it.
 - [ ] Change the spring-loading speed (System Settings › Accessibility › Pointer Control): the rest delay follows it from the next drag. The 0.5 s default feels right.
 
+### The ring: images from the web
+
+In Safari and in Chrome (and Dia, if installed), with a page of photos and an image search:
+
+- [ ] Drag an image and press ⇧: the ring opens with PNG, JPEG and Original, and the centre reads its type and size in pixels, such as "WebP" over "1600 × 1067". Sizes appear within a moment. A JPEG offers PNG and Original only; a PNG, JPEG and Original.
+- [ ] Without ⇧, the drag behaves as before: onto the Desktop, into a Finder window, into another app. Release ⇧ over the ring and it carries on the same way.
+- [ ] A drop on PNG over the browser saves `name.png` in Downloads: "Saved to Downloads" shows by the pointer, the Dock's Downloads stack bounces, and the clipboard is unchanged. Again: `name 2.png`.
+- [ ] A drop on Original saves the image byte for byte under its own extension (compare with the browser's Save Image As).
+- [ ] A drop over the bare Desktop puts the new file where you dropped it, as for a drag of Desktop files, and no Finder window opens.
+- [ ] A drop over a Finder window saves into the folder it shows, selected. The first time, macOS asks whether Turnover may control Finder; after Don't Allow, and over a Recents or search window, it goes to Downloads with the note.
+- [ ] A drop over another app (Mail, Messages, a chat) reads "Saved to Downloads · Copied", and ⌘V attaches the new file there.
+- [ ] Over the ring, the drag image shrinks to a small picture of the image as soon as the pointer moves, and doesn't stay large over the centre.
+- [ ] An image inside a link (a search result) is named after its title, not the link. With neither a name nor a title, it is `image.png`.
+- [ ] ⌥ fans JPEG out with Original still at the bottom. Esc, a drop on the centre and a drop off the ring cancel, and nothing is saved.
+- [ ] Dragging a link, selected text, or an SVG image and pressing ⇧: no ring (the SVG shows a hint), and the drag carries on.
+- [ ] After each of these, `ls $TMPDIR | grep Turnover-dragged` lists nothing.
+
 ### The ring: look and drag image
 
 - [ ] Over the ring, the drag image shrinks to a small thumbnail without its name, and comes back when the ring closes: in icon, list and column view, from the Desktop, and with many files.
