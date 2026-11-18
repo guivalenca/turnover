@@ -50,8 +50,10 @@ macOS asks a few things once:
 
 - **Login Item Added:** a notification that Turnover opens at login. You can turn that off in Turnover's window.
 - **Notifications:** asked the first time Turnover has something to tell you, or when you click Allow… in its window.
+- **Folder access:** the first time you convert a file on the Desktop, in Documents or Downloads, on an external drive or on a network share, macOS asks whether Turnover may access it. Allow it.
 - **Controlling Finder:** the first time you drop on the ring on the Desktop, macOS asks whether Turnover may control Finder. Turnover uses it only to put the new file where you dropped it. If you say no, the file goes where Finder puts new files.
-- **Folder access:** the first time you convert a file on the Desktop, in Documents or Downloads, on an external drive or on a network share, macOS asks whether Turnover may access it. Allow it. Because the app is signed on your Mac rather than by a developer, macOS treats each `make install` as a new app, so these prompts come back after every reinstall or upgrade.
+
+macOS remembers these answers across reinstalls and upgrades when `make install` signs Turnover with an Apple Development certificate. It uses the first one in your keychain by itself. To get one, free with any Apple ID, open Xcode › Settings › Accounts, sign in, then Manage Certificates › + › Apple Development. Without a certificate, Turnover is signed ad hoc: macOS then treats each `make install` as a new app and asks again after every reinstall.
 
 If **Turnover ›** is missing from the right-click menu, click Open Settings… next to Finder extension in Turnover's window and turn Turnover on.
 

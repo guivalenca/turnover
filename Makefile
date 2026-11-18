@@ -1,8 +1,8 @@
 # Build, install and test Turnover. Only Xcode is needed, except for `make project`.
 #
-#   make install     build, sign ad hoc, install to /Applications, enable the Finder menu, launch
+#   make install     build, sign, install to /Applications, enable the Finder menu, launch
 #   make uninstall   quit, disable and unregister everything `make install` set up
-#   make app         build build/Turnover.app only (ad hoc signed; install removes it again)
+#   make app         build and sign build/Turnover.app only (install removes it again)
 #   make test        run every test: TurnoverKit, the app core, the ring model and the CLI
 #   make project     regenerate Turnover.xcodeproj from project.yml (needs `brew install xcodegen`)
 
@@ -18,6 +18,17 @@ LSREGISTER  := /System/Library/Frameworks/CoreServices.framework/Frameworks/Laun
 XCODEGEN_VERSION := 2.47.0
 XCODEGEN    ?= xcodegen
 
+# What `make app` signs with (#19). macOS remembers what you allowed an app (folders, controlling
+# Finder) by its signature. Signed with a certificate, Turnover keeps its identity from one build
+# to the next, so each permission is asked once. Signed ad hoc, every build is a new app to macOS,
+# and it asks again after each reinstall. The default is the keychain's first Apple Development
+# certificate (free with any Apple ID: Xcode › Settings › Accounts › Manage Certificates), else
+# ad hoc. Override with SIGN_IDENTITY=<certificate name or SHA-1>, or SIGN_IDENTITY=- for ad hoc.
+ifndef SIGN_IDENTITY
+SIGN_IDENTITY := $(or $(shell security find-identity -v -p codesigning 2>/dev/null | awk '/"Apple Development: / {print $$2; exit}'),-)
+endif
+CODESIGN    := codesign --force --sign "$(SIGN_IDENTITY)" --timestamp=none --preserve-metadata=entitlements
+
 .PHONY: app install uninstall test project clean
 
 # Xcode registers what it builds with LaunchServices and pluginkit. Turnover's URL scheme and
@@ -31,8 +42,11 @@ app:
 	rm -rf "$(PRODUCT)"
 	ditto "$(BUILT)" "$(PRODUCT)"
 	rm -rf "$(BUILT)"
+	@# Inside out: the extension, keeping its sandbox entitlement, then the app around it.
+	$(CODESIGN) "$(PRODUCT)/$(EXTENSION)"
+	$(CODESIGN) "$(PRODUCT)"
 	codesign --verify --deep --strict "$(PRODUCT)"
-	@echo "Built $(PRODUCT)"
+	@echo "Built $(PRODUCT), signed $(if $(filter -,$(SIGN_IDENTITY)),ad hoc: macOS will ask for permissions again after each reinstall,with a certificate: macOS remembers what you allow)"
 
 # Re-running upgrades in place: the old copy is quit and replaced, and Finder restarts the
 # extension from the new one.
