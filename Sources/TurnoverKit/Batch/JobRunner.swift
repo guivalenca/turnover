@@ -26,13 +26,16 @@ public final class JobRunner {
     /// `targets` that accepts it, for example PNG for the images and MP4 for the videos. Files
     /// no target fits are skipped.
     ///
+    /// With `folder`, every new file goes there instead of next to its original (see
+    /// `Converter.convert`).
+    ///
     /// Observe the batch from the main actor. `reporting`, if given, also receives each job's
     /// progress as the conversion reports it (the job's index in `files`, and the fraction), on
     /// the conversion's thread: for a display that can't count on the main actor being free,
     /// such as a terminal's progress line. Values follow `Converter.convert`'s rules.
     @discardableResult
     public func run(
-        _ files: [URL], to targets: [any ConversionAction],
+        _ files: [URL], to targets: [any ConversionAction], into folder: URL? = nil,
         reporting: (@Sendable (_ job: Int, _ fraction: Double) -> Void)? = nil
     ) -> Batch {
         precondition(!targets.isEmpty, "a batch needs at least one target")
@@ -52,7 +55,7 @@ public final class JobRunner {
                         reporting?(index, fraction)
                         job.report(fraction)
                     }
-                    lanes[lane]!.queue.append(Queued(job: job, file: file, action: action, progress: progress))
+                    lanes[lane]!.queue.append(Queued(job: job, file: file, action: action, folder: folder, progress: progress))
                     startQueuedJobs()
                 case .end(let state):
                     job.end(as: state)
@@ -77,6 +80,8 @@ public final class JobRunner {
         let job: Job
         let file: SourceFile
         let action: any ConversionAction
+        /// Where the new file goes; next to the original when nil.
+        let folder: URL?
         let progress: @Sendable (Double) -> Void
     }
 
@@ -94,7 +99,8 @@ public final class JobRunner {
         lanes[lane]!.running += 1
         let converter = converter
         queued.job.start(Task {
-            let state = await Self.convert(queued.file, with: queued.action, by: converter, progress: queued.progress)
+            let state = await Self.convert(queued.file, with: queued.action, into: queued.folder, by: converter,
+                                            progress: queued.progress)
             lanes[lane]!.running -= 1
             queued.job.end(as: state)
             startQueuedJobs()
@@ -121,11 +127,11 @@ public final class JobRunner {
     }
 
     private nonisolated static func convert(
-        _ file: SourceFile, with action: any ConversionAction, by converter: Converter,
+        _ file: SourceFile, with action: any ConversionAction, into folder: URL?, by converter: Converter,
         progress: @escaping @Sendable (Double) -> Void
     ) async -> Job.State {
         do {
-            return .converted(try await converter.convert(file, with: action, progress: progress))
+            return .converted(try await converter.convert(file, with: action, into: folder, progress: progress))
         } catch let error as ConversionError {
             return .failed(error)
         } catch {

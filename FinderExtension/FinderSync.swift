@@ -54,11 +54,12 @@ final class FinderSync: FIFinderSync {
     @objc func convertToJPEG(_ sender: AnyObject?) { convert(to: .jpeg) }
     @objc func convertToMP4(_ sender: AnyObject?) { convert(to: .mp4) }
 
-    private static func action(for format: OutputFormat) -> Selector {
+    private static func action(for format: OutputFormat) -> Selector? {
         switch format {
         case .png: #selector(convertToPNG(_:))
         case .jpeg: #selector(convertToJPEG(_:))
         case .mp4: #selector(convertToMP4(_:))
+        case .original: nil  // never offered for files on disk
         }
     }
 

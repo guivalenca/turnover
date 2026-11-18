@@ -44,7 +44,8 @@ public enum ConversionError: Error, Sendable, Hashable {
             String(localized: "already a JPEG", bundle: .turnoverKit, comment: "Why a file wasn't converted, after its name.")
         case .alreadyInFormat(_, .mp4):
             String(localized: "already an MP4", bundle: .turnoverKit, comment: "Why a file wasn't converted, after its name.")
-        case .notApplicable(_, let format):
+        // `.alreadyInFormat` with `original` never happens: every image can be saved as it is.
+        case .notApplicable(_, let format), .alreadyInFormat(_, let format):
             String(localized: "can't be converted to \(format.name)", bundle: .turnoverKit,
                    comment: "Why a file wasn't converted, after its name. The format: “PNG”.")
         case .notWritten(_, let format, let detail):

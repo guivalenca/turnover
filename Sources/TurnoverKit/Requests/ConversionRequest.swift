@@ -36,7 +36,7 @@ public struct ConversionRequest: Sendable, Hashable {
         if let unknown = items.first(where: { !["to", "file"].contains($0.name) }) {
             throw refuse("unknown parameter \(unknown.name)")
         }
-        let formats = items.filter { $0.name == "to" }.map { $0.value.flatMap(OutputFormat.init(rawValue:)) }
+        let formats = items.filter { $0.name == "to" }.map { $0.value.flatMap(OutputFormat.init(conversion:)) }
         guard formats.count == 1, let format = formats[0] else { throw refuse("needs exactly one known format") }
 
         let paths = items.filter { $0.name == "file" }.map { $0.value ?? "" }

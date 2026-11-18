@@ -53,6 +53,7 @@ import TurnoverTestSupport
         ["photo.heic"],
         ["photo.heic", "--to"],
         ["photo.heic", "--to", "gif"],
+        ["photo.heic", "--to", "original"],
         ["--to", "png"],
         ["photo.heic", "--to", "png", "--fast"],
     ])
