@@ -1,0 +1,39 @@
+name: Something doesn't work
+description: A conversion, the right-click menu, the ring or the install went wrong.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+      placeholder: I dragged a .mov from the Desktop, pressed ⇧ and dropped on MP4, but…
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      description: Apple menu › About This Mac.
+      placeholder: macOS 26.1
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Turnover version
+      description: At the bottom of Turnover's window, or the commit you installed from (`git log -1 --oneline`).
+      placeholder: 1.0.0
+  - type: textarea
+    id: file
+    attributes:
+      label: The file
+      description: For a failed conversion, what kind of file it was and where it came from (an iPhone photo, a screen recording, a file from another app…).
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: |
+        Right after it happens, run this in Terminal and paste what it prints. Remove anything you'd rather not share, like file names.
+        `log show --last 10m --style compact --info --debug --predicate 'subsystem == "com.guivalenca.turnover"'`
+      render: text
