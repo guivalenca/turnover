@@ -191,6 +191,12 @@ extension Ring: RingPanelDelegate {
         // The drag pasteboard couldn't be read at drag start: the files come from the drag now.
         guard self.files == nil else { return }
         ringLog.notice("Files from the panel's draggingEntered: \(files.count)")
+        // Read without the files, a drag that didn't start in a Finder window was "elsewhere";
+        // with them, it is the Desktop's if they are all on it.
+        if source == .elsewhere,
+           ConversionOrigin(menuFiles: files, desktopFolder: FinderDesktop.folder) == .desktop(drop: nil) {
+            source = .desktop
+        }
         estimate(files)
     }
 

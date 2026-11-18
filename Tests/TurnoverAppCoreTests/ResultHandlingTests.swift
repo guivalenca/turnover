@@ -56,52 +56,69 @@ import TurnoverAppCore
 
     // MARK: Where a drag started
 
-    let levels = DragSource.Levels(desktopIcons: -2_147_483_603, normal: 0, dragging: 500)
+    let levels = DragSource.Levels(normal: 0, dragging: 500)
     let screen = CGRect(x: 0, y: 0, width: 1728, height: 1117)
-    var desktopIcons: DragSource.Window { .init(isFinder: true, layer: levels.desktopIcons, frame: screen) }
+    /// What `CGWindowListCopyWindowInfo` lists over the Desktop on macOS 26 and later: the
+    /// wallpaper's and WindowManager's windows, and no window of Desktop icons.
+    var wallpaper: [DragSource.Window] {
+        [.init(isFinder: false, layer: -2_147_483_622, frame: screen), .init(isFinder: false, layer: -2_147_483_626, frame: screen)]
+    }
+    var onDesktop: [URL] { [desktop.appendingPathComponent("IMG_0001.heic")] }
+    let inPictures = [URL(fileURLWithPath: "/Users/me/Pictures/IMG_0001.heic")]
 
-    @Test func aDragFromTheDesktopIsTheDesktops() {
-        let source = DragSource(at: CGPoint(x: 1660, y: 60), windows: [desktopIcons], levels: levels)
-
-        #expect(source == .desktop)
+    func source(of files: [URL], at point: CGPoint, under windows: [DragSource.Window]) -> DragSource {
+        DragSource(of: files, at: point, windows: windows, levels: levels, desktopFolder: desktop)
     }
 
-    @Test func aDragFromAFinderWindowOverTheDesktopIsTheWindows() {
+    @Test func aDragOfDesktopFilesFromTheDesktopIsTheDesktops() {
+        #expect(source(of: onDesktop, at: CGPoint(x: 1660, y: 60), under: wallpaper) == .desktop)
+    }
+
+    /// Windows moved aside to show the Desktop keep their old bounds in the list.
+    @Test func aDragOfDesktopFilesUnderAnotherAppsWindowIsStillTheDesktops() {
+        let editor = DragSource.Window(isFinder: false, layer: 0, frame: CGRect(x: 0, y: 33, width: 1728, height: 1084))
+
+        #expect(source(of: onDesktop, at: CGPoint(x: 1660, y: 60), under: [editor] + wallpaper) == .desktop)
+    }
+
+    @Test func aDragFromAFinderWindowIsTheWindows() {
         let window = DragSource.Window(isFinder: true, layer: 0, frame: CGRect(x: 100, y: 100, width: 800, height: 500))
 
-        let source = DragSource(at: CGPoint(x: 300, y: 300), windows: [window, desktopIcons], levels: levels)
+        #expect(source(of: inPictures, at: CGPoint(x: 300, y: 300), under: [window] + wallpaper) == .finderWindow)
+    }
 
-        #expect(source == .finderWindow)
+    /// A Finder window showing the Desktop folder selects the new files in it.
+    @Test func aDragOfDesktopFilesFromAFinderWindowIsTheWindows() {
+        let window = DragSource.Window(isFinder: true, layer: 0, frame: CGRect(x: 100, y: 100, width: 800, height: 500))
+
+        #expect(source(of: onDesktop, at: CGPoint(x: 300, y: 300), under: [window] + wallpaper) == .finderWindow)
     }
 
     @Test func aDragFromAnotherAppsWindowIsElsewhere() {
         let editor = DragSource.Window(isFinder: false, layer: 0, frame: CGRect(x: 0, y: 0, width: 900, height: 900))
 
-        let source = DragSource(at: CGPoint(x: 300, y: 300), windows: [editor, desktopIcons], levels: levels)
-
-        #expect(source == .elsewhere)
+        #expect(source(of: inPictures, at: CGPoint(x: 300, y: 300), under: [editor] + wallpaper) == .elsewhere)
     }
 
     @Test func aDragFromADockStackIsElsewhere() {
         let stack = DragSource.Window(isFinder: false, layer: 20, frame: CGRect(x: 1200, y: 600, width: 400, height: 400))
+        let downloads = [URL(fileURLWithPath: "/Users/me/Downloads/IMG_0001.heic")]
 
-        let source = DragSource(at: CGPoint(x: 1300, y: 700), windows: [stack, desktopIcons], levels: levels)
-
-        #expect(source == .elsewhere)
+        #expect(source(of: downloads, at: CGPoint(x: 1300, y: 700), under: [stack] + wallpaper) == .elsewhere)
     }
 
     /// The drag may have started before Turnover reads the windows, so its image can already be
     /// under the pointer.
     @Test func theDragImageIsSeenThrough() {
-        let dragImage = DragSource.Window(isFinder: true, layer: levels.dragging, frame: CGRect(x: 1600, y: 20, width: 100, height: 100))
+        let dragImage = DragSource.Window(isFinder: false, layer: levels.dragging, frame: CGRect(x: 250, y: 250, width: 100, height: 100))
+        let window = DragSource.Window(isFinder: true, layer: 0, frame: CGRect(x: 100, y: 100, width: 800, height: 500))
 
-        let source = DragSource(at: CGPoint(x: 1660, y: 60), windows: [dragImage, desktopIcons], levels: levels)
-
-        #expect(source == .desktop)
+        #expect(source(of: inPictures, at: CGPoint(x: 300, y: 300), under: [dragImage, window] + wallpaper) == .finderWindow)
     }
 
-    @Test func noWindowUnderThePointIsElsewhere() {
-        #expect(DragSource(at: CGPoint(x: 10, y: 10), windows: [], levels: levels) == .elsewhere)
+    /// Desktop files mixed with others aren't all the Desktop's.
+    @Test func aDragOfSomeDesktopFilesIsElsewhere() {
+        #expect(source(of: onDesktop + inPictures, at: CGPoint(x: 10, y: 10), under: wallpaper) == .elsewhere)
     }
 
     @Test func onlyADesktopDragPlacesTheFilesWhereTheyWereDropped() {

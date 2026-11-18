@@ -1,9 +1,13 @@
 import Foundation
 
-/// Where a drag of files started: the Desktop, a Finder window or somewhere else, read from
-/// the windows on screen when the button went down. Each window comes from
+/// Where a drag of files started: the Desktop, a Finder window or somewhere else.
+///
+/// A Finder window is told by the windows on screen when the button went down, from
 /// `CGWindowListCopyWindowInfo`, which gives owners, levels and bounds without any permission
-/// (only window names need Screen Recording, and they aren't read).
+/// (only window names need Screen Recording, and they aren't read). The Desktop can't be told
+/// that way: on recent macOS, Finder's window of Desktop icons isn't in that list, and windows
+/// moved aside to show the Desktop keep their old bounds there. So a drag that didn't start
+/// in a Finder window is the Desktop's when every dragged file is directly on the Desktop.
 public enum DragSource: Sendable, Equatable {
     case desktop
     case finderWindow
@@ -27,31 +31,28 @@ public enum DragSource: Sendable, Equatable {
 
     /// Window levels, from `CGWindowLevelForKey`.
     public struct Levels: Sendable, Equatable {
-        /// `.desktopIconWindow`: Finder's window of Desktop icons.
-        public var desktopIcons: Int
         /// `.normalWindow`: Finder's browser windows.
         public var normal: Int
         /// `.draggingWindow`: the drag image, which may already be under the pointer.
         public var dragging: Int
 
-        public init(desktopIcons: Int, normal: Int, dragging: Int) {
-            self.desktopIcons = desktopIcons
+        public init(normal: Int, dragging: Int) {
             self.normal = normal
             self.dragging = dragging
         }
     }
 
-    /// The source of a drag that started at `point`, given the windows on screen from front
-    /// to back, without Turnover's own. The frontmost window under the point decides; the drag
-    /// image and anything above it is skipped.
-    public init(at point: CGPoint, windows: [Window], levels: Levels) {
-        guard let window = windows.first(where: { $0.layer < levels.dragging && $0.frame.contains(point) }),
-              window.isFinder
-        else { self = .elsewhere; return }
-        switch window.layer {
-        case levels.desktopIcons: self = .desktop
-        case levels.normal: self = .finderWindow
-        default: self = .elsewhere
+    /// The source of a drag of `files` that started at `point`, given the windows on screen
+    /// from front to back, without Turnover's own. The frontmost window under the point, past
+    /// the drag image and anything above it, says whether it is a Finder window.
+    public init(of files: [URL], at point: CGPoint, windows: [Window], levels: Levels, desktopFolder: URL) {
+        let window = windows.first { $0.layer < levels.dragging && $0.frame.contains(point) }
+        if let window, window.isFinder, window.layer == levels.normal {
+            self = .finderWindow
+        } else if ConversionOrigin(menuFiles: files, desktopFolder: desktopFolder) == .desktop(drop: nil) {
+            self = .desktop
+        } else {
+            self = .elsewhere
         }
     }
 

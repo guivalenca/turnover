@@ -103,7 +103,7 @@ final class DragWatcher {
             guard pasteboard.changeCount != baseline else { break }
             if let files = fileURLs() {
                 phase = .dragging(shift: shift, option: option)
-                let source = DragSource.current(at: point)
+                let source = DragSource.current(of: files, at: point)
                 ringLog.debug("Drag of \(files.count) file(s) started from \(String(describing: source), privacy: .public), ⇧ \(shift ? "held" : "up"), ⌥ \(option ? "held" : "up")")
                 onEvent?(.dragStarted(shiftDown: shift, optionDown: option, files: files.isEmpty ? nil : files, source: source))
             } else if let since, Date.now.timeIntervalSince(since) > Self.fileURLGrace {
