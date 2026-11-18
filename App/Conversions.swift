@@ -2,9 +2,11 @@ import AppKit
 import TurnoverKit
 import TurnoverAppCore
 
-/// Runs every conversion the app is asked for and selects the new files in Finder when a batch
-/// ends. There is one for the app, so the runner's limits (at most two videos at a time) hold
-/// across everything converting at once.
+/// Runs every conversion the app is asked for, then deals with the new files as where it
+/// started says (#18): selected in a Finder window, put where the ring was dropped on the
+/// Desktop, or left alone. A conversion that didn't start in a Finder window never opens one.
+/// There is one for the app, so the runner's limits (at most two videos at a time) hold across
+/// everything converting at once.
 ///
 /// Every batch gets the same feedback, whoever started it: the menu bar item while it is slow,
 /// and notifications when it was slow, failed or saved to Downloads.
@@ -18,6 +20,7 @@ final class Conversions {
     let feedback: Feedback
     private let notifier: Notifier
     private let statusItem: StatusItem
+    private let desktop = FinderDesktop()
 
     init() {
         runner = JobRunner(converter: converter)
@@ -29,21 +32,24 @@ final class Conversions {
 
     /// A choice from the Finder menu. JPEG converts at the default quality from `AppSettings`.
     func convert(_ request: ConversionRequest) {
-        log.notice("Converting \(request.files.count) file(s) to \(request.format.name, privacy: .public)")
-        convert(request.files, to: [request.format.action(quality: AppSettings().jpegQuality)])
+        let origin = ConversionOrigin(menuFiles: request.files, desktopFolder: FinderDesktop.folder)
+        log.notice("Converting \(request.files.count) file(s) to \(request.format.name, privacy: .public), from \(String(describing: origin), privacy: .public)")
+        convert(request.files, to: [request.format.action(quality: AppSettings().jpegQuality)], origin: origin)
     }
 
     /// Converts each of `files` with the first of `actions` that takes it, for example PNG for
     /// the images and MP4 for the videos. Files none of them takes are skipped.
     @discardableResult
-    func convert(_ files: [URL], to actions: [any ConversionAction]) -> Batch {
+    func convert(_ files: [URL], to actions: [any ConversionAction], origin: ConversionOrigin) -> Batch {
         let batch = runner.run(files, to: actions)
         feedback.track(batch)
-        Task { await finish(batch) }
+        let handling = origin.handling
+        if case .placeOnDesktop(let drop) = handling { desktop.place(batch, from: drop) }
+        Task { await finish(batch, selecting: handling == .selectInFinder) }
         return batch
     }
 
-    private func finish(_ batch: Batch) async {
+    private func finish(_ batch: Batch, selecting: Bool) async {
         await batch.waitUntilFinished()
         for job in batch.jobs {
             switch job.state {
@@ -57,7 +63,7 @@ final class Conversions {
                 break
             }
         }
-        if !batch.outputs.isEmpty {
+        if selecting, !batch.outputs.isEmpty {
             NSWorkspace.shared.activateFileViewerSelecting(batch.outputs)
         }
     }

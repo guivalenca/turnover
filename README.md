@@ -14,7 +14,7 @@
 - Dragging photos and videos together? **Rest** on a format for a moment to add it (it fills and shows ✓), then drop on another. Drop straight on one format to convert only that kind of file.
 - To cancel, drop anywhere off the ring or press Esc. Release ⇧ to carry on with a normal drag.
 
-The new file appears next to the original, with the same name, and is selected in Finder. Turnover never changes or overwrites a file.
+The new file appears next to the original, with the same name. Converted from a Finder window, it is selected there. Dropped on the ring on the Desktop, it appears where you dropped it, and no Finder window opens. Turnover never changes or overwrites a file.
 
 | From | To |
 | --- | --- |
@@ -50,6 +50,7 @@ macOS asks a few things once:
 
 - **Login Item Added:** a notification that Turnover opens at login. You can turn that off in Turnover's window.
 - **Notifications:** asked the first time Turnover has something to tell you, or when you click Allow… in its window.
+- **Controlling Finder:** the first time you drop on the ring on the Desktop, macOS asks whether Turnover may control Finder. Turnover uses it only to put the new file where you dropped it. If you say no, the file goes where Finder puts new files.
 - **Folder access:** the first time you convert a file on the Desktop, in Documents or Downloads, on an external drive or on a network share, macOS asks whether Turnover may access it. Allow it. Because the app is signed on your Mac rather than by a developer, macOS treats each `make install` as a new app, so these prompts come back after every reinstall or upgrade.
 
 If **Turnover ›** is missing from the right-click menu, click Open Settings… next to Finder extension in Turnover's window and turn Turnover on.

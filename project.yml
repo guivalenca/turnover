@@ -59,6 +59,8 @@ targets:
         NSDownloadsFolderUsageDescription: Turnover converts the files you choose in Downloads, and saves new files there when the original's folder is read-only.
         NSRemovableVolumesUsageDescription: Turnover converts the files you choose on external drives and saves the new files next to them.
         NSNetworkVolumesUsageDescription: Turnover converts the files you choose on network shares and saves the new files next to them.
+        # Shown when a ring drop on the Desktop first asks Finder to put the new file there (#18).
+        NSAppleEventsUsageDescription: Turnover asks Finder to put each new file where you dropped it on the Desktop.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.guivalenca.turnover
