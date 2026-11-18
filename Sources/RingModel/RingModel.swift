@@ -96,7 +96,8 @@ public struct RingModel: Sendable {
     }
 
     /// What the hub says while the ring is open and the files are known: what a drop on the
-    /// highlighted entry converts to, or how many files are dragged.
+    /// highlighted entry converts to, or how many files are dragged. For an image dragged out of
+    /// a web page, what it is instead of a count: "WebP", "1600 × 1067".
     public var hub: Hub? {
         guard phase == .open, let offers else { return nil }
         guard let entry = highlighted, let choice = entry.choices.first else {
@@ -106,6 +107,15 @@ public struct RingModel: Sendable {
                                           comment: "The hub's small line under “JPEG” while ⌥ fans out JPEG's qualities."),
                            text: String(localized: "JPEG quality", bundle: .ringModel,
                                         comment: "The hub while ⌥ fans out JPEG's qualities, on one line."))
+            }
+            if let original = offers.original {
+                // A size in pixels isn't a count: no grouping separators, in any language.
+                let detail = if let width = original.width, let height = original.height {
+                    "\(width) × \(height)"
+                } else {
+                    Self.noun(of: .image, count: 1)
+                }
+                return Hub(title: original.typeName, detail: detail, text: Self.line(original.typeName, detail))
             }
             let count = offers.groups.flatMap(\.files).count
             let kinds = Set(offers.groups.map(\.kind))
@@ -123,7 +133,8 @@ public struct RingModel: Sendable {
         var detail = entry.estimate?.label ?? Self.files(choice.files.count, of: choice.kind)
         // A JPEG quality: "JPEG", "Best · 5.2 MB".
         if let quality = entry.quality { detail = Self.line(quality.name, detail) }
-        let title = choice.format.name
+        // Original: the image's own format rather than "Original", "WebP" over "212 KB".
+        let title = choice.format == .original ? offers.original?.typeName ?? choice.format.name : choice.format.name
         return Hub(title: title, detail: detail, text: Self.line(title, detail))
     }
 
@@ -149,7 +160,8 @@ public struct RingModel: Sendable {
     /// The text in the ring's centre.
     public struct Hub: Sendable, Hashable {
         /// The large line: what a drop converts to ("PNG", "PNG + MP4", "JPEG"), or the file
-        /// count ("3"), or "JPEG" while ⌥ fans it out.
+        /// count ("3"), or "JPEG" while ⌥ fans it out; "WebP" for an image dragged out of a web
+        /// page, over nothing or over Original.
         public let title: String
         /// The small line under it: the estimate ("19 MB"), the quality and its estimate
         /// ("Best · 5.2 MB"), the files converted ("3 files"), what is counted ("images"), or
@@ -180,7 +192,7 @@ public struct RingModel: Sendable {
     }
 
     /// Two parts of the hub on one line: "PNG · 19 MB", "Best · 5.2 MB".
-    private static func line(_ first: String, _ second: String) -> String {
+    static func line(_ first: String, _ second: String) -> String {
         String(localized: "\(first) · \(second)", bundle: .ringModel,
                comment: "Two parts of the hub on one line: the format and its size, “PNG · 19 MB”.")
     }

@@ -3,11 +3,17 @@ import TurnoverKit
 extension RingModel {
     /// One format on the ring.
     public struct Entry: Sendable, Hashable {
-        /// The format ("PNG", "JPEG", "MP4"), or a JPEG quality ⌥ fanned out ("Best", "High",
-        /// "Small").
+        /// The format ("PNG", "JPEG", "MP4"), a JPEG quality ⌥ fanned out ("Best", "High",
+        /// "Small"), or "Original" for an image dragged out of a web page, saved as it is.
         public let title: String
         /// Its estimate: "19 MB" (measured), "~19 MB", "Instant", "About 5 s"; "…" until known.
-        public var subtitle: String { estimate?.label ?? "…" }
+        /// Original names the image's own format first: "WebP · 212 KB".
+        public var subtitle: String {
+            let label = estimate?.label ?? "…"
+            return note.map { RingModel.line($0, label) } ?? label
+        }
+        /// What the subtitle says before the estimate: the image's own format, for Original.
+        public let note: String?
         /// For every file it converts together; nil until estimated.
         public let estimate: Estimate?
         /// Where it sits, in degrees clockwise from the right (screen coordinates, y down):
@@ -75,6 +81,10 @@ extension RingModel {
     /// order (PNG left, JPEG right). Images and videos together: images on the left, centred on
     /// 180° and 74° apart; videos on the right, at 0°. With ⌥, JPEG's qualities fan out around
     /// where JPEG was: 54° apart, or 52° in a mixed ring. Angles are in (-180, 180].
+    ///
+    /// With Original (an image dragged out of a web page): Original sits at the bottom and the
+    /// formats above it, a single one at the top, PNG and JPEG up left and up right (-150° and
+    /// -30°), a third of the ring each.
     static func layout(_ offers: Offers, fannedOut: Bool, added: [Choice]) -> [Entry] {
         // No local is named `spots`: the runner's older Swift reports a circular reference when
         // one shadows `spots(for:fannedOut:)` in the same function.
@@ -82,7 +92,17 @@ extension RingModel {
             (kind: group.kind, spots: group.targets.flatMap { Self.spots(for: $0, fannedOut: fannedOut) })
         }
         let angles: [Double]
-        if groups.count == 1 {
+        if groups.count == 1, groups[0].spots.contains(where: \.isOriginal) {
+            let formats = groups[0].spots.filter { !$0.isOriginal }
+            let above: [Double]
+            if formats.contains(where: { $0.preset != nil }) {
+                // JPEG's qualities around where JPEG was: up right, or the top if JPEG was alone.
+                above = formats.count == 3 ? spread(3, around: -90, step: 54) : [-150] + spread(3, around: -30, step: 54)
+            } else {
+                above = formats.count == 1 ? [-90] : [-150, -30]
+            }
+            angles = above + [90]
+        } else if groups.count == 1 {
             let only = groups[0].spots
             if only.contains(where: { $0.preset != nil }) {
                 // JPEG's qualities around where JPEG was: the right, or the top if JPEG was alone.
@@ -101,8 +121,8 @@ extension RingModel {
         let all = groups.flatMap { $0.spots }
         let placed = angles.map(normalized)
         return zip(all, placed).map { spot, angle in
-            Entry(title: spot.title, estimate: spot.estimate, angle: angle,
-                  arc: Arc(around: angle, among: placed), choices: spot.choices,
+            Entry(title: spot.title, note: spot.isOriginal ? offers.original?.typeName : nil, estimate: spot.estimate,
+                  angle: angle, arc: Arc(around: angle, among: placed), choices: spot.choices,
                   quality: spot.preset, isDefault: spot.isDefault, isAdded: added.contains(spot.choices[0]))
         }
     }
@@ -121,6 +141,8 @@ extension RingModel {
         /// The JPEG quality it stands for, when JPEG is fanned out.
         let preset: JPEGQuality?
         var isDefault = false
+        /// Original: the image saved as it is.
+        var isOriginal: Bool { choices[0].format == .original }
     }
 
     /// One spot per target, except JPEG fanned out: one per quality, Best to Small.
