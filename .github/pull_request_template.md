@@ -63,7 +63,7 @@ With a physical mouse or trackpad, and the keyboard:
 
 ### The ring: catching the drop
 
-- [ ] A drop on a format converts, and the dragged files stay put. From a Finder window, the new files are selected in it. From the Desktop, they appear where you dropped, in a row for several files, and no Finder window opens. From a Dock stack, nothing opens.
+- [ ] A drop on a format converts, and the dragged files stay put. From a Finder window, the new files are selected in it. From the Desktop, they appear where you dropped: with Snap to Grid on the nearest free grid spots, lined up with the other icons; with Sort By None exactly there, in a row for several files; sorted by name or date, where Finder sorts them. No Finder window opens. From a Dock stack, nothing opens.
 - [ ] The first drop on the Desktop asks once whether Turnover may control Finder. After Don't Allow, the new file goes to Finder's next free spot, still with no window.
 - [ ] A drop on the centre, off the ring, or off the ring over a Finder folder or the Desktop cancels: the files slide back and nothing moves.
 - [ ] Esc during the drag cancels it, and the ring closes after the slide-back.

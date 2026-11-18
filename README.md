@@ -14,7 +14,7 @@
 - Dragging photos and videos together? **Rest** on a format for a moment to add it (it fills and shows ✓), then drop on another. Drop straight on one format to convert only that kind of file.
 - To cancel, drop anywhere off the ring or press Esc. Release ⇧ to carry on with a normal drag.
 
-The new file appears next to the original, with the same name. Converted from a Finder window, it is selected there. Dropped on the ring on the Desktop, it appears where you dropped it, and no Finder window opens. Turnover never changes or overwrites a file.
+The new file appears next to the original, with the same name. Converted from a Finder window, it is selected there. Dropped on the ring on the Desktop, it appears where you dropped it: on the nearest free grid spot with Snap to Grid, exactly there without it. No Finder window opens. Turnover never changes or overwrites a file.
 
 | From | To |
 | --- | --- |

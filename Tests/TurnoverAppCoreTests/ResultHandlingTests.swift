@@ -67,7 +67,7 @@ import TurnoverAppCore
     let inPictures = [URL(fileURLWithPath: "/Users/me/Pictures/IMG_0001.heic")]
 
     func source(of files: [URL], at point: CGPoint, under windows: [DragSource.Window]) -> DragSource {
-        DragSource(of: files, at: point, windows: windows, levels: levels, desktopFolder: desktop)
+        DragSource(of: files, at: point, windows: windows, levels: levels, screens: [screen], desktopFolder: desktop)
     }
 
     @Test func aDragOfDesktopFilesFromTheDesktopIsTheDesktops() {
@@ -107,6 +107,14 @@ import TurnoverAppCore
         #expect(source(of: downloads, at: CGPoint(x: 1300, y: 700), under: [stack] + wallpaper) == .elsewhere)
     }
 
+    /// While something is dragged, the Dock covers the screen with a window of its own.
+    @Test func aDragFromAFinderWindowUnderTheDocksOverlayIsTheWindows() {
+        let overlay = DragSource.Window(isFinder: false, layer: 20, frame: screen)
+        let window = DragSource.Window(isFinder: true, layer: 0, frame: CGRect(x: 100, y: 100, width: 800, height: 500))
+
+        #expect(source(of: inPictures, at: CGPoint(x: 300, y: 300), under: [overlay, window] + wallpaper) == .finderWindow)
+    }
+
     /// The drag may have started before Turnover reads the windows, so its image can already be
     /// under the pointer.
     @Test func theDragImageIsSeenThrough() {
@@ -129,46 +137,118 @@ import TurnoverAppCore
         #expect(DragSource.elsewhere.origin(drop: drop) == .elsewhere)
     }
 
-    // MARK: Slots on the Desktop
+    // MARK: Where new files go on the Desktop
 
-    let pitch = CGSize(width: 120, height: 140)
+    /// A 1728 × 1117 screen's visible frame, below the menu bar and above the Dock.
+    let visible = CGRect(x: 0, y: 33, width: 1728, height: 1020)
 
-    @Test func theFirstFileGoesWhereTheRingWasDropped() {
-        var slots = DesktopSlots(drop: CGPoint(x: 500, y: 400), pitch: pitch, screen: screen)
-
-        #expect(slots.next() == CGPoint(x: 500, y: 400))
+    func layout(_ arrangement: DesktopLayout.Arrangement) -> DesktopLayout {
+        DesktopLayout(arrangement: arrangement, screen: visible, iconSize: 64, textSize: 12)
     }
 
-    @Test func moreFilesGoInARowToTheRight() {
-        var slots = DesktopSlots(drop: CGPoint(x: 500, y: 400), pitch: pitch, screen: screen)
+    /// Icons on Finder's grid for 64-point icons: columns 128 apart from 68 off the right
+    /// edge, rows 112 apart from 73 down.
+    let onGrid = [
+        CGPoint(x: 1660, y: 73), CGPoint(x: 1660, y: 185), CGPoint(x: 1660, y: 297),
+        CGPoint(x: 1532, y: 73), CGPoint(x: 124, y: 73), CGPoint(x: 124, y: 185),
+    ]
 
-        let points = (0..<3).map { _ in slots.next() }
+    /// A real Desktop: two columns on each side, an icon a few points off its row, and the
+    /// photo that was converted.
+    let aRealDesktop = [
+        CGPoint(x: 124, y: 73), CGPoint(x: 124, y: 181), CGPoint(x: 124, y: 297), CGPoint(x: 124, y: 409),
+        CGPoint(x: 124, y: 521), CGPoint(x: 124, y: 633),
+        CGPoint(x: 1660, y: 73), CGPoint(x: 1660, y: 184), CGPoint(x: 1660, y: 297), CGPoint(x: 1660, y: 409),
+        CGPoint(x: 1660, y: 521), CGPoint(x: 1532, y: 297), CGPoint(x: 1532, y: 745),
+        CGPoint(x: 1148, y: 521),
+    ]
 
-        #expect(points == [CGPoint(x: 500, y: 400), CGPoint(x: 620, y: 400), CGPoint(x: 740, y: 400)])
+    @Test func withSnapToGridAFileTakesTheGridSpotNearestTheDrop() {
+        let places = layout(.grid).places(for: 1, droppedAt: CGPoint(x: 1000, y: 500), icons: onGrid)
+
+        #expect(places == [CGPoint(x: 1020, y: 521)])
     }
 
-    @Test func theRowWrapsAtTheScreensEdge() {
-        // 1728 wide, kept 60 inside: room for the drop column and two more.
-        var slots = DesktopSlots(drop: CGPoint(x: 1400, y: 400), pitch: pitch, screen: screen)
+    /// Dropped just below and left of the photo, whose spot is taken.
+    @Test func aTakenSpotPassesToTheNearestFreeOne() {
+        let places = layout(.grid).places(for: 1, droppedAt: CGPoint(x: 1102, y: 555), icons: aRealDesktop)
 
-        let points = (0..<4).map { _ in slots.next() }
+        #expect(places == [CGPoint(x: 1020, y: 521)])
+    }
 
-        #expect(points == [
-            CGPoint(x: 1400, y: 400), CGPoint(x: 1520, y: 400), CGPoint(x: 1640, y: 400),
-            CGPoint(x: 1400, y: 540),
+    @Test func moreFilesTakeTheNextNearestSpotsBelowFirst() {
+        let places = layout(.grid).places(for: 3, droppedAt: CGPoint(x: 1020, y: 521), icons: onGrid)
+
+        #expect(places == [CGPoint(x: 1020, y: 521), CGPoint(x: 1020, y: 633), CGPoint(x: 1020, y: 409)])
+    }
+
+    /// Files placed before the grid was followed are off it, and don't move it.
+    @Test func theGridIsFoundPastIconsOffIt() {
+        let offGrid = [CGPoint(x: 1103, y: 555), CGPoint(x: 1216, y: 570)]
+
+        let places = layout(.grid).places(for: 1, droppedAt: CGPoint(x: 650, y: 300), icons: aRealDesktop + offGrid)
+
+        #expect(places == [CGPoint(x: 636, y: 297)])
+    }
+
+    /// Finder's settings only give a guess at the grid: the icons' spacing wins.
+    @Test func theIconsSpacingWinsOverTheExpectedOne() {
+        let biggerLabels = DesktopLayout(arrangement: .grid, screen: visible, iconSize: 64, textSize: 14)
+
+        let places = biggerLabels.places(for: 1, droppedAt: CGPoint(x: 650, y: 300), icons: aRealDesktop)
+
+        #expect(biggerLabels.expectedPitch.height == 120)
+        #expect(places == [CGPoint(x: 636, y: 297)])
+    }
+
+    @Test func withOneIconTheGridFollowsFindersSettings() {
+        let places = layout(.grid).places(for: 1, droppedAt: CGPoint(x: 1500, y: 100), icons: [CGPoint(x: 1660, y: 73)])
+
+        #expect(places == [CGPoint(x: 1532, y: 73)])
+    }
+
+    /// The spot keeps the icon and its label on the screen.
+    @Test func aDropAtTheScreensCornerTakesTheLastSpotInside() {
+        let places = layout(.grid).places(for: 1, droppedAt: CGPoint(x: 1725, y: 1050), icons: onGrid)
+
+        #expect(places == [CGPoint(x: 1660, y: 969)])
+    }
+
+    @Test func withoutAGridTheFirstFileGoesWhereTheRingWasDropped() {
+        let places = layout(.free).places(for: 3, droppedAt: CGPoint(x: 500, y: 400), icons: onGrid)
+
+        #expect(places == [CGPoint(x: 500, y: 400), CGPoint(x: 628, y: 400), CGPoint(x: 756, y: 400)])
+    }
+
+    @Test func withoutAGridTheRowWrapsAtTheScreensEdge() {
+        let places = layout(.free).places(for: 4, droppedAt: CGPoint(x: 1400, y: 400), icons: [])
+
+        #expect(places == [
+            CGPoint(x: 1400, y: 400), CGPoint(x: 1528, y: 400), CGPoint(x: 1656, y: 400),
+            CGPoint(x: 1400, y: 512),
         ])
     }
 
-    @Test func aDropAtTheEdgeIsPulledInside() {
-        var slots = DesktopSlots(drop: CGPoint(x: 1725, y: 2), pitch: pitch, screen: screen)
+    @Test func withoutAGridADropAtTheEdgeIsPulledInside() {
+        let places = layout(.free).places(for: 1, droppedAt: CGPoint(x: 1725, y: 2), icons: [])
 
-        #expect(slots.next() == CGPoint(x: 1668, y: 70))
+        #expect(places == [CGPoint(x: 1664, y: 89)])
     }
 
-    @Test func thePitchFollowsFindersDesktopSettings() {
-        let pitch = DesktopSlots.pitch(iconSize: 64, gridSpacing: 57, textSize: 12)
+    @Test func aDesktopFinderKeepsSortedIsLeftToFinder() {
+        #expect(layout(.keptArranged).places(for: 2, droppedAt: CGPoint(x: 500, y: 400), icons: onGrid).isEmpty)
+    }
 
-        #expect(pitch == CGSize(width: 121, height: 145))
+    @Test func theArrangementComesFromFindersSortBy() {
+        #expect(DesktopLayout.Arrangement(finderSetting: "grid") == .grid)
+        #expect(DesktopLayout.Arrangement(finderSetting: "none") == .free)
+        #expect(DesktopLayout.Arrangement(finderSetting: nil) == .free)
+        #expect(DesktopLayout.Arrangement(finderSetting: "name") == .keptArranged)
+        #expect(DesktopLayout.Arrangement(finderSetting: "dateAdded") == .keptArranged)
+    }
+
+    @Test func theExpectedGridIsTheOneMeasuredForFindersSizes() {
+        #expect(layout(.grid).expectedPitch == CGSize(width: 128, height: 112))
     }
 
     // MARK: Coordinates

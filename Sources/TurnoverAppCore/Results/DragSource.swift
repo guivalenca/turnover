@@ -43,10 +43,15 @@ public enum DragSource: Sendable, Equatable {
     }
 
     /// The source of a drag of `files` that started at `point`, given the windows on screen
-    /// from front to back, without Turnover's own. The frontmost window under the point, past
-    /// the drag image and anything above it, says whether it is a Finder window.
-    public init(of files: [URL], at point: CGPoint, windows: [Window], levels: Levels, desktopFolder: URL) {
-        let window = windows.first { $0.layer < levels.dragging && $0.frame.contains(point) }
+    /// from front to back, without Turnover's own, and the screens' frames. The frontmost
+    /// window under the point says whether it is a Finder window. The drag image and anything
+    /// above it are seen through, and so are overlays: windows above the normal level that
+    /// cover a whole screen, like the one the Dock puts up while something is dragged.
+    public init(of files: [URL], at point: CGPoint, windows: [Window], levels: Levels, screens: [CGRect], desktopFolder: URL) {
+        let window = windows.first { window in
+            let isOverlay = window.layer > levels.normal && screens.contains { window.frame.contains($0) }
+            return window.layer < levels.dragging && !isOverlay && window.frame.contains(point)
+        }
         if let window, window.isFinder, window.layer == levels.normal {
             self = .finderWindow
         } else if ConversionOrigin(menuFiles: files, desktopFolder: desktopFolder) == .desktop(drop: nil) {

@@ -18,13 +18,17 @@ extension DragSource {
                   let frame = CGRect(dictionaryRepresentation: bounds),
                   (info[kCGWindowAlpha] as? Double ?? 1) > 0
             else { return nil }
-            if frame.contains(topLeft) { under.append("\(info[kCGWindowOwnerName] as? String ?? "?")@\(layer)") }
+            if frame.contains(topLeft) {
+                under.append("\(info[kCGWindowOwnerName] as? String ?? "?")@\(layer) \(Int(frame.width))×\(Int(frame.height))")
+            }
             return Window(isFinder: finder.contains(pid), layer: layer, frame: frame)
         }
         let levels = Levels(
             normal: Int(CGWindowLevelForKey(.normalWindow)),
             dragging: Int(CGWindowLevelForKey(.draggingWindow)))
-        let source = DragSource(of: files, at: topLeft, windows: windows, levels: levels, desktopFolder: FinderDesktop.folder)
+        let screens = NSScreen.screens.map { DesktopCoordinates.current.topLeft($0.frame) }
+        let source = DragSource(
+            of: files, at: topLeft, windows: windows, levels: levels, screens: screens, desktopFolder: FinderDesktop.folder)
         ringLog.debug("Windows under the drag's start, front to back: \(under.joined(separator: ", "), privacy: .public)")
         return source
     }
