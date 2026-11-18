@@ -21,6 +21,8 @@ final class Ring {
     private let conversions: Conversions
     private let estimator: Estimator
 
+    /// Where the drag started, which decides what happens to the new files.
+    private var source = DragSource.elsewhere
     /// The dragged files, once known, and their offers with the estimates refining.
     private var files: [URL]?
     private var live: LiveOffers?
@@ -54,7 +56,8 @@ final class Ring {
 
     private func handle(_ event: DragWatcher.Event) {
         switch event {
-        case .dragStarted(let shiftDown, let optionDown, let files):
+        case .dragStarted(let shiftDown, let optionDown, let files, let source):
+            self.source = source
             if let files {
                 ringLog.notice("Drag started: \(files.count) file(s) read from the drag pasteboard at once")
             } else {
@@ -151,8 +154,9 @@ final class Ring {
         switch outcome {
         case .convert(let choices):
             let summary = choices.map { "\($0.files.count) to \($0.format.name)\($0.quality.map { " \($0.percent)%" } ?? "")" }
-            ringLog.notice("Ring drop: \(summary.joined(separator: ", "), privacy: .public)")
-            conversions.convert(choices.flatMap(\.files), to: choices.map(\.action))
+            let origin = source.origin(drop: DesktopCoordinates.current.topLeft(NSEvent.mouseLocation))
+            ringLog.notice("Ring drop: \(summary.joined(separator: ", "), privacy: .public), from \(String(describing: origin), privacy: .public)")
+            conversions.convert(choices.flatMap(\.files), to: choices.map(\.action), origin: origin)
         case .cancel:
             ringLog.notice("Ring cancelled; nothing converted")
         }
@@ -187,6 +191,12 @@ extension Ring: RingPanelDelegate {
         // The drag pasteboard couldn't be read at drag start: the files come from the drag now.
         guard self.files == nil else { return }
         ringLog.notice("Files from the panel's draggingEntered: \(files.count)")
+        // Read without the files, a drag that didn't start in a Finder window was "elsewhere";
+        // with them, it is the Desktop's if they are all on it.
+        if source == .elsewhere,
+           ConversionOrigin(menuFiles: files, desktopFolder: FinderDesktop.folder) == .desktop(drop: nil) {
+            source = .desktop
+        }
         estimate(files)
     }
 

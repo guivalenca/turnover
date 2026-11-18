@@ -10,12 +10,14 @@
 		1B8363B5DD4ED04EE6B55528 /* RingPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B308C965AF00979AF7C7E44 /* RingPreview.swift */; };
 		21E38D62C349DB7D6E297B23 /* TurnoverWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CDF580712E61F8F0158AFED /* TurnoverWindow.swift */; };
 		22D9C7AB4E308CA9354AF965 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = FB6B7D609B3C4676140FA8B5 /* AppIcon.icon */; };
+		37BC83804A9689816E8BFA77 /* FinderDesktop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B6B55B47EA2515A0BD77762 /* FinderDesktop.swift */; };
 		381DD881ECE88E96D3DB8F19 /* RingModel in Frameworks */ = {isa = PBXBuildFile; productRef = 59393087FCD3B3EECF1EEBB9 /* RingModel */; };
 		39EAFD21CDF3C0F2B7E34E2E /* TurnoverKit in Frameworks */ = {isa = PBXBuildFile; productRef = 76C12C9F1D3471F0D7C1B5B2 /* TurnoverKit */; };
 		3BD80338DBF51E0BE5141CA5 /* Main.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4EBF56228EF202D2E3574DB /* Main.swift */; };
 		4821FF95521A2230644FA956 /* OverlayPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57AF6B96525487B25800937B /* OverlayPanel.swift */; };
 		500092B9CEC5382AE41DB03F /* DragWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFEFFB35CDC3839342AD369 /* DragWatcher.swift */; };
 		535419A9360015A9B43A7F3E /* TurnoverFinder.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AC1329052DD8DE6C4A250CF9 /* TurnoverFinder.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		5585C0A5E42271FC1225EA48 /* ScreenWindows.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF892E58F77319F00FCD3F8D /* ScreenWindows.swift */; };
 		5804849746040A64AD758F92 /* Conversions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03775AE3E5A433705BF218F /* Conversions.swift */; };
 		5C05B6701BE56F9B6416FC35 /* FinderSync.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 27545BF2090D7CF8C3CD1FD7 /* FinderSync.framework */; };
 		6744631416F9DA96D090348C /* FinderSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC2044A17FFCA87022765DA /* FinderSync.swift */; };
@@ -81,6 +83,7 @@
 		541110B2C69050B416C31167 /* Log.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
 		57AF6B96525487B25800937B /* OverlayPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayPanel.swift; sourceTree = "<group>"; };
 		5BA307F6BAE8FDF755431170 /* TurnoverFinder.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TurnoverFinder.entitlements; sourceTree = "<group>"; };
+		8B6B55B47EA2515A0BD77762 /* FinderDesktop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinderDesktop.swift; sourceTree = "<group>"; };
 		8DD57A25DA23F1E37A3C9C5C /* TurnoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnoverView.swift; sourceTree = "<group>"; };
 		8EFEFFB35CDC3839342AD369 /* DragWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragWatcher.swift; sourceTree = "<group>"; };
 		984E4C89E30107C947967E2F /* StatusItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusItem.swift; sourceTree = "<group>"; };
@@ -94,6 +97,7 @@
 		E483924A3901F93F84C37DF8 /* Turnover.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Turnover.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E4EBF56228EF202D2E3574DB /* Main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Main.swift; sourceTree = "<group>"; };
 		FB6B7D609B3C4676140FA8B5 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		FF892E58F77319F00FCD3F8D /* ScreenWindows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenWindows.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -206,10 +210,20 @@
 				541110B2C69050B416C31167 /* Log.swift */,
 				E4EBF56228EF202D2E3574DB /* Main.swift */,
 				2536FBE43CB469AA56317E48 /* Feedback */,
+				642287E2968FFD4B0BD3EDA2 /* Results */,
 				5FFA1B3F55748BB384CB8FAF /* Ring */,
 				2412C693104B4BF1EEBA32B7 /* Window */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		642287E2968FFD4B0BD3EDA2 /* Results */ = {
+			isa = PBXGroup;
+			children = (
+				8B6B55B47EA2515A0BD77762 /* FinderDesktop.swift */,
+				FF892E58F77319F00FCD3F8D /* ScreenWindows.swift */,
+			);
+			path = Results;
 			sourceTree = "<group>";
 		};
 		9053796AE02723F780F1975B /* Frameworks */ = {
@@ -329,6 +343,7 @@
 				71F009451EB3B2DD7F2028FA /* AppDelegate.swift in Sources */,
 				5804849746040A64AD758F92 /* Conversions.swift in Sources */,
 				500092B9CEC5382AE41DB03F /* DragWatcher.swift in Sources */,
+				37BC83804A9689816E8BFA77 /* FinderDesktop.swift in Sources */,
 				CA415786AA7C7C9B7D7360DB /* HintPanel.swift in Sources */,
 				FC822B4CAFFF758EE9010EFF /* JobRow.swift in Sources */,
 				C2D8E1B0030AB29ABE1F0673 /* Log.swift in Sources */,
@@ -341,6 +356,7 @@
 				93DE5C807D2EFC9F1AEAE087 /* RingPanel.swift in Sources */,
 				1B8363B5DD4ED04EE6B55528 /* RingPreview.swift in Sources */,
 				C2136102521C8D2B32028665 /* RingView.swift in Sources */,
+				5585C0A5E42271FC1225EA48 /* ScreenWindows.swift in Sources */,
 				826780E2E08784AE032AC556 /* StatusItem.swift in Sources */,
 				DC48C0ADCF81A7D1C7A43EA3 /* TurnoverView.swift in Sources */,
 				21E38D62C349DB7D6E297B23 /* TurnoverWindow.swift in Sources */,

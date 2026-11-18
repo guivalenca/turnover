@@ -41,7 +41,7 @@ Tested on: macOS ___ (Mac: ___ , display: ___ ) and macOS 15.___
 - [ ] Converting the same file again writes `name 2.png`.
 - [ ] Photos, a PNG, a MOV and a PDF together: PNG and JPEG with their image counts, a separator, MP4 (1 video). Each converts only the files it fits.
 - [ ] A PDF or a text file alone: no Turnover item.
-- [ ] Works in icon, list, column and gallery views, and on the Desktop.
+- [ ] Works in icon, list, column and gallery views, and on the Desktop. On the Desktop, the new file appears there and no Finder window opens.
 - [ ] On an external drive and on a writable network share, the new file lands next to the original.
 - [ ] On a read-only disk image, the new file goes to Downloads, with "Saved … to Downloads"; Show in Finder selects it.
 
@@ -63,7 +63,8 @@ With a physical mouse or trackpad, and the keyboard:
 
 ### The ring: catching the drop
 
-- [ ] A drop on a format converts. The dragged files stay put, and the new files are selected in Finder.
+- [ ] A drop on a format converts, and the dragged files stay put. From a Finder window, the new files are selected in it. From the Desktop, they appear where you dropped: with Snap to Grid on the nearest free grid spots, lined up with the other icons; with Sort By None exactly there, in a row for several files; sorted by name or date, where Finder sorts them. No Finder window opens. From a Dock stack, nothing opens.
+- [ ] The first drop on the Desktop asks once whether Turnover may control Finder. After Don't Allow, the new file goes to Finder's next free spot, still with no window.
 - [ ] A drop on the centre, off the ring, or off the ring over a Finder folder or the Desktop cancels: the files slide back and nothing moves.
 - [ ] Esc during the drag cancels it, and the ring closes after the slide-back.
 - [ ] With two displays: moving from the ring's screen to the other doesn't close it, and a drop on the other screen is refused.

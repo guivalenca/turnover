@@ -1,4 +1,5 @@
 import AppKit
+import TurnoverAppCore
 
 /// Notices drags of files in any app, and ⇧ and ⌥ during them, with no Accessibility or Input
 /// Monitoring permission (the approach #2's spike settled):
@@ -18,8 +19,9 @@ final class DragWatcher {
     enum Event {
         /// A drag of files started, with ⇧ and ⌥ as they were then. `files` are the dragged files
         /// when the drag pasteboard could be read at once; nil when they have to come from the
-        /// ring's panel later.
-        case dragStarted(shiftDown: Bool, optionDown: Bool, files: [URL]?)
+        /// ring's panel later. `source` is where the button went down: the Desktop, a Finder
+        /// window or somewhere else.
+        case dragStarted(shiftDown: Bool, optionDown: Bool, files: [URL]?, source: DragSource)
         /// ⇧ went down or up during the drag.
         case shift(down: Bool)
         /// ⌥ went down or up during the drag.
@@ -32,9 +34,10 @@ final class DragWatcher {
 
     private enum Phase {
         case idle
-        /// The button is down and no drag has started yet. `since`: when the drag pasteboard
-        /// first changed without file URLs on it, if it has.
-        case pressed(baseline: Int, since: Date?)
+        /// The button is down and no drag has started yet. `at`: where it went down, in AppKit
+        /// screen coordinates. `since`: when the drag pasteboard first changed without file URLs
+        /// on it, if it has.
+        case pressed(baseline: Int, at: NSPoint, since: Date?)
         case dragging(shift: Bool, option: Bool)
         /// A drag of something other than files (text, say): ignored until the button goes up.
         case otherDrag
@@ -68,7 +71,7 @@ final class DragWatcher {
     private func handle(_ event: NSEvent) {
         switch event.type {
         case .leftMouseDown, .leftMouseDragged:
-            if case .idle = phase { phase = .pressed(baseline: idleBaseline, since: nil) }
+            if case .idle = phase { phase = .pressed(baseline: idleBaseline, at: NSEvent.mouseLocation, since: nil) }
             startPolling()
             tick()
         case .flagsChanged, .leftMouseUp:
@@ -95,17 +98,18 @@ final class DragWatcher {
         switch phase {
         case .idle:
             break
-        case .pressed(let baseline, let since):
+        case .pressed(let baseline, let point, let since):
             guard buttonDown else { phase = .idle; break }
             guard pasteboard.changeCount != baseline else { break }
             if let files = fileURLs() {
                 phase = .dragging(shift: shift, option: option)
-                ringLog.debug("Drag of \(files.count) file(s) started, ⇧ \(shift ? "held" : "up"), ⌥ \(option ? "held" : "up")")
-                onEvent?(.dragStarted(shiftDown: shift, optionDown: option, files: files.isEmpty ? nil : files))
+                let source = DragSource.current(of: files, at: point)
+                ringLog.debug("Drag of \(files.count) file(s) started from \(String(describing: source), privacy: .public), ⇧ \(shift ? "held" : "up"), ⌥ \(option ? "held" : "up")")
+                onEvent?(.dragStarted(shiftDown: shift, optionDown: option, files: files.isEmpty ? nil : files, source: source))
             } else if let since, Date.now.timeIntervalSince(since) > Self.fileURLGrace {
                 phase = .otherDrag
             } else if since == nil {
-                phase = .pressed(baseline: baseline, since: .now)
+                phase = .pressed(baseline: baseline, at: point, since: .now)
             }
         case .dragging(let wasShift, let wasOption):
             if !buttonDown {

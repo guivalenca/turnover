@@ -14,7 +14,7 @@
 - Dragging photos and videos together? **Rest** on a format for a moment to add it (it fills and shows ✓), then drop on another. Drop straight on one format to convert only that kind of file.
 - To cancel, drop anywhere off the ring or press Esc. Release ⇧ to carry on with a normal drag.
 
-The new file appears next to the original, with the same name, and is selected in Finder. Turnover never changes or overwrites a file.
+The new file appears next to the original, with the same name. Converted from a Finder window, it is selected there. Dropped on the ring on the Desktop, it appears where you dropped it: on the nearest free grid spot with Snap to Grid, exactly there without it. No Finder window opens. Turnover never changes or overwrites a file.
 
 | From | To |
 | --- | --- |
@@ -51,6 +51,7 @@ macOS asks a few things once:
 - **Login Item Added:** a notification that Turnover opens at login. You can turn that off in Turnover's window.
 - **Notifications:** asked the first time Turnover has something to tell you, or when you click Allow… in its window.
 - **Folder access:** the first time you convert a file on the Desktop, in Documents or Downloads, on an external drive or on a network share, macOS asks whether Turnover may access it. Allow it.
+- **Controlling Finder:** the first time you drop on the ring on the Desktop, macOS asks whether Turnover may control Finder. Turnover uses it only to put the new file where you dropped it. If you say no, the file goes where Finder puts new files.
 
 macOS remembers these answers across reinstalls and upgrades when `make install` signs Turnover with an Apple Development certificate. It uses the first one in your keychain by itself. To get one, free with any Apple ID, open Xcode › Settings › Accounts, sign in, then Manage Certificates › + › Apple Development. Without a certificate, Turnover is signed ad hoc: macOS then treats each `make install` as a new app and asks again after every reinstall.
 

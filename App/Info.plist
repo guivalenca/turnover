@@ -37,6 +37,8 @@
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Turnover asks Finder to put each new file where you dropped it on the Desktop.</string>
 	<key>NSDesktopFolderUsageDescription</key>
 	<string>Turnover converts the files you choose on your Desktop and saves the new files next to them.</string>
 	<key>NSDocumentsFolderUsageDescription</key>
