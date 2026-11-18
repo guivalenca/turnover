@@ -109,7 +109,7 @@ cd turnover
 make install
 ```
 
-This builds Turnover, signs it, copies it to `/Applications`, turns on its Finder extension and opens it. The last lines say how it was signed: "signed with a certificate" means macOS will remember your answers.
+This builds Turnover, signs it, copies it to `/Applications`, turns on its Finder extension and opens it. Its "Built build/Turnover.app" line says how it was signed: "signed with a certificate" means macOS will remember your answers.
 
 ### 4. Check the setup
 
@@ -165,7 +165,7 @@ This quits Turnover, turns off its Finder extension, deletes the app, and resets
 
 **"Verifying Turnover…" flashes and Turnover doesn't open.** After an install, macOS checks the new app on its first launch, and a key pressed while that window is up can cancel it. Open Turnover again from Applications.
 
-**macOS asks for the same permissions after every install.** Turnover was signed ad hoc: check that `make install` ends with "signed with a certificate", and if it doesn't, add one (step 2). Answers given to an ad hoc build aren't carried over: macOS asks once more after the first signed install, then remembers.
+**macOS asks for the same permissions after every install.** Turnover was signed ad hoc: check that `make install` prints "signed with a certificate", and if it doesn't, add one (step 2). Answers given to an ad hoc build aren't carried over: macOS asks once more after the first signed install, then remembers.
 
 **Files in one folder don't convert.** You may have answered Don't Allow when macOS asked about that folder. Turn Turnover on in System Settings › Privacy & Security › Files & Folders.
 

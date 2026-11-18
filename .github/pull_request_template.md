@@ -19,6 +19,7 @@ Tested on: macOS ___ (Mac: ___ , display: ___ ) and macOS 15.___
 - [ ] Running `make install` again upgrades in place, and System Settings › General › Login Items & Extensions lists a single Turnover.
 - [ ] No Dock icon. No menu bar item while nothing is converting.
 - [ ] After a first install, macOS shows "Login Item Added" once.
+- [ ] With an Apple Development certificate in the keychain, `make install` prints "signed with a certificate"; without one, it says it signed ad hoc and that macOS will ask again after each reinstall.
 
 ### Setup window
 
@@ -48,7 +49,7 @@ Tested on: macOS ___ (Mac: ___ , display: ___ ) and macOS 15.___
 ### Folder access
 
 - [ ] The first conversion on the Desktop, in Documents, in Downloads, on an external drive and on a network share each asks once. After allowing, the conversion goes ahead.
-- [ ] After another `make install`, the prompts come back (expected with ad-hoc signing), and nothing else breaks.
+- [ ] After another `make install` signed with a certificate, none of them is asked again. Signed ad hoc (`make install SIGN_IDENTITY=-`), they come back once, and nothing else breaks.
 
 ### The ring: drag and ⇧
 
