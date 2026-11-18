@@ -1,8 +1,9 @@
 import AppKit
 import TurnoverAppCore
 
-/// Notices drags of files in any app, and ⇧ and ⌥ during them, with no Accessibility or Input
-/// Monitoring permission (the approach #2's spike settled):
+/// Notices drags of files in any app, and of images dragged as pictures (out of a web page),
+/// and ⇧ and ⌥ during them, with no Accessibility or Input Monitoring permission (the approach
+/// #2's spike settled):
 ///
 /// - A global monitor for left-mouse and modifier events. Global *mouse* monitors need no
 ///   permission, and they keep arriving during another app's drag. Key events never arrive
@@ -22,6 +23,10 @@ final class DragWatcher {
         /// ring's panel later. `source` is where the button went down: the Desktop, a Finder
         /// window or somewhere else.
         case dragStarted(shiftDown: Bool, optionDown: Bool, files: [URL]?, source: DragSource)
+        /// A drag of an image that isn't a file started: out of a web page, say. `image` is what
+        /// the drag pasteboard says it carries; its bytes are still there to be read. `from` is
+        /// the process whose window the button went down in, if there is one.
+        case imageDragStarted(shiftDown: Bool, optionDown: Bool, image: DraggedImage, from: pid_t?)
         /// ⇧ went down or up during the drag.
         case shift(down: Bool)
         /// ⌥ went down or up during the drag.
@@ -39,7 +44,8 @@ final class DragWatcher {
         /// on it, if it has.
         case pressed(baseline: Int, at: NSPoint, since: Date?)
         case dragging(shift: Bool, option: Bool)
-        /// A drag of something other than files (text, say): ignored until the button goes up.
+        /// A drag of something other than files or an image (text, say): ignored until the button
+        /// goes up.
         case otherDrag
     }
 
@@ -51,8 +57,9 @@ final class DragWatcher {
     private var monitor: Any?
     private var timer: Timer?
 
-    /// How long a changed drag pasteboard may stay without file URLs before the drag counts as
-    /// one of something else: the source may write its items just after the count moves.
+    /// How long a changed drag pasteboard may stay without file URLs or an image before the drag
+    /// counts as one of something else: the source may write its items just after the count
+    /// moves, as Safari does with an image's bytes.
     private static let fileURLGrace: TimeInterval = 0.15
 
     init() {
@@ -106,6 +113,11 @@ final class DragWatcher {
                 let source = DragSource.current(of: files, at: point)
                 ringLog.debug("Drag of \(files.count) file(s) started from \(String(describing: source), privacy: .public), ⇧ \(shift ? "held" : "up"), ⌥ \(option ? "held" : "up")")
                 onEvent?(.dragStarted(shiftDown: shift, optionDown: option, files: files.isEmpty ? nil : files, source: source))
+            } else if let image = DraggedImage(pasteboard) {
+                phase = .dragging(shift: shift, option: option)
+                let owner = ScreenWindows().frontmost(at: DesktopCoordinates.current.topLeft(point))?.owner
+                ringLog.debug("Drag of an image (\(image.pasteboardType, privacy: .public)) started, ⇧ \(shift ? "held" : "up"), ⌥ \(option ? "held" : "up")")
+                onEvent?(.imageDragStarted(shiftDown: shift, optionDown: option, image: image, from: owner))
             } else if let since, Date.now.timeIntervalSince(since) > Self.fileURLGrace {
                 phase = .otherDrag
             } else if since == nil {
@@ -137,5 +149,19 @@ final class DragWatcher {
         guard pasteboard.types?.contains(.fileURL) == true else { return nil }
         let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL]
         return urls ?? []
+    }
+}
+
+extension DraggedImage {
+    /// The image `pasteboard` (the drag pasteboard) carries, if any. The types are looked at
+    /// first, which costs nothing; only when an image is among them is the source asked for the
+    /// promised type, the address and the title. The image's bytes aren't read.
+    @MainActor init?(_ pasteboard: NSPasteboard) {
+        let types = pasteboard.types?.map(\.rawValue) ?? []
+        guard DraggedImage(types: types) != nil else { return nil }
+        self.init(types: types,
+                  promisedType: pasteboard.string(forType: .init("com.apple.pasteboard.promised-file-content-type")),
+                  url: pasteboard.string(forType: .URL),
+                  title: pasteboard.string(forType: .init("public.url-name")))
     }
 }

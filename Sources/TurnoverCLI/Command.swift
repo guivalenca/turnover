@@ -1,7 +1,7 @@
 import TurnoverKit
 
 /// A parsed command line: `turnover <files…> --to <format> [--quality <quality>]`. `--to` takes
-/// any `OutputFormat`'s raw value, so a new format needs nothing here.
+/// any format files convert to (`OutputFormat.allCases`), so a new one needs nothing here.
 struct Command {
 
     static let usage = """
@@ -64,7 +64,7 @@ struct Command {
             }
         }
         guard let format else { throw UsageError(message: "missing --to <format>") }
-        guard let target = OutputFormat(rawValue: format.lowercased())
+        guard let target = OutputFormat(conversion: format.lowercased())
         else { throw UsageError(message: "unknown format '\(format)'") }
         var preset = JPEGQuality.default
         if let quality {

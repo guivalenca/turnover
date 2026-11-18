@@ -14,15 +14,19 @@ struct Refinement: Sendable {
     let exactPixelBudget: Int
     /// The images whose every output the cache remembered when the work began.
     let known: [URL: ImageSizes]
+    /// Set when the images are offered Original too: what saving each as it is gives.
+    let originals: Offers.Originals?
 
     /// Inspects `files` and checks the cache, on a dispatch queue: both read the files.
-    static func start(_ files: [URL], jpegQuality: JPEGQuality, cache: SizeCache, conversions: ConversionActivity?,
-                      exactPixelBudget: Int) async -> Refinement {
+    static func start(_ files: [URL], jpegQuality: JPEGQuality, keepingOriginal: Bool = false, cache: SizeCache,
+                      conversions: ConversionActivity?, exactPixelBudget: Int) async -> Refinement {
         await blocking(.userInitiated) {
             let inspection = Offers.Inspection(files)
+            let images = inspection.files.filter { $0.kind == .image }
             return Refinement(files: files, inspection: inspection, jpegQuality: jpegQuality, cache: cache,
                               conversions: conversions, exactPixelBudget: exactPixelBudget,
-                              known: remembered(inspection.files.filter { $0.kind == .image }, in: cache))
+                              known: remembered(images, in: cache),
+                              originals: keepingOriginal ? Offers.Originals(images) : nil)
         }
     }
 
@@ -121,6 +125,6 @@ struct Refinement: Sendable {
 
     private func offers(_ images: [URL: ImageSizes], _ videos: [URL: VideoTime], pending: Set<URL> = []) -> Offers {
         Offers(files, inspection, jpegQuality: jpegQuality,
-               estimates: Offers.Estimates(images: images, videos: videos, pending: pending))
+               estimates: Offers.Estimates(images: images, videos: videos, pending: pending), originals: originals)
     }
 }

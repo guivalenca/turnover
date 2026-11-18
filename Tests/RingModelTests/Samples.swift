@@ -41,6 +41,21 @@ enum Sample {
         Offers(groups: Sample.pngs(pngs).groups + Sample.movies(movies).groups)
     }
 
+    /// A WebP dragged out of a web page, staged in a temporary folder.
+    static let webImage = URL(fileURLWithPath: "/tmp/Turnover-dragged/mountain-lake.webp")
+
+    /// Offers for an image dragged out of a web page: the formats that aren't its own, then
+    /// Original, and what the image is.
+    static func webImage(typeName: String = "WebP", formats: [OutputFormat] = [.png, .jpeg], width: Int? = 1600,
+                         height: Int? = 1067, png: Estimate? = nil, jpeg: Estimate? = nil,
+                         presets: [JPEGQuality: Estimate] = [:], original: Estimate? = .exactSize(212_000)) -> Offers {
+        let converted = Sample.images([webImage], png: png, jpeg: jpeg, presets: presets).groups[0].targets
+            .filter { formats.contains($0.format) }
+        return Offers(groups: [.init(kind: .image, files: [webImage], targets: converted + [
+            .init(format: .original, kind: .image, files: [webImage], estimate: original),
+        ])], original: .init(typeName: typeName, width: width, height: height))
+    }
+
     /// Offers for movies: MP4.
     static func movies(_ files: [URL], mp4: Estimate? = nil) -> Offers {
         Offers(groups: [.init(kind: .video, files: files, targets: [

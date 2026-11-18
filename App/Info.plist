@@ -38,13 +38,13 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>Turnover asks Finder to put each new file where you dropped it on the Desktop.</string>
+	<string>Turnover asks Finder to put each new file where you dropped it on the Desktop, and which folder a window shows when you drop an image from a web page on it.</string>
 	<key>NSDesktopFolderUsageDescription</key>
-	<string>Turnover converts the files you choose on your Desktop and saves the new files next to them.</string>
+	<string>Turnover converts the files you choose on your Desktop and saves the new files next to them, and saves images you drop there from a web page.</string>
 	<key>NSDocumentsFolderUsageDescription</key>
 	<string>Turnover converts the files you choose in Documents and saves the new files next to them.</string>
 	<key>NSDownloadsFolderUsageDescription</key>
-	<string>Turnover converts the files you choose in Downloads, and saves new files there when the original's folder is read-only.</string>
+	<string>Turnover converts the files you choose in Downloads, and saves new files there when you drag an image out of a web page or the original's folder is read-only.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Guilherme Valença. MIT License.</string>
 	<key>NSNetworkVolumesUsageDescription</key>

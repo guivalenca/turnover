@@ -6,7 +6,8 @@ public struct ConversionResult: Sendable, Hashable {
     public let source: URL
     /// The new file.
     public let output: URL
-    /// True when the original's folder couldn't be written to, so the new file went to Downloads.
+    /// True when the folder it was meant for (the original's, or the one asked for) couldn't be
+    /// written to, so the new file went to Downloads.
     public let savedToDownloads: Bool
     /// What the original was: an image or a video.
     public let kind: SourceFile.Kind
@@ -39,26 +40,31 @@ public struct Converter: Sendable {
     /// go backwards and the last one is 1 when the conversion succeeds. Quick actions (images)
     /// report only that final 1; videos report along the way.
     ///
+    /// With `folder`, the output goes there instead of next to the source, under the same
+    /// naming rules: for a source that has no place of its own, such as an image dragged out of
+    /// a web page and staged in a temporary folder.
+    ///
     /// Throws `ConversionError` when the file can't be read, isn't something `action` accepts,
     /// can't be decoded, or the new file can't be written (`.notWritten`, for example on a full
     /// disk); `CancellationError` when the task is cancelled.
     public func convert(
-        _ source: URL, with action: some ConversionAction,
+        _ source: URL, with action: some ConversionAction, into folder: URL? = nil,
         progress: @escaping @Sendable (Double) -> Void = { _ in }
     ) async throws -> ConversionResult {
-        try await convert(SourceFile.inspecting(source), with: action, progress: progress)
+        try await convert(SourceFile.inspecting(source), with: action, into: folder, progress: progress)
     }
 
     /// The same, for a file already inspected.
     func convert(
-        _ file: SourceFile, with action: some ConversionAction,
+        _ file: SourceFile, with action: some ConversionAction, into folder: URL? = nil,
         progress: @escaping @Sendable (Double) -> Void = { _ in }
     ) async throws -> ConversionResult {
         activity.begin()
         defer { activity.end() }
         let progress = ConversionProgress(progress)
         guard action.accepts(file) else { throw ConversionError.refusal(of: file, by: action) }
-        let placement = Placement(nextTo: file.url, fileExtension: action.fileExtension, fallback: downloads)
+        let placement = Placement(of: file.url, in: folder, fileExtension: action.fileExtension(for: file),
+                                  fallback: downloads)
         let output: URL
         do {
             output = try await placement.place { temporary in

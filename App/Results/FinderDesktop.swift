@@ -130,33 +130,8 @@ final class FinderDesktop {
         return true
     }
 
-    /// Runs `script` with `arguments` and returns what it printed, or nil after logging why
-    /// it failed.
-    ///
-    /// Paths and points go to `osascript` as arguments, never into the script's text.
-    /// `osascript` runs as Turnover's child, so the permission prompt names Turnover.
     nonisolated private static func osascript(_ script: [String], arguments: [String], what: String) -> String? {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        process.arguments = script.flatMap { ["-e", $0] } + arguments
-        let output = Pipe(), errors = Pipe()
-        process.standardOutput = output
-        process.standardError = errors
-        do {
-            try process.run()
-        } catch {
-            desktopLog.error("Couldn't run osascript to \(what, privacy: .public): \(error.localizedDescription, privacy: .public)")
-            return nil
-        }
-        let said = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else {
-            let error = String(decoding: errors.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            desktopLog.error("Finder didn't \(what, privacy: .public): \(error, privacy: .public)")
-            return nil
-        }
-        return said.trimmingCharacters(in: .whitespacesAndNewlines)
+        FinderScript.run(script, arguments: arguments, what: what, log: desktopLog)
     }
 
     /// Prints a line for each icon on the Desktop: x, y and name, between tabs. Asks for all

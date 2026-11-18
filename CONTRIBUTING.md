@@ -43,7 +43,7 @@ make install    # build, sign and install the app, as in the README
 - Before Swift 6.4 (Xcode 27), a plain `swift test` uses SwiftPM's older build system, which doesn't compile the String Catalogs, and the plural tests fail. Run `make test`, or `swift test --build-system swiftbuild`.
 - The timing tests (`EstimateTests`, `RefinementTests`, `MP4PlanTests`) can fail on a heavily loaded Mac. Run them again on a quiet one before suspecting a change.
 - TurnoverKit's tests convert the real files in `Tests/TurnoverTestSupport/Fixtures`. `scripts/make-fixtures.sh` regenerates them; see the README in that folder.
-- Automated tests can't drive Finder, the ring or the system prompts. The manual checklist in [the pull request template](.github/pull_request_template.md) covers them; go through the parts your change touches.
+- Automated tests can't drive Finder, the ring, a browser or the system prompts. The manual checklist in [the pull request template](.github/pull_request_template.md) covers them; go through the parts your change touches.
 
 ## The Xcode project
 
@@ -75,7 +75,9 @@ In zsh, `log` is a shell builtin: if that command complains, use `/usr/bin/log`.
 
 ## Common changes
 
-**A new output format.** Add a `ConversionAction` (images in `Sources/TurnoverKit/Actions`, videos in `Sources/TurnoverKit/Video`) and a case in `OutputFormat`, which gives it its name and its `--to` value. The compiler then points at the few places that list every format: the Finder extension's menu action, the "already a PNG" reason, and, for an image format, its size estimates.
+**A new output format.** Add a `ConversionAction` (images in `Sources/TurnoverKit/Actions`, videos in `Sources/TurnoverKit/Video`) and a case in `OutputFormat`, which gives it its name and its `--to` value. Add the case to `OutputFormat.allCases` too: the list is written out, because `original` (a web image saved as it is) is a case that files on disk are never offered. The compiler then points at the few places that list every format: the Finder extension's menu action, the "already a PNG" reason, and, for an image format, its size estimates.
+
+**What a drag carries.** The ring takes drags of files, and of images dragged as pictures out of a web page. `DraggedImage` (TurnoverAppCore) decides from the drag pasteboard's types, and its tests hold the types Safari and Chrome put there. To see what another app puts on a drag, log `NSPasteboard(name: .drag).types` from `DragWatcher`.
 
 **Text people see.** It lives in each target's `Localizable.xcstrings` (TurnoverKit, TurnoverAppCore, RingModel and the app), in English for now. Counts use the catalogs' plural forms. The command's own messages are English only.
 

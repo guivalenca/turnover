@@ -54,13 +54,13 @@ targets:
           - CFBundleURLName: com.guivalenca.turnover
             CFBundleURLSchemes: [turnover]
         # Shown in the one-time prompts macOS makes before the app reads a protected location.
-        NSDesktopFolderUsageDescription: Turnover converts the files you choose on your Desktop and saves the new files next to them.
+        NSDesktopFolderUsageDescription: Turnover converts the files you choose on your Desktop and saves the new files next to them, and saves images you drop there from a web page.
         NSDocumentsFolderUsageDescription: Turnover converts the files you choose in Documents and saves the new files next to them.
-        NSDownloadsFolderUsageDescription: Turnover converts the files you choose in Downloads, and saves new files there when the original's folder is read-only.
+        NSDownloadsFolderUsageDescription: Turnover converts the files you choose in Downloads, and saves new files there when you drag an image out of a web page or the original's folder is read-only.
         NSRemovableVolumesUsageDescription: Turnover converts the files you choose on external drives and saves the new files next to them.
         NSNetworkVolumesUsageDescription: Turnover converts the files you choose on network shares and saves the new files next to them.
         # Shown when a ring drop on the Desktop first asks Finder to put the new file there (#18).
-        NSAppleEventsUsageDescription: Turnover asks Finder to put each new file where you dropped it on the Desktop.
+        NSAppleEventsUsageDescription: Turnover asks Finder to put each new file where you dropped it on the Desktop, and which folder a window shows when you drop an image from a web page on it.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.guivalenca.turnover

@@ -103,6 +103,9 @@
     "No files" : {
       "comment" : "Why nothing can be converted: nothing was dragged."
     },
+    "Original" : {
+      "comment" : "The ring's entry that saves an image dragged out of a web page as it is, next to PNG and JPEG."
+    },
     "Small" : {
       "comment" : "The JPEG quality of 60%."
     },

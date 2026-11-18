@@ -2,6 +2,10 @@
 
 What changed in each version of Turnover. Versions follow [semantic versioning](https://semver.org).
 
+## Unreleased
+
+- **Images from the web:** drag an image out of a page in Safari, Chrome or Dia and press ⇧. The ring's centre says what it is (`WebP · 1600 × 1067`), and a drop saves it as PNG, as JPEG, or as it is with the new **Original** entry. Dropped over the Desktop it lands there, over a Finder window in that window's folder, and anywhere else in Downloads. Over another app it is also copied, ready to paste with ⌘V. Nothing is downloaded and no browser extension is needed: the image is read from the drag itself.
+
 ## 1.0.0 — 2026-11-18
 
 The first release, built from the spec in [#1](https://github.com/guivalenca/turnover/issues/1).

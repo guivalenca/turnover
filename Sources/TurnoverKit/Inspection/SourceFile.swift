@@ -18,6 +18,13 @@ public struct SourceFile: Sendable, Hashable {
     /// The detected format. For unsupported files it is a best guess, for naming them in messages.
     public let contentType: UTType
 
+    /// The format's short name, as people write it: "WebP", "AVIF", "JPEG", "HEIC".
+    public var typeName: String {
+        if contentType.identifier == "org.webmproject.webp" { return "WebP" }
+        return contentType.preferredFilenameExtension?.uppercased()
+            ?? contentType.localizedDescription ?? contentType.identifier
+    }
+
     /// Inspects the file at `url`. Throws `ConversionError.unreadable` if it can't be read.
     public init(_ url: URL) throws {
         self.url = url

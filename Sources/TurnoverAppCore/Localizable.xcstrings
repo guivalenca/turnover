@@ -160,6 +160,9 @@
     "The folders of the originals are read-only." : {
       "comment" : "Why new files went to Downloads."
     },
+    "image" : {
+      "comment" : "The name of the file an image dragged out of a web page is saved as, when neither its address nor its title gives one: “image.png”."
+    },
     "the folder of %@ is read-only" : {
       "comment" : "Why a new file went to Downloads, after a colon: the original's name."
     },

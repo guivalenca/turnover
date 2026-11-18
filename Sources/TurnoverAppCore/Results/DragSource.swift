@@ -21,11 +21,26 @@ public enum DragSource: Sendable, Equatable {
         public var layer: Int
         /// Its frame in global, top-left-origin points.
         public var frame: CGRect
+        /// The process that owns it, to tell one app's windows from another's; 0 when it doesn't
+        /// matter.
+        public var owner: Int32
 
-        public init(isFinder: Bool, layer: Int, frame: CGRect) {
+        public init(isFinder: Bool, layer: Int, frame: CGRect, owner: Int32 = 0) {
             self.isFinder = isFinder
             self.layer = layer
             self.frame = frame
+            self.owner = owner
+        }
+
+        /// The frontmost of `windows`, given from front to back, under `point`. The drag image
+        /// and anything above it are seen through, and so are overlays: windows above the normal
+        /// level that cover a whole screen, like the one the Dock puts up while something is
+        /// dragged.
+        public static func frontmost(at point: CGPoint, among windows: [Window], levels: Levels, screens: [CGRect]) -> Window? {
+            windows.first { window in
+                let isOverlay = window.layer > levels.normal && screens.contains { window.frame.contains($0) }
+                return window.layer < levels.dragging && !isOverlay && window.frame.contains(point)
+            }
         }
     }
 
@@ -44,14 +59,9 @@ public enum DragSource: Sendable, Equatable {
 
     /// The source of a drag of `files` that started at `point`, given the windows on screen
     /// from front to back, without Turnover's own, and the screens' frames. The frontmost
-    /// window under the point says whether it is a Finder window. The drag image and anything
-    /// above it are seen through, and so are overlays: windows above the normal level that
-    /// cover a whole screen, like the one the Dock puts up while something is dragged.
+    /// window under the point (`Window.frontmost`) says whether it is a Finder window.
     public init(of files: [URL], at point: CGPoint, windows: [Window], levels: Levels, screens: [CGRect], desktopFolder: URL) {
-        let window = windows.first { window in
-            let isOverlay = window.layer > levels.normal && screens.contains { window.frame.contains($0) }
-            return window.layer < levels.dragging && !isOverlay && window.frame.contains(point)
-        }
+        let window = Window.frontmost(at: point, among: windows, levels: levels, screens: screens)
         if let window, window.isFinder, window.layer == levels.normal {
             self = .finderWindow
         } else if ConversionOrigin(menuFiles: files, desktopFolder: desktopFolder) == .desktop(drop: nil) {

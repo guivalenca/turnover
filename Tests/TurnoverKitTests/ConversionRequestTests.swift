@@ -45,6 +45,7 @@ import TurnoverTestSupport
         "turnover://delete?to=png&file=$FILE",
         "turnover://convert/now?to=png&file=$FILE",
         "turnover://convert?to=gif&file=$FILE",
+        "turnover://convert?to=original&file=$FILE",
         "turnover://convert?file=$FILE",
         "turnover://convert?to=png&to=jpeg&file=$FILE",
         "turnover://convert?to=png&file=$FILE&then=delete",

@@ -5,7 +5,7 @@
 <h1 align="center">Turnover</h1>
 
 <p align="center">
-  <strong>Turn the <code>.heic</code> photos and <code>.mov</code> videos from your iPhone and Mac into PNG, JPEG and MP4, right from Finder.</strong>
+  <strong>Turn the <code>.heic</code> photos and <code>.mov</code> videos from your iPhone and Mac into PNG, JPEG and MP4, right from Finder. Drag an image out of a web page to save it in the format you want.</strong>
 </p>
 
 <p align="center">
@@ -47,6 +47,25 @@ Start dragging files, from Finder, the Desktop or a Dock stack, and press **⇧*
 - Dragging photos and videos together? **Rest** on a format for a moment to add it (it fills and shows ✓), then drop on another. Drop straight on one format to convert only that kind of file.
 - To cancel, drop anywhere off the ring or press Esc. Release ⇧ to carry on with a normal drag.
 
+### Drag an image out of a web page
+
+Start dragging an image in Safari, Chrome or Dia and press **⇧**. The same ring opens, and its centre says what the image is, such as `WebP · 1600 × 1067`. Drop on **PNG** or **JPEG** to save it in that format, or on **Original** to save it as it is.
+
+Where you drop the ring decides where the image is saved:
+
+| Dropped over | Saved |
+| --- | --- |
+| The Desktop | On the Desktop, where you dropped it. |
+| A Finder window | In the folder that window shows, selected. |
+| Another app, such as a chat or a mail message | In Downloads, and copied: press **⌘V** to attach it there. |
+| Anything else, the browser included | In Downloads. A short note by the pointer says so. |
+
+The file is named after the image's address when that names a file (`mountain-lake.png`), otherwise after its title, otherwise `image`.
+
+- In a search's grid of results, what you drag is the search engine's small thumbnail. Click a result first and drag the larger preview to get the real image.
+- Animated GIFs and WebPs keep their animation only as Original; PNG and JPEG save the first frame. SVGs aren't converted.
+- Other Chromium browsers should behave like Chrome. Firefox hasn't been tested yet.
+
 ### Where the new file goes
 
 The new file appears next to the original, with the same name and the new extension. Turnover never changes or overwrites a file.
@@ -61,6 +80,7 @@ The new file appears next to the original, with the same name and the new extens
 | --- | --- |
 | Videos: MOV, M4V | **MP4**: H.264 and AAC, which play everywhere. Instant when the video is already H.264 (a large one takes a few seconds, the time to copy it); otherwise it is re-encoded at the same size and frame rate, with HDR mapped to SDR. H.264 that not every player decodes (High 10, 4:2:2, 4:4:4) is re-encoded too. |
 | Images: HEIC, HEIF, AVIF, WebP, TIFF, PNG, JPEG and most others macOS opens | **PNG**, or **JPEG** at Best (100%), High (85%, the default) or Small (60%) |
+| Images dragged out of a web page | The same, or **Original**: the image as the page has it |
 
 Dates, EXIF, location and colour profile are kept, and the orientation is applied.
 
@@ -134,8 +154,8 @@ Open Turnover from Applications or Spotlight to see this window again, or to qui
 | --- | --- | --- |
 | Login Item Added | First launch | Turnover opens at login. You can turn it off in its window. |
 | Notifications | The first notice, or Allow… in the window | To tell you when long conversions finish or fail. |
-| Access to the Desktop, Documents, Downloads, a removable or network volume | The first conversion there | To read the original and write the new file next to it. Allow it. |
-| Control Finder | The first drop on the ring on the Desktop | Only to put the new file where you dropped it. If you say no, the file goes where Finder puts new files. |
+| Access to the Desktop, Documents, Downloads, a removable or network volume | The first conversion there, or the first web image saved there | To read the original and write the new file next to it, and to save web images where you drop them. Allow it. |
+| Control Finder | The first drop on the ring on the Desktop, or of a web image over a Finder window | Only to put the new file where you dropped it, and to ask which folder a window shows. If you say no, a file on the Desktop goes where Finder puts new files, and a web image dropped over a Finder window goes to Downloads. |
 
 Turnover needs no Accessibility, Input Monitoring or Screen Recording access. You can change any answer later in System Settings › Privacy & Security.
 
@@ -162,6 +182,10 @@ This quits Turnover, turns off its Finder extension, deletes the app, and resets
 **Turnover › is missing from the right-click menu.** Open Turnover's window and check Finder extension. If it has no ✓, click Open Settings… and turn Turnover on. If it does, relaunch Finder: ⌥-right-click its Dock icon › Relaunch.
 
 **Pressing ⇧ during a drag doesn't open the ring.** Turnover has to be running: open it from Applications, and keep Open at login on. If ⇧ was already down when the drag started, release it and press it again. Files that aren't photos or videos show a short hint instead of the ring.
+
+**A web image saved from a search is tiny.** You dragged the result's thumbnail. Click the result and drag the larger preview instead.
+
+**A web image went to Downloads instead of the Finder window I dropped it on.** Turnover asks Finder which folder the window shows, which needs System Settings › Privacy & Security › Automation › Turnover › Finder. Windows that show no folder, such as Recents or a search, also send it to Downloads.
 
 **"Verifying Turnover…" flashes and Turnover doesn't open.** After an install, macOS checks the new app on its first launch, and a key pressed while that window is up can cancel it. Open Turnover again from Applications.
 
@@ -203,7 +227,7 @@ turnover offers [--exact] <files…>
 
 ## How it works
 
-Turnover is a Swift package and an Xcode project with no third-party code. The converting is done with ImageIO and AVFoundation. The Finder extension builds the right-click menu and hands your choice to the app; the app runs every conversion, the ring, the menu bar progress and the notifications. The ring watches the mouse and modifier keys, which needs no permission.
+Turnover is a Swift package and an Xcode project with no third-party code. The converting is done with ImageIO and AVFoundation. The Finder extension builds the right-click menu and hands your choice to the app; the app runs every conversion, the ring, the menu bar progress and the notifications. The ring watches the mouse and modifier keys, which needs no permission. An image dragged out of a web page is read from the drag itself when you press ⇧, with no browser extension and nothing downloaded.
 
 [docs/architecture.md](docs/architecture.md) explains the parts and how a conversion flows through them. [CONTRIBUTING.md](CONTRIBUTING.md) covers building, testing and changing Turnover. What changed in each version is in [CHANGELOG.md](CHANGELOG.md).
 

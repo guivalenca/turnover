@@ -17,6 +17,10 @@ public protocol ConversionAction: Sendable {
     /// The output's filename extension, without the dot. Defaults to `outputType`'s preferred one.
     var fileExtension: String { get }
 
+    /// The same, for `file`. Defaults to `fileExtension`; an action whose output's type depends
+    /// on its source (`OriginalAction`) answers per file.
+    func fileExtension(for file: SourceFile) -> String
+
     /// Whether the action can convert `file`. Must be false for a file already in `outputType`.
     func accepts(_ file: SourceFile) -> Bool
 
@@ -39,6 +43,8 @@ extension ConversionAction {
     public var name: String { format.name }
 
     public var fileExtension: String { outputType.preferredFilenameExtension ?? "out" }
+
+    public func fileExtension(for file: SourceFile) -> String { fileExtension }
 
     public func perform(_ file: SourceFile, writingTo destination: URL, progress: ConversionProgress) async throws {
         try await perform(file, writingTo: destination)

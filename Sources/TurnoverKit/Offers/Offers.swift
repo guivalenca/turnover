@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 
 /// What Turnover can do with a selection of files: for each kind of file (images, videos), the
 /// formats it can be converted to, and which files each format applies to.
@@ -14,6 +15,10 @@ public struct Offers: Sendable, Hashable {
     /// The files no format applies to, in selection order, each with the reason: not an image
     /// or a video (with its type), already an MP4, or unreadable.
     public let skipped: [ConversionError]
+
+    /// What the lone image of offers that include Original is, for the ring's centre: an image
+    /// dragged out of a web page says "WebP, 1600 × 1067" there. Nil for files on disk.
+    public let original: Original?
 
     /// Why nothing can be converted, for a short hint, e.g. "notes.txt: not an image or a video
     /// (text)". Nil when something is offered.
@@ -87,6 +92,21 @@ public struct Offers: Sendable, Hashable {
         }
     }
 
+    /// What an image that can be saved as it is, is.
+    public struct Original: Sendable, Hashable {
+        /// Its format's short name: "WebP", "AVIF", "JPEG".
+        public let typeName: String
+        /// Its size in pixels, upright; nil when its header can't be read.
+        public let width: Int?
+        public let height: Int?
+
+        public init(typeName: String, width: Int? = nil, height: Int? = nil) {
+            self.typeName = typeName
+            self.width = width
+            self.height = height
+        }
+    }
+
     /// One JPEG quality and its estimate.
     public struct Preset: Sendable, Hashable {
         public let quality: JPEGQuality
@@ -100,9 +120,10 @@ public struct Offers: Sendable, Hashable {
 
     /// Offers as given, for previews and tests (the ring model's): `init(for:)` and its siblings
     /// work them out from files.
-    public init(groups: [Group], skipped: [ConversionError] = []) {
+    public init(groups: [Group], skipped: [ConversionError] = [], original: Original? = nil) {
         self.groups = groups
         self.skipped = skipped
+        self.original = original
     }
 
     /// Inspects `files` by their contents and works out what is offered. It only sniffs each
@@ -176,12 +197,36 @@ public struct Offers: Sendable, Hashable {
         }
     }
 
-    init(_ files: [URL], _ inspection: Inspection, jpegQuality: JPEGQuality, estimates: Estimates?) {
+    /// What saving each image as it is gives: a file of its size now. For a lone image, what it
+    /// is too.
+    struct Originals: Sendable {
+        var bytes: [URL: Int] = [:]
+        var facts: Original?
+
+        /// Reads each image's size, and a lone image's header.
+        init(_ images: [SourceFile]) {
+            for image in images {
+                bytes[image.url] = (try? image.url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize
+            }
+            guard images.count == 1, let image = images.first else { return }
+            let header = ImageHeader(image.url)
+            // Orientations 5 to 8 are stored on their side.
+            let turned = (header?.properties[kCGImagePropertyOrientation] as? Int ?? 1) >= 5
+            facts = Original(typeName: image.typeName,
+                             width: turned ? header?.height : header?.width,
+                             height: turned ? header?.width : header?.height)
+        }
+    }
+
+    /// With `originals`, the images are offered Original too, after the formats: every image,
+    /// whatever its own format.
+    init(_ files: [URL], _ inspection: Inspection, jpegQuality: JPEGQuality, estimates: Estimates?,
+         originals: Originals? = nil) {
         let inspected = inspection.files
         let actions = OutputFormat.allCases.map { ($0, $0.action()) }
         groups = [SourceFile.Kind.image, .video].compactMap { kind in
             let members = inspected.filter { $0.kind == kind }
-            let targets = actions.compactMap { format, action -> Target? in
+            var targets = actions.compactMap { format, action -> Target? in
                 let fitting = members.filter(action.accepts).map(\.url)
                 guard !fitting.isEmpty else { return nil }
                 let quality = format == .jpeg ? jpegQuality : nil
@@ -191,8 +236,15 @@ public struct Offers: Sendable, Hashable {
                 return Target(format: format, kind: kind, files: fitting, quality: quality,
                               estimate: estimates?.estimate(format, quality: jpegQuality, of: fitting), presets: presets)
             }
+            if kind == .image, let originals, !members.isEmpty {
+                let images = members.map(\.url)
+                let sizes = images.compactMap { originals.bytes[$0] }
+                targets.append(Target(format: .original, kind: .image, files: images,
+                                      estimate: sizes.count == images.count ? .exactSize(sizes.reduce(0, +)) : nil))
+            }
             return targets.isEmpty ? nil : Group(kind: kind, files: members.map(\.url), targets: targets)
         }
+        original = groups.first { $0.kind == .image }?.files.count == 1 ? originals?.facts : nil
         let offered = Set(groups.flatMap(\.targets).flatMap(\.files))
         let refusals = Dictionary(inspected.map { file in
             // "Already an MP4" says more than "can't be converted to PNG".

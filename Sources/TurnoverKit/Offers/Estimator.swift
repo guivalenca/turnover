@@ -11,7 +11,7 @@ public final class Estimator {
     private let cache: SizeCache
     private let conversions: ConversionActivity?
     /// The selection being estimated, until `cancel()` or another selection.
-    private var current: (files: [URL], jpegQuality: JPEGQuality, live: LiveOffers)?
+    private var current: (files: [URL], jpegQuality: JPEGQuality, keepingOriginal: Bool, live: LiveOffers)?
     /// Counts selections and cancels, so a selection still being inspected when another one (or
     /// a cancel) comes knows it is out of date.
     private var requests = 0
@@ -40,19 +40,24 @@ public final class Estimator {
     /// is in progress returns the same `LiveOffers`; once it has finished, a new one checks the
     /// files again (from the cache, so it is quick). Asking for other files cancels the previous
     /// ones, and so does `cancel()`: a `LiveOffers` asked for before either comes back cancelled.
-    public func estimate(_ files: [URL], jpegQuality: JPEGQuality = .default) async -> LiveOffers {
+    ///
+    /// `keepingOriginal` offers the images Original too, to be saved as they are: for an image
+    /// that has no file of its own yet, staged from a drag out of a web page.
+    public func estimate(_ files: [URL], jpegQuality: JPEGQuality = .default,
+                         keepingOriginal: Bool = false) async -> LiveOffers {
         if let current, current.files == files, current.jpegQuality == jpegQuality,
-           !current.live.isCancelled, !current.live.isFinished {
+           current.keepingOriginal == keepingOriginal, !current.live.isCancelled, !current.live.isFinished {
             return current.live
         }
         let previous = current?.live
         cancel()
         let request = requests
-        let refinement = await Refinement.start(files, jpegQuality: jpegQuality, cache: cache,
-                                                conversions: conversions, exactPixelBudget: exactPixelBudget)
+        let refinement = await Refinement.start(files, jpegQuality: jpegQuality, keepingOriginal: keepingOriginal,
+                                                cache: cache, conversions: conversions,
+                                                exactPixelBudget: exactPixelBudget)
         let live = LiveOffers(after: previous, refinement)
         if request == requests {
-            current = (files, jpegQuality, live)
+            current = (files, jpegQuality, keepingOriginal, live)
         } else {
             live.cancel()  // another selection, or a cancel, came meanwhile
         }
