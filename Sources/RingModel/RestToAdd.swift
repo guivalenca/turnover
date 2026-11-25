@@ -16,7 +16,8 @@ extension RingModel {
     /// A format added by resting on it, with its name for the caption.
     struct Addition: Sendable, Hashable {
         let choice: Choice
-        /// "PNG", "MP4"; a JPEG quality fanned out by ⌥ names its percentage: "JPEG 100%".
+        /// "PNG", "MP4"; a JPEG quality fanned out by ⌥ names its percentage: "JPEG 100%";
+        /// a smaller MP4's, its name: "Smaller (Medium)".
         let label: String
     }
 
@@ -60,9 +61,15 @@ extension RingModel {
     private mutating func add(_ entry: Entry) {
         let choice = entry.choices[0]
         let label = entry.quality.map { quality in
-            String(localized: "\(choice.format.name) \(quality.percent)%", bundle: .ringModel,
-                   comment: "A JPEG quality added by resting on it, in the caption: “JPEG 100%”.")
-        } ?? choice.format.name
+            switch quality {
+            case .jpeg(let quality):
+                String(localized: "\(choice.format.name) \(quality.percent)%", bundle: .ringModel,
+                       comment: "A JPEG quality added by resting on it, in the caption: “JPEG 100%”.")
+            case .video(let quality):
+                String(localized: "\(choice.format.shortName) (\(quality.name))", bundle: .ringModel,
+                       comment: "A smaller MP4's quality added by resting on it, in the caption: “Smaller (Medium)”.")
+            }
+        } ?? choice.format.shortName
         let addition = Addition(choice: choice, label: label)
         if let index = additions.firstIndex(where: { $0.choice.kind == choice.kind }) {
             additions[index] = addition

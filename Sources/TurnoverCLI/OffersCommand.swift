@@ -65,10 +65,12 @@ enum OffersCommand {
     ///       notes.txt: not an image or a video (text)
     static func render(_ offers: Offers) -> String {
         var lines: [String] = []
+        // Aligned on the longest name offered.
+        let names = max(6, (offers.targets.map(\.format.name.count).max() ?? 0) + 2)
         for group in offers.groups {
             lines.append("\(group.kind == .video ? "Videos" : "Images") (\(count(group.files)))")
             for target in group.targets {
-                lines.append("  " + column(target.format.name, 6) + column(count(target.files), 9) + estimates(target))
+                lines.append("  " + column(target.format.name, names) + column(count(target.files), 9) + estimates(target))
             }
         }
         if !offers.skipped.isEmpty {
@@ -78,7 +80,7 @@ enum OffersCommand {
         return lines.map { $0 + "\n" }.joined()
     }
 
-    /// JPEG lists every preset and marks the one it uses; the others have one estimate.
+    /// JPEG and Smaller MP4 list every quality and mark the one it uses; the others have one estimate.
     private static func estimates(_ target: Offers.Target) -> String {
         guard !target.presets.isEmpty else { return target.estimate?.label ?? "no estimate" }
         return target.presets.map { preset in

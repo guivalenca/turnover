@@ -1,8 +1,8 @@
 import Darwin
 import Foundation
 
-/// Where and how an output file appears: in `folder`, named after the source with the new
-/// extension, numbered Finder-style on a collision (`photo 2.png`, `photo 3.png`, …), with the
+/// Where and how an output file appears: in `folder`, under the name the action gives
+/// (the source's, mostly) with the new extension, numbered Finder-style on a collision (`photo 2.png`, `photo 3.png`, …), with the
 /// source's creation and modification dates. `folder` is the source's own folder, or the one
 /// asked for (an image dragged out of a web page has no folder of its own: the drop says where
 /// it goes), or the fallback (Downloads) when that folder can't be written to.
@@ -19,14 +19,14 @@ struct Placement {
     let usesFallback: Bool
 
     /// Next to `source`, or in `destination` when one is given.
-    init(of source: URL, in destination: URL? = nil, fileExtension: String, fallback: URL) {
+    init(of source: URL, in destination: URL? = nil, baseName: String, fileExtension: String, fallback: URL) {
         self.source = source
         let wanted = destination ?? source.deletingLastPathComponent()
         // Asked up front: a read-only disk image fails the final rename with EXDEV, not EROFS,
         // because the temporary folder can't be made on it and lands on the startup disk.
         usesFallback = access(wanted.path, W_OK) != 0
         folder = usesFallback ? fallback : wanted
-        baseName = source.deletingPathExtension().lastPathComponent
+        self.baseName = baseName
         self.fileExtension = fileExtension
     }
 

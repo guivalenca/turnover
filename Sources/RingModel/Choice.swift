@@ -7,8 +7,8 @@ extension RingModel {
         /// `.image` or `.video`.
         public let kind: SourceFile.Kind
         public let format: OutputFormat
-        /// The JPEG preset to convert with; nil for other formats.
-        public let quality: JPEGQuality?
+        /// The quality to convert with; nil for formats without any.
+        public let quality: Quality?
         /// The files it converts, in drag order.
         public let files: [URL]
 
@@ -16,14 +16,15 @@ extension RingModel {
         /// `runner.run(choices.flatMap(\\.files), to: choices.map(\\.action))`.
         public var action: any ConversionAction { format.action(quality: quality) }
 
-        public init(kind: SourceFile.Kind, format: OutputFormat, quality: JPEGQuality? = nil, files: [URL]) {
+        public init(kind: SourceFile.Kind, format: OutputFormat, quality: Quality? = nil, files: [URL]) {
             self.kind = kind
             self.format = format
             self.quality = quality
             self.files = files
         }
 
-        /// A target as offered: JPEG at the quality it was offered with (the stored default).
+        /// A target as offered: JPEG and a smaller MP4 at the quality they were offered with
+        /// (the default).
         init(_ target: Offers.Target) {
             self.init(kind: target.kind, format: target.format, quality: target.quality, files: target.files)
         }

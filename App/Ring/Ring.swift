@@ -131,7 +131,7 @@ final class Ring {
             ringLog.debug("Hub: \(self.model.hub?.text ?? "-", privacy: .public)")
         }
         if model.isFannedOut != before.isFannedOut {
-            ringLog.notice("⌥: JPEG \(self.model.isFannedOut ? "fanned out" : "folded back", privacy: .public)")
+            ringLog.notice("Qualities \(self.model.isFannedOut ? "fanned out" : "folded back", privacy: .public)")
         }
         if model.added != before.added, model.phase == .open {
             ringLog.notice("Added: \(self.model.caption ?? "-", privacy: .public)")
@@ -217,7 +217,7 @@ final class Ring {
     private func finish(_ outcome: RingModel.Outcome) {
         switch outcome {
         case .convert(let choices):
-            let summary = choices.map { "\($0.files.count) to \($0.format.name)\($0.quality.map { " \($0.percent)%" } ?? "")" }
+            let summary = choices.map { "\($0.files.count) to \($0.format.name)\($0.quality.map { " \($0.name)" } ?? "")" }
             if let staged = picture?.staged {
                 // The conversion owns the staged file from here, and removes it when it is done.
                 picture?.staged = nil

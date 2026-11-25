@@ -25,6 +25,7 @@ import TurnoverTestSupport
         ("clip.mov", [OutputFormat.mp4]),
         ("IMG_0001.MOV", [.mp4]),
         ("encoded.m4v", [.mp4]),
+        ("clip.mp4", [.smaller]),
         ("sticker.webp", [.png, .jpeg]),
         ("scan.tiff", [.png, .jpeg]),
         ("logo.png", [.jpeg]),
@@ -49,19 +50,17 @@ import TurnoverTestSupport
         #expect(offers.targets.map(\.files) == [[photo], [photo, logo, screenshot], [movie]])
     }
 
-    @Test func mp4sDocumentsFoldersAndMissingFilesAreOfferedNothing() throws {
-        let mp4 = try folder.add(.mp4H264, as: "clip.mp4")
+    @Test func documentsFoldersAndMissingFilesAreOfferedNothing() throws {
         let pdf = try folder.add(.pdf)
         let svg = try folder.add(Data("<svg/>".utf8), as: "drawing.svg")
         let subfolder = folder.url.appendingPathComponent("Album.heic", isDirectory: true)
         try FileManager.default.createDirectory(at: subfolder, withIntermediateDirectories: false)
         let missing = folder.url.appendingPathComponent("gone.heic")
 
-        let offers = Offers(declaredTypesOf: [mp4, pdf, svg, subfolder, missing])
+        let offers = Offers(declaredTypesOf: [pdf, svg, subfolder, missing])
 
         #expect(offers.targets == [])
         #expect(offers.skipped.map(\.localizedDescription) == [
-            "clip.mp4: already an MP4",
             "document.pdf: not an image or a video (PDF document)",
             "drawing.svg: not an image or a video (SVG image)",
             "Album.heic: not an image or a video (folder)",

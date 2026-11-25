@@ -7,7 +7,7 @@ import RingModel
 ///
 ///     Turnover.app/Contents/MacOS/Turnover -RingPreview photos -RingHighlight 1
 ///
-/// States: `movie`, `photos`, `fanned` (⌥ over images), `web` (an image dragged out of a web
+/// States: `movie`, `mp4` (made smaller), `photos`, `fanned` (⌥ over images), `web` (an image dragged out of a web
 /// page), `web-fanned`, `mixed` (images and a video),
 /// `mixed-added` (PNG added), `mixed-fanned`, `long` (the longest texts), and `none` (no
 /// preview: for trying the real ring with drags, without the window).
@@ -81,7 +81,7 @@ enum RingPreview {
         let added = look.entries.filter(\.isAdded).map(\.title)
         if !added.isEmpty, !entry.isAdded {
             look.hub = .init(title: (added + [entry.title]).joined(separator: " + "), detail: "4 files")
-        } else if ["Best", "High", "Small"].contains(entry.title) {
+        } else if look.hub?.title != "Smaller", ["Best", "High", "Small"].contains(entry.title) {
             look.hub = .init(title: "JPEG", detail: "\(entry.title) · \(entry.subtitle)")
         } else {
             look.hub = .init(title: entry.title, detail: entry.subtitle)
@@ -94,6 +94,10 @@ enum RingPreview {
         switch name {
         case "movie":
             return RingLook(entries: placed([("MP4", "About 5 s", -90)]), hub: .init(title: "1", detail: "video"))
+        case "mp4":
+            var entries = placed([("High", "~999 MB", 150), ("Medium", "~123 MB", -90), ("Small", "~4.9 MB", 30)])
+            entries[1].isDefault = true
+            return RingLook(entries: entries, hub: .init(title: "Smaller", detail: "1 video"))
         case "photos":
             return RingLook(entries: placed([("PNG", "~19 MB", 180), ("JPEG", "2.4 MB", 0)]),
                             hub: .init(title: "3", detail: "images"))

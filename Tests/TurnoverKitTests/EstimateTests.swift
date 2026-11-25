@@ -27,10 +27,10 @@ import TurnoverTestSupport
         let offers = await Offers(estimating: [image], jpegQuality: .small)
 
         let jpeg = try #require(offers.targets.first { $0.format == .jpeg })
-        #expect(jpeg.quality == .small)
-        #expect(jpeg.presets.map(\.quality) == [.best, .high, .small])
+        #expect(jpeg.quality == .jpeg(.small))
+        #expect(jpeg.presets.map(\.quality) == [.jpeg(.best), .jpeg(.high), .jpeg(.small)])
         for preset in jpeg.presets {
-            let real = try await outputSize(of: image, with: JPEGAction(quality: preset.quality))
+            let real = try await outputSize(of: image, with: OutputFormat.jpeg.action(quality: preset.quality))
             #expect(try isWithinFactorOfTwo(preset.estimate, of: real), "\(preset.quality)")
         }
         #expect(jpeg.estimate == jpeg.presets.last?.estimate)
@@ -46,7 +46,7 @@ import TurnoverTestSupport
         let offers = await Offers(estimating: [photo, movie])
 
         #expect(offers.targets.map(\.presets.isEmpty) == [true, false, true])
-        #expect(offers.targets.map(\.quality) == [nil, .high, nil])
+        #expect(offers.targets.map(\.quality) == [nil, .jpeg(.high), nil])
     }
 
     @Test func aTargetForSeveralImagesEstimatesTheirTotal() async throws {
@@ -95,7 +95,7 @@ import TurnoverTestSupport
         let realPNG = try await outputSize(of: jpeg, with: PNGAction())
         #expect(try isWithinFactorOfTwo(toPNG.estimate, of: realPNG))
         for preset in toJPEG.presets {
-            let real = try await outputSize(of: png, with: JPEGAction(quality: preset.quality))
+            let real = try await outputSize(of: png, with: OutputFormat.jpeg.action(quality: preset.quality))
             #expect(try isWithinFactorOfTwo(preset.estimate, of: real), "\(preset.quality)")
         }
     }
@@ -113,7 +113,7 @@ import TurnoverTestSupport
         let png = try #require(offers.targets.first { $0.format == .png })
         let jpeg = try #require(offers.targets.first { $0.format == .jpeg })
         let estimates = [(PNGAction() as any ConversionAction, png.estimate)]
-            + jpeg.presets.map { (JPEGAction(quality: $0.quality) as any ConversionAction, Optional($0.estimate)) }
+            + jpeg.presets.map { (OutputFormat.jpeg.action(quality: $0.quality), Optional($0.estimate)) }
         for (action, estimate) in estimates {
             let real = try await outputSize(of: photo, with: action)
             let ratio = Double(try bytes(estimate)) / Double(real)

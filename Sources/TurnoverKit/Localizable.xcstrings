@@ -95,10 +95,13 @@
       "comment" : "The JPEG quality of 100%."
     },
     "High" : {
-      "comment" : "The JPEG quality of 85%, the default."
+      "comment" : "A quality: JPEG at 85%, the default, or a smaller MP4 at up to 1080p."
     },
     "Instant" : {
       "comment" : "How long converting takes when the video is only copied into the new file."
+    },
+    "Medium" : {
+      "comment" : "The quality of a smaller MP4 at up to 720p, the default."
     },
     "No files" : {
       "comment" : "Why nothing can be converted: nothing was dragged."
@@ -107,7 +110,13 @@
       "comment" : "The ring's entry that saves an image dragged out of a web page as it is, next to PNG and JPEG."
     },
     "Small" : {
-      "comment" : "The JPEG quality of 60%."
+      "comment" : "A quality: JPEG at 60%, or a smaller MP4 at up to 480p."
+    },
+    "Smaller" : {
+      "comment" : "The ring's entry that makes an MP4 smaller, at a lower quality."
+    },
+    "Smaller MP4" : {
+      "comment" : "The format that makes an MP4 smaller, at a lower quality: “Smaller MP4 (2 videos)” in the Finder menu."
     },
     "already a JPEG" : {
       "comment" : "Why a file wasn't converted, after its name."
@@ -120,6 +129,9 @@
     },
     "can't be converted to %@" : {
       "comment" : "Why a file wasn't converted, after its name. The format: “PNG”."
+    },
+    "can't be made any smaller" : {
+      "comment" : "Why a file wasn't converted, after its name."
     },
     "can't be read" : {
       "comment" : "Why a file wasn't converted, after its name: “x.heic: can't be read”."

@@ -75,7 +75,7 @@ In zsh, `log` is a shell builtin: if that command complains, use `/usr/bin/log`.
 
 ## Common changes
 
-**A new output format.** Add a `ConversionAction` (images in `Sources/TurnoverKit/Actions`, videos in `Sources/TurnoverKit/Video`) and a case in `OutputFormat`, which gives it its name and its `--to` value. Add the case to `OutputFormat.allCases` too: the list is written out, because `original` (a web image saved as it is) is a case that files on disk are never offered. The compiler then points at the few places that list every format: the Finder extension's menu action, the "already a PNG" reason, and, for an image format, its size estimates.
+**A new output format.** Add a `ConversionAction` (images in `Sources/TurnoverKit/Actions`, videos in `Sources/TurnoverKit/Video`) and a case in `OutputFormat`, which gives it its name and its `--to` value. Add the case to `OutputFormat.allCases` too: the list is written out, because `original` (a web image saved as it is) is a case that files on disk are never offered. The compiler then points at the few places that list every format: the Finder extension's menu action, the "already a PNG" reason, and, for an image format, its size estimates. A format that comes in qualities lists them in `OutputFormat.qualities`, which is what ⌥ fans out. An action whose output has its source's extension gives it a name of its own with `baseName(for:)`, as `SmallerAction` does.
 
 **What a drag carries.** The ring takes drags of files, and of images dragged as pictures out of a web page. `DraggedImage` (TurnoverAppCore) decides from the drag pasteboard's types, and its tests hold the types Safari and Chrome put there. To see what another app puts on a drag, log `NSPasteboard(name: .drag).types` from `DragWatcher`.
 

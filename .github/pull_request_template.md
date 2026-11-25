@@ -41,6 +41,7 @@ Tested on: macOS ___ (Mac: ___ , display: ___ ) and macOS 15.___
 - [ ] Right-click a HEIC: **Turnover ›** sits just below Quick Actions, with PNG (1 image) and JPEG (1 image). PNG writes `name.png` next to it, selected in Finder; the original is unchanged.
 - [ ] Converting the same file again writes `name 2.png`.
 - [ ] Photos, a PNG, a MOV and a PDF together: PNG and JPEG with their image counts, a separator, MP4 (1 video). Each converts only the files it fits.
+- [ ] An MP4 alone: Smaller MP4 (1 video), which writes `name-s.mp4`, smaller, next to it.
 - [ ] A PDF or a text file alone: no Turnover item.
 - [ ] Works in icon, list, column and gallery views, and on the Desktop. On the Desktop, the new file appears there and no Finder window opens.
 - [ ] On an external drive and on a writable network share, the new file lands next to the original.
@@ -76,6 +77,7 @@ With a physical mouse or trackpad, and the keyboard:
 - [ ] Hold ⌥ over the ring: JPEG fans out into Best, High and Small, each with its size, and the default is marked. Releasing ⌥ folds them back. A drop on a quality uses it this once, and the setting doesn't change.
 - [ ] ⌥ then ⇧, ⇧ then ⌥, and both at once all work. A drag started with ⌥ (a Finder copy) then ⇧ opens the ring fanned out, and the drop converts rather than copies.
 - [ ] Release ⇧ while holding ⌥: a drop into a folder copies, as usual.
+- [ ] An MP4 alone opens High, Medium and Small with their sizes, Medium marked, and a drop converts at that quality. With a MOV or photos alongside, it is one entry, Smaller, which ⌥ fans out.
 - [ ] Photos and a video together: the caption reads "Rest on a format to add it, then drop on another". Rest on PNG: it fills, blinks ✓ and stays tinted. Over MP4 the centre reads "PNG + MP4 · 2 files", and the drop converts both.
 - [ ] Dropping straight on MP4 converts only the video. Adding JPEG after PNG replaces it.
 - [ ] Change the spring-loading speed (System Settings › Accessibility › Pointer Control): the rest delay follows it from the next drag. The 0.5 s default feels right.

@@ -5,7 +5,7 @@
 <h1 align="center">Turnover</h1>
 
 <p align="center">
-  <strong>Turn the <code>.heic</code> photos and <code>.mov</code> videos from your iPhone and Mac into PNG, JPEG and MP4, right from Finder. Drag an image out of a web page to save it in the format you want.</strong>
+  <strong>Turn the <code>.heic</code> photos and <code>.mov</code> videos from your iPhone and Mac into PNG, JPEG and MP4, right from Finder. Make an MP4 smaller. Drag an image out of a web page to save it in the format you want.</strong>
 </p>
 
 <p align="center">
@@ -30,7 +30,7 @@
 
 ### Right-click
 
-Select photos or videos in Finder, right-click, and choose **Turnover ›** PNG, JPEG or MP4. The menu only offers the formats that fit what you selected, such as `PNG (3 images)` or `MP4 (1 video)`.
+Select photos or videos in Finder, right-click, and choose **Turnover ›** PNG, JPEG, MP4 or Smaller MP4. The menu only offers the formats that fit what you selected, such as `PNG (3 images)` or `Smaller MP4 (1 video)`.
 
 ### Drag and press ⇧
 
@@ -46,6 +46,21 @@ Start dragging files, from Finder, the Desktop or a Dock stack, and press **⇧*
 - Hold **⌥** over the ring to choose the JPEG quality for this drop only: Best, High or Small.
 - Dragging photos and videos together? **Rest** on a format for a moment to add it (it fills and shows ✓), then drop on another. Drop straight on one format to convert only that kind of file.
 - To cancel, drop anywhere off the ring or press Esc. Release ⇧ to carry on with a normal drag.
+
+### Make an MP4 smaller
+
+Start dragging an MP4, or several, and press **⇧**. The ring offers three qualities, each with about how big the new file will be. Drop on one:
+
+| Quality | Frame size | Keeps at most |
+| --- | --- | --- |
+| **High** | Up to 1080p | 60% of the video's bit rate |
+| **Medium**, the default | Up to 720p | 35% |
+| **Small** | Up to 480p | 18% |
+
+- The new file appears next to the original as `clip-s.mp4`, and the original stays.
+- With photos or other videos in the same drag, it is one entry, **Smaller**, at Medium. Hold **⌥** to choose the quality.
+- Right-click › Turnover › **Smaller MP4** uses Medium.
+- To shrink a MOV or M4V, convert it to MP4 first.
 
 ### Drag an image out of a web page
 
@@ -68,17 +83,18 @@ The file is named after the image's address when that names a file (`mountain-la
 
 ### Where the new file goes
 
-The new file appears next to the original, with the same name and the new extension. Turnover never changes or overwrites a file.
+The new file appears next to the original, with the same name and the new extension (a smaller MP4 gets `-s` after its name instead, like `clip-s.mp4`). Turnover never changes or overwrites a file.
 
 - Converted from a Finder window, the new file is selected in it.
 - Dropped on the ring on the Desktop, the new file appears where you dropped it: on the nearest free grid spot with Snap to Grid on, exactly there without it. No Finder window opens.
-- If the name is taken, the new file is numbered, like `IMG_0420 2.jpg`. If the folder is read-only, the new file goes to Downloads and Turnover tells you.
+- If the name is taken, the new file is numbered, like `IMG_0420 2.jpg`. So is a smaller MP4 of a file already named with `-s`: `clip-s 2.mp4`. If the folder is read-only, the new file goes to Downloads and Turnover tells you.
 
 ### What converts to what
 
 | From | To |
 | --- | --- |
 | Videos: MOV, M4V | **MP4**: H.264 and AAC, which play everywhere. Instant when the video is already H.264 (a large one takes a few seconds, the time to copy it); otherwise it is re-encoded at the same size and frame rate, with HDR mapped to SDR. H.264 that not every player decodes (High 10, 4:2:2, 4:4:4) is re-encoded too. |
+| Videos: MP4 | **Smaller MP4** at High, Medium (the default) or Small: the same video re-encoded as H.264, with HDR mapped to SDR. Never enlarged, at the same frame rate, with AAC sound copied as it is. If it wouldn't come out smaller, nothing is written and Turnover says so. |
 | Images: HEIC, HEIF, AVIF, WebP, TIFF, PNG, JPEG and most others macOS opens | **PNG**, or **JPEG** at Best (100%), High (85%, the default) or Small (60%) |
 | Images dragged out of a web page | The same, or **Original**: the image as the page has it |
 
@@ -193,6 +209,8 @@ This quits Turnover, turns off its Finder extension, deletes the app, and resets
 
 **Files in one folder don't convert.** You may have answered Don't Allow when macOS asked about that folder. Turn Turnover on in System Settings › Privacy & Security › Files & Folders.
 
+**"Can't be made any smaller".** The MP4 is already compressed about as far as it goes, as a still screen recording can be, so nothing was written. Try Small.
+
 **The new file went to Downloads.** The original's folder can't be written to (a disk image, a shared folder, or a read-only drive), so Turnover saved it in Downloads and posted a notification saying so.
 
 **"xcodebuild requires Xcode".** Run `sudo xcode-select -s /Applications/Xcode.app`, then `make install` again.
@@ -215,13 +233,13 @@ swift build -c release --product turnover
 Copy `.build/release/turnover` to a folder on your `PATH` to use it anywhere.
 
 ```text
-turnover <files…> --to png|jpeg|mp4 [--quality best|high|small]
+turnover <files…> --to png|jpeg|mp4|smaller [--quality <quality>]
 turnover offers [--exact] <files…>
 ```
 
 - Each new file is saved next to its original, and its path is printed.
 - The exit code is 1 if any file couldn't be converted, and 64 for a usage error.
-- `--quality` is for JPEG; the default is `high`.
+- `--quality` is `best`, `high` (the default) or `small` for JPEG, and `high`, `medium` (the default) or `small` for a smaller MP4.
 - `offers` lists the formats each file can become, with estimated sizes and times, and converts nothing. With `--exact`, it waits for the exact image sizes the ring ends up showing (measured by encoding a few photos in memory; the others are scaled from them).
 - Ctrl-C stops the conversions and leaves nothing behind.
 

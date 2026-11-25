@@ -3,8 +3,8 @@ import TurnoverKit
 extension RingModel {
     /// One format on the ring.
     public struct Entry: Sendable, Hashable {
-        /// The format ("PNG", "JPEG", "MP4"), a JPEG quality ⌥ fanned out ("Best", "High",
-        /// "Small"), or "Original" for an image dragged out of a web page, saved as it is.
+        /// The format ("PNG", "JPEG", "MP4", "Smaller"), a quality fanned out ("Best", "High",
+        /// "Medium", "Small"), or "Original" for an image dragged out of a web page, saved as it is.
         public let title: String
         /// Its estimate: "19 MB" (measured), "~19 MB", "Instant", "About 5 s"; "…" until known.
         /// Original names the image's own format first: "WebP · 212 KB".
@@ -23,21 +23,21 @@ extension RingModel {
         public let arc: Arc
         /// What a drop on it converts.
         public let choices: [Choice]
-        /// The JPEG quality it stands for when ⌥ fans JPEG out ("Best", say); nil for a format.
-        public let quality: JPEGQuality?
-        /// A JPEG quality fanned out by ⌥ that is the stored default: it is marked.
+        /// The quality it stands for when its format is fanned out ("Best", say); nil for a format.
+        public let quality: Quality?
+        /// A fanned out quality that is the default: it is marked.
         public let isDefault: Bool
         /// Added by resting on it: it stays tinted, with a ✓.
         public let isAdded: Bool
 
-        /// Which format, or JPEG quality, of which kind of file it is, whatever its estimate.
+        /// Which format, or quality, of which kind of file it is, whatever its estimate.
         public var id: ID { ID(kind: choices[0].kind, format: choices[0].format, quality: quality) }
 
         public struct ID: Sendable, Hashable {
             public let kind: SourceFile.Kind
             public let format: OutputFormat
-            /// Set for a JPEG quality fanned out by ⌥; nil for JPEG itself.
-            public let quality: JPEGQuality?
+            /// Set for a fanned out quality; nil for the format itself.
+            public let quality: Quality?
         }
     }
 
@@ -80,7 +80,10 @@ extension RingModel {
     /// One kind of file: a single entry sits at the top; two sit left and right, in display
     /// order (PNG left, JPEG right). Images and videos together: images on the left, centred on
     /// 180° and 74° apart; videos on the right, at 0°. With ⌥, JPEG's qualities fan out around
-    /// where JPEG was: 54° apart, or 52° in a mixed ring. Angles are in (-180, 180].
+    /// where JPEG was: 54° apart, or 52° in a mixed ring. A smaller MP4's do the same, and when it is
+    /// all the ring offers they are there from the start, a
+    /// third of the ring each, the middle one at the top. With both fanned out next to PNG and
+    /// MP4, everything sits 45° apart. Angles are in (-180, 180].
     ///
     /// With Original (an image dragged out of a web page): Original sits at the bottom and the
     /// formats above it, a single one at the top, PNG and JPEG up left and up right (-150° and
@@ -104,18 +107,20 @@ extension RingModel {
             angles = above + [90]
         } else if groups.count == 1 {
             let only = groups[0].spots
-            if only.contains(where: { $0.preset != nil }) {
-                // JPEG's qualities around where JPEG was: the right, or the top if JPEG was alone.
+            if only.allSatisfy({ $0.choices[0].format == .smaller && $0.preset != nil }) {
+                angles = spread(only.count, around: -90, step: 360 / Double(only.count))
+            } else if only.contains(where: { $0.preset != nil }) {
+                // The qualities around where their format was: the right, or the top if it was alone.
                 let others = only.filter { $0.preset == nil }.count
                 angles = others == 1 ? [180] + spread(3, around: 0, step: 54) : spread(3, around: -90, step: 54)
             } else {
                 angles = only.count == 1 ? [-90] : [180, 0]
             }
         } else {
+            let total = groups.map(\.spots.count).reduce(0, +)
             angles = groups.flatMap { group -> [Double] in
-                group.kind == SourceFile.Kind.video
-                    ? spread(group.spots.count, around: 0, step: 74)
-                    : spread(group.spots.count, around: 180, step: fannedOut ? 52 : 74)
+                spread(group.spots.count, around: group.kind == SourceFile.Kind.video ? 0 : 180,
+                       step: !fannedOut ? 74 : total > 7 ? 45 : 52)
             }
         }
         let all = groups.flatMap { $0.spots }
@@ -138,21 +143,22 @@ extension RingModel {
         let title: String
         let estimate: Estimate?
         let choices: [Choice]
-        /// The JPEG quality it stands for, when JPEG is fanned out.
-        let preset: JPEGQuality?
+        /// The quality it stands for, when its format is fanned out.
+        let preset: Quality?
         var isDefault = false
         /// Original: the image saved as it is.
         var isOriginal: Bool { choices[0].format == .original }
     }
 
-    /// One spot per target, except JPEG fanned out: one per quality, Best to Small.
+    /// One spot per target, except one fanned out: one per quality, largest to smallest.
     private static func spots(for target: Offers.Target, fannedOut: Bool) -> [Spot] {
-        guard fannedOut, target.format == .jpeg else {
-            return [Spot(title: target.format.name, estimate: target.estimate, choices: [Choice(target)], preset: nil)]
+        let qualities = target.format.qualities
+        guard fannedOut, !qualities.isEmpty else {
+            return [Spot(title: target.format.shortName, estimate: target.estimate, choices: [Choice(target)], preset: nil)]
         }
-        return JPEGQuality.allCases.map { quality in
+        return qualities.map { quality in
             Spot(title: quality.name, estimate: target.presets.first { $0.quality == quality }?.estimate,
-                 choices: [Choice(kind: target.kind, format: .jpeg, quality: quality, files: target.files)],
+                 choices: [Choice(kind: target.kind, format: target.format, quality: quality, files: target.files)],
                  preset: quality, isDefault: quality == target.quality)
         }
     }

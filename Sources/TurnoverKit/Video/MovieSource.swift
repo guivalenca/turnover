@@ -20,6 +20,8 @@ struct MovieSource {
     struct Audio {
         let track: AVAssetTrack
         let format: CMFormatDescription
+        /// Bits per second.
+        let dataRate: Double
     }
 
     let asset: AVURLAsset
@@ -30,20 +32,20 @@ struct MovieSource {
     let audio: Audio?
 
     /// Reads the movie's tracks. Throws `ConversionError.damaged` when the file can't be parsed
-    /// and `.notApplicable` when it has no video.
-    init(_ url: URL) async throws {
+    /// and `.notApplicable` when it has no video for `format`.
+    init(_ url: URL, for target: OutputFormat = .mp4) async throws {
         asset = AVURLAsset(url: url)
         do {
             (duration, metadata) = try await asset.load(.duration, .metadata)
             guard let track = try await Self.firstEnabledTrack(of: .video, in: asset),
                   let format = try await track.load(.formatDescriptions).first
-            else { throw ConversionError.notApplicable(url, format: .mp4) }
+            else { throw ConversionError.notApplicable(url, format: target) }
             let (transform, frameRate, dataRate) = try await track.load(.preferredTransform, .nominalFrameRate, .estimatedDataRate)
             video = Video(track: track, format: format, transform: transform, frameRate: Double(frameRate), dataRate: Double(dataRate))
 
             if let track = try await Self.firstEnabledTrack(of: .audio, in: asset),
                let format = try await track.load(.formatDescriptions).first {
-                audio = Audio(track: track, format: format)
+                audio = Audio(track: track, format: format, dataRate: Double(try await track.load(.estimatedDataRate)))
             } else {
                 audio = nil
             }

@@ -39,7 +39,7 @@ func expectExact(_ offers: Offers, for image: URL, sourceLocation: SourceLocatio
     for target in targets {
         let presets = target.presets.isEmpty
             ? [(target.format.action(), target.estimate)]
-            : target.presets.map { (JPEGAction(quality: $0.quality) as any ConversionAction, Optional($0.estimate)) }
+            : target.presets.map { (OutputFormat.jpeg.action(quality: $0.quality), Optional($0.estimate)) }
         for (action, estimate) in presets {
             let real = try await outputSize(of: image, with: action)
             #expect(isExact(estimate, of: real), "\(action.name) \(String(describing: estimate)) vs \(real)",
@@ -386,7 +386,7 @@ enum ImageSizesSampled {
 
         #expect(exact.values.last == [.png, .jpeg])
         #expect(exact.values.contains([.jpeg]))
-        #expect(presets.values.first { !$0.isEmpty } == [.small])
+        #expect(presets.values.first { !$0.isEmpty } == [.jpeg(.small)])
     }
 }
 

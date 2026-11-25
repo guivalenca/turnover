@@ -46,8 +46,8 @@ public enum JPEGQuality: String, CaseIterable, Sendable {
     public var name: String {
         switch self {
         case .best: String(localized: "Best", bundle: .turnoverKit, comment: "The JPEG quality of 100%.")
-        case .high: String(localized: "High", bundle: .turnoverKit, comment: "The JPEG quality of 85%, the default.")
-        case .small: String(localized: "Small", bundle: .turnoverKit, comment: "The JPEG quality of 60%.")
+        case .high: String(localized: "High", bundle: .turnoverKit, comment: "A quality: JPEG at 85%, the default, or a smaller MP4 at up to 1080p.")
+        case .small: String(localized: "Small", bundle: .turnoverKit, comment: "A quality: JPEG at 60%, or a smaller MP4 at up to 480p.")
         }
     }
 
