@@ -30,7 +30,7 @@ public struct Converter: Sendable {
 
     /// Converts `source` with `action` and returns where the new file landed.
     ///
-    /// The output appears next to the source, named like it with the action's extension and a
+    /// The output appears next to the source, named like it (or as the action says) with the action's extension and a
     /// Finder-style number if that name is taken, carrying the source's creation and modification
     /// dates. It appears complete or not at all; the source and existing files are never touched.
     /// When the source's folder can't be written to, the output goes to `downloads` instead, under
@@ -63,7 +63,8 @@ public struct Converter: Sendable {
         defer { activity.end() }
         let progress = ConversionProgress(progress)
         guard action.accepts(file) else { throw ConversionError.refusal(of: file, by: action) }
-        let placement = Placement(of: file.url, in: folder, fileExtension: action.fileExtension(for: file),
+        let placement = Placement(of: file.url, in: folder, baseName: action.baseName(for: file),
+                                  fileExtension: action.fileExtension(for: file),
                                   fallback: downloads)
         let output: URL
         do {

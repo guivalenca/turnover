@@ -30,7 +30,7 @@ struct QuickEstimateAccuracy {
             for target in offers?.targets ?? [] {
                 let estimates = target.presets.isEmpty
                     ? [(target.format.name, target.format.action(), target.estimate)]
-                    : target.presets.map { ("JPEG \($0.quality.name)", JPEGAction(quality: $0.quality) as any ConversionAction, Optional($0.estimate)) }
+                    : target.presets.map { ("\(target.format.name) \($0.quality.name)", target.format.action(quality: $0.quality), Optional($0.estimate)) }
                 for (name, action, estimate) in estimates {
                     let real = try await outputSize(of: photo, with: action)
                     let ratio = Double(try bytes(estimate)) / Double(real)

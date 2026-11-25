@@ -22,7 +22,7 @@ import TurnoverKit
 
         ring.send(.drop)
 
-        #expect(ring.outcome == .convert([.init(kind: .image, format: .jpeg, quality: defaultQuality, files: [Sample.photo])]))
+        #expect(ring.outcome == .convert([.init(kind: .image, format: .jpeg, quality: .jpeg(defaultQuality), files: [Sample.photo])]))
     }
 
     @Test func aDropOnTheHubCancels() {

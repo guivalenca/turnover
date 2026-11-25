@@ -60,19 +60,25 @@ import TurnoverTestSupport
     }
 }
 
-/// Files nothing is offered for, and the hint shown when that is the whole selection.
-@Suite struct WhatIsSkipped {
+/// MP4s have nothing to convert to but a smaller MP4.
+@Suite struct WhatAnMP4Offers {
     let folder = try! ScratchFolder()
 
-    @Test func anMP4OffersNothing() throws {
+    @Test func onlyASmallerOne() throws {
         let movie = try folder.add(.mp4H264, as: "clip.mp4")
 
         let offers = Offers(for: [movie])
 
-        #expect(offers.groups == [])
-        #expect(offers.skipped == [.alreadyInFormat(movie, format: .mp4)])
-        #expect(offers.reason == "clip.mp4: already an MP4")
+        #expect(offers.targets.map(\.format) == [.smaller])
+        #expect(offers.targets.first?.files == [movie])
+        #expect(offers.targets.first?.menuTitle == "Smaller MP4 (1 video)")
+        #expect(offers.skipped == [])
     }
+}
+
+/// Files nothing is offered for, and the hint shown when that is the whole selection.
+@Suite struct WhatIsSkipped {
+    let folder = try! ScratchFolder()
 
     @Test(arguments: [(Fixture.pdf, "PDF document"), (.text, "text")])
     func aDocumentIsUnsupportedAndTheReasonNamesItsType(fixture: Fixture, type: String) throws {
@@ -116,13 +122,10 @@ import TurnoverTestSupport
 
         let offers = Offers(for: [photo, pdf, movie, mp4])
 
-        #expect(offers.targets.map(\.format) == [.png, .jpeg, .mp4])
+        #expect(offers.targets.map(\.format) == [.png, .jpeg, .mp4, .smaller])
         #expect(offers.groups.map(\.files) == [[photo], [movie, mp4]])
-        #expect(offers.targets.last?.files == [movie])
-        #expect(offers.skipped == [
-            .unsupported(pdf, typeDescription: "PDF document"),
-            .alreadyInFormat(mp4, format: .mp4),
-        ])
+        #expect(offers.targets.map(\.files) == [[photo], [photo], [movie], [mp4]])
+        #expect(offers.skipped == [.unsupported(pdf, typeDescription: "PDF document")])
         #expect(offers.reason == nil)
     }
 

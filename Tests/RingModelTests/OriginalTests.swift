@@ -138,7 +138,7 @@ import TurnoverKit
         ring.send(.pointer(at: 24, distance: 100))
         ring.send(.drop)
 
-        #expect(ring.outcome == .convert([.init(kind: .image, format: .jpeg, quality: .small, files: [Sample.webImage])]))
+        #expect(ring.outcome == .convert([.init(kind: .image, format: .jpeg, quality: .jpeg(.small), files: [Sample.webImage])]))
     }
 
     @Test func aDropOnTheHubCancels() {

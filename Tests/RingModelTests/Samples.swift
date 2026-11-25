@@ -8,6 +8,7 @@ enum Sample {
     static let photo2 = URL(fileURLWithPath: "/Users/me/Pictures/IMG_0002.heic")
     static let screenshot = URL(fileURLWithPath: "/Users/me/Desktop/Screenshot.png")
     static let movie = URL(fileURLWithPath: "/Users/me/Movies/IMG_0003.mov")
+    static let mp4 = URL(fileURLWithPath: "/Users/me/Movies/IMG_0004.mp4")
     static let lease = URL(fileURLWithPath: "/Users/me/Documents/lease.pdf")
 
     /// Offers for images that aren't PNGs or JPEGs (HEICs, say): PNG and JPEG.
@@ -16,9 +17,9 @@ enum Sample {
                        jpegQuality: JPEGQuality = .default, presets: [JPEGQuality: Estimate] = [:]) -> Offers {
         Offers(groups: [.init(kind: .image, files: files, targets: [
             .init(format: .png, kind: .image, files: files, estimate: png),
-            .init(format: .jpeg, kind: .image, files: files, quality: jpegQuality, estimate: jpeg,
+            .init(format: .jpeg, kind: .image, files: files, quality: .jpeg(jpegQuality), estimate: jpeg,
                   presets: JPEGQuality.allCases.compactMap { quality in
-                      presets[quality].map { Offers.Preset(quality: quality, estimate: $0) }
+                      presets[quality].map { Offers.Preset(quality: .jpeg(quality), estimate: $0) }
                   }),
         ])])
     }
@@ -26,7 +27,7 @@ enum Sample {
     /// Offers for PNGs: JPEG only.
     static func pngs(_ files: [URL], jpeg: Estimate? = nil) -> Offers {
         Offers(groups: [.init(kind: .image, files: files, targets: [
-            .init(format: .jpeg, kind: .image, files: files, quality: .default, estimate: jpeg),
+            .init(format: .jpeg, kind: .image, files: files, quality: .jpeg(.default), estimate: jpeg),
         ])])
     }
 
@@ -60,6 +61,17 @@ enum Sample {
     static func movies(_ files: [URL], mp4: Estimate? = nil) -> Offers {
         Offers(groups: [.init(kind: .video, files: files, targets: [
             .init(format: .mp4, kind: .video, files: files, estimate: mp4),
+        ])])
+    }
+
+    /// Offers for MP4s: a smaller one, at each quality's size.
+    static func mp4s(_ files: [URL], presets: [VideoQuality: Int] = [:]) -> Offers {
+        Offers(groups: [.init(kind: .video, files: files, targets: [
+            .init(format: .smaller, kind: .video, files: files, quality: .video(.default),
+                  estimate: presets[.default].map(Estimate.size),
+                  presets: VideoQuality.allCases.compactMap { quality in
+                      presets[quality].map { Offers.Preset(quality: .video(quality), estimate: .size($0)) }
+                  }),
         ])])
     }
 }

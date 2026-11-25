@@ -47,15 +47,15 @@ import TurnoverTestSupport
 
     @Test func nothingToConvertListsWhyAndExitsNonZero() async throws {
         let pdf = try folder.add(.pdf)
-        let mp4 = try folder.add(.mp4H264, as: "clip.mp4")
+        let text = try folder.add(.text)
 
-        let run = try await turnover("offers", pdf.path, mp4.path)
+        let run = try await turnover("offers", pdf.path, text.path)
 
         #expect(run.status == 1)
         #expect(run.output == """
             Skipped
               document.pdf: not an image or a video (PDF document)
-              clip.mp4: already an MP4
+              notes.txt: not an image or a video (text)
 
             """)
     }

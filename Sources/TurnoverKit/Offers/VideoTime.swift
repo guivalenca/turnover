@@ -1,6 +1,7 @@
 import Foundation
 
-/// Roughly how long converting one video to MP4 takes, from its plan.
+/// Roughly how long converting one video to MP4 takes, from its plan, and for a video that is an
+/// MP4 already, how big making it smaller leaves it.
 ///
 /// Calibrated on an Apple Silicon Mac with the hardware H.264 encoder (see the #5 notes): copying
 /// the video into the new container runs at about 275 MB/s of file, and re-encoding at about
@@ -10,13 +11,19 @@ struct VideoTime: Sendable {
     let seconds: Double
     /// Whether the video is only copied, not re-encoded.
     let isCopy: Bool
+    /// For an MP4, the approximate size at each quality, in bytes; empty for other videos.
+    let smaller: [VideoQuality: Int]
 
     static let copiedBytesPerSecond = 275e6
     static let encodedPixelsPerSecond = 550e6
 
     /// Nil when the video can't be planned (it is damaged, or has no video track).
     init?(of file: SourceFile) async {
-        guard let plan = try? await MP4Action().plan(for: file) else { return nil }
+        guard let movie = try? await MovieSource(file.url) else { return nil }
+        let plan = MP4Plan(movie)
+        smaller = !SmallerAction().accepts(file) ? [:] : Dictionary(uniqueKeysWithValues: VideoQuality.allCases.map {
+            ($0, SmallerPlan(movie, quality: $0).bytes)
+        })
         isCopy = plan.passesVideoThrough
         if isCopy {
             let bytes = (try? file.url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0

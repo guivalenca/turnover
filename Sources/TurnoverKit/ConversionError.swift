@@ -13,6 +13,8 @@ public enum ConversionError: Error, Sendable, Hashable {
     case alreadyInFormat(URL, format: OutputFormat)
     /// The action doesn't take this kind of file, e.g. a video asked to become a PNG.
     case notApplicable(URL, format: OutputFormat)
+    /// Making the MP4 smaller gave a file no smaller than it: it is compressed enough already.
+    case notSmaller(URL)
     /// The new file couldn't be written: no room, no permission, …. `detail` is the system's
     /// reason, e.g. "Permission denied".
     case notWritten(URL, format: OutputFormat, detail: String)
@@ -21,7 +23,7 @@ public enum ConversionError: Error, Sendable, Hashable {
     public var file: URL {
         switch self {
         case .unreadable(let url), .damaged(let url), .unsupported(let url, _), .alreadyInFormat(let url, _),
-             .notApplicable(let url, _), .notWritten(let url, _, _):
+             .notApplicable(let url, _), .notSmaller(let url), .notWritten(let url, _, _):
             url
         }
     }
@@ -48,6 +50,8 @@ public enum ConversionError: Error, Sendable, Hashable {
         case .notApplicable(_, let format), .alreadyInFormat(_, let format):
             String(localized: "can't be converted to \(format.name)", bundle: .turnoverKit,
                    comment: "Why a file wasn't converted, after its name. The format: “PNG”.")
+        case .notSmaller:
+            String(localized: "can't be made any smaller", bundle: .turnoverKit, comment: "Why a file wasn't converted, after its name.")
         case .notWritten(_, let format, let detail):
             String(localized: "couldn't write the \(format.name) (\(detail))", bundle: .turnoverKit,
                    comment: "Why a file wasn't converted, after its name. The format, then the system's reason: “couldn't write the PNG (Permission denied)”.")

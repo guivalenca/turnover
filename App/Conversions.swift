@@ -39,7 +39,7 @@ final class Conversions {
     func convert(_ request: ConversionRequest) {
         let origin = ConversionOrigin(menuFiles: request.files, desktopFolder: FinderDesktop.folder)
         log.notice("Converting \(request.files.count) file(s) to \(request.format.name, privacy: .public), from \(String(describing: origin), privacy: .public)")
-        convert(request.files, to: [request.format.action(quality: AppSettings().jpegQuality)], origin: origin)
+        convert(request.files, to: [request.format.action(quality: .jpeg(AppSettings().jpegQuality))], origin: origin)
     }
 
     /// Converts each of `files` with the first of `actions` that takes it, for example PNG for

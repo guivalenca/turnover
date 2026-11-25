@@ -152,7 +152,7 @@ import TurnoverTestSupport
     // MARK: Kept out of the command and the Finder menu
 
     @Test func originalIsNotAFormatFilesConvertTo() {
-        #expect(OutputFormat.allCases == [.png, .jpeg, .mp4])
+        #expect(OutputFormat.allCases == [.png, .jpeg, .mp4, .smaller])
         #expect(OutputFormat(conversion: "original") == nil)
         #expect(OutputFormat(conversion: "png") == .png)
         #expect(OutputFormat.original.name == "Original")

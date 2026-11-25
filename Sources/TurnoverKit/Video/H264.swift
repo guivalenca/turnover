@@ -38,13 +38,27 @@ enum H264 {
     /// never more than twice the source's rate: H.264 needs about that much more than HEVC for
     /// the same picture, and more would only make the file bigger.
     static func encodingSettings(for size: CMVideoDimensions, frameRate: Double, sourceDataRate: Double) -> [String: Any] {
-        let frameRate = frameRate > 0 ? frameRate : 30
+        let frameRate = Self.frameRate(frameRate)
         var bitRate = Double(size.width) * Double(size.height) * frameRate * 0.15
         if sourceDataRate > 0 { bitRate = min(bitRate, sourceDataRate * 2) }
-        return [
+        return encodingSettings(width: Int(size.width), height: Int(size.height), frameRate: frameRate, bitRate: bitRate)
+    }
+
+    /// H.264 High at the frame size and bit rate planned for making a video smaller. The source's
+    /// frames are scaled to fill it, whatever the shape of their pixels.
+    static func encodingSettings(for plan: SmallerPlan, frameRate: Double) -> [String: Any] {
+        encodingSettings(width: plan.width, height: plan.height, frameRate: Self.frameRate(frameRate), bitRate: plan.bitRate)
+            .merging([AVVideoScalingModeKey: AVVideoScalingModeResize]) { $1 }
+    }
+
+    /// `frameRate`, or 30 when it isn't known.
+    static func frameRate(_ frameRate: Double) -> Double { frameRate > 0 ? frameRate : 30 }
+
+    private static func encodingSettings(width: Int, height: Int, frameRate: Double, bitRate: Double) -> [String: Any] {
+        [
             AVVideoCodecKey: AVVideoCodecType.h264,
-            AVVideoWidthKey: size.width,
-            AVVideoHeightKey: size.height,
+            AVVideoWidthKey: width,
+            AVVideoHeightKey: height,
             AVVideoColorPropertiesKey: colorProperties,
             AVVideoCompressionPropertiesKey: [
                 AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,

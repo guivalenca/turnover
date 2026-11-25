@@ -4,6 +4,9 @@
     "%@ %lld%%" : {
       "comment" : "A JPEG quality added by resting on it, in the caption: “JPEG 100%”."
     },
+    "%@ (%@)" : {
+      "comment" : "A smaller MP4's quality added by resting on it, in the caption: “Smaller (Medium)”."
+    },
     "%@ added · drop to convert" : {
       "comment" : "Under the ring once formats are added by resting on them: “PNG + MP4 added · drop to convert”."
     },

@@ -81,7 +81,7 @@ import TurnoverKit
 
         ring.send(.drop)
 
-        #expect(ring.outcome == .convert([.init(kind: .image, format: .jpeg, quality: quality, files: [Sample.photo])]))
+        #expect(ring.outcome == .convert([.init(kind: .image, format: .jpeg, quality: .jpeg(quality), files: [Sample.photo])]))
     }
 
     @Test func theQualityIsForThatDropOnly() {
@@ -97,7 +97,7 @@ import TurnoverKit
         ring.send(.pointer(at: 0, distance: 90))
         ring.send(.drop)
 
-        #expect(ring.outcome == .convert([.init(kind: .image, format: .jpeg, quality: .high, files: [Sample.photo])]))
+        #expect(ring.outcome == .convert([.init(kind: .image, format: .jpeg, quality: .jpeg(.high), files: [Sample.photo])]))
     }
 
     @Test func releasingOptionOverAQualityHighlightsJPEG() {
@@ -108,7 +108,7 @@ import TurnoverKit
         ring.send(.option(down: false))
         ring.send(.drop)
 
-        #expect(ring.outcome == .convert([.init(kind: .image, format: .jpeg, quality: .high, files: [Sample.photo])]))
+        #expect(ring.outcome == .convert([.init(kind: .image, format: .jpeg, quality: .jpeg(.high), files: [Sample.photo])]))
     }
 
     @Test func withNothingHighlightedTheHubSaysJPEGQuality() {

@@ -124,7 +124,7 @@ import TurnoverKit
         #expect(ring.added.isEmpty)
 
         ring.send(.time(10.8))
-        #expect(ring.added == [.init(kind: .image, format: .jpeg, quality: .high, files: [Sample.photo])])
+        #expect(ring.added == [.init(kind: .image, format: .jpeg, quality: .jpeg(.high), files: [Sample.photo])])
     }
 
     @Test func movingWithinTheSameFormatKeepsResting() {
@@ -167,7 +167,7 @@ import TurnoverKit
 
         ring.rest(at: -143, from: 11)
 
-        #expect(ring.added == [.init(kind: .image, format: .jpeg, quality: .high, files: [Sample.photo])])
+        #expect(ring.added == [.init(kind: .image, format: .jpeg, quality: .jpeg(.high), files: [Sample.photo])])
         #expect(ring.entries.map(\.isAdded) == [false, true, false])
         #expect(ring.caption == "JPEG added · drop to convert")
 
@@ -175,7 +175,7 @@ import TurnoverKit
         ring.send(.drop)
 
         #expect(ring.outcome == .convert([
-            .init(kind: .image, format: .jpeg, quality: .high, files: [Sample.photo]),
+            .init(kind: .image, format: .jpeg, quality: .jpeg(.high), files: [Sample.photo]),
             .init(kind: .video, format: .mp4, files: [Sample.movie]),
         ]))
     }
@@ -244,7 +244,7 @@ import TurnoverKit
 
         ring.rest(at: 154, from: 10)
 
-        #expect(ring.added == [.init(kind: .image, format: .jpeg, quality: .best, files: [Sample.photo])])
+        #expect(ring.added == [.init(kind: .image, format: .jpeg, quality: .jpeg(.best), files: [Sample.photo])])
         #expect(ring.entries.map(\.isAdded) == [false, true, false, false, false])
         #expect(ring.caption == "JPEG 100% added · drop to convert")
 
@@ -253,7 +253,7 @@ import TurnoverKit
         ring.send(.drop)
 
         #expect(ring.outcome == .convert([
-            .init(kind: .image, format: .jpeg, quality: .best, files: [Sample.photo]),
+            .init(kind: .image, format: .jpeg, quality: .jpeg(.best), files: [Sample.photo]),
             .init(kind: .video, format: .mp4, files: [Sample.movie]),
         ]))
     }

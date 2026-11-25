@@ -7,12 +7,14 @@ enum ImageOutput: Hashable, Sendable, CaseIterable {
 
     static let allCases: [ImageOutput] = [.png] + JPEGQuality.allCases.map(ImageOutput.jpeg)
 
-    /// Nil for formats whose size isn't estimated by encoding: MP4, and Original, which is a copy.
-    init?(_ format: OutputFormat, quality: JPEGQuality) {
+    /// Nil for formats whose size isn't estimated by encoding: videos, and Original, which is a copy.
+    init?(_ format: OutputFormat, quality: Quality?) {
         switch format {
         case .png: self = .png
-        case .jpeg: self = .jpeg(quality)
-        case .mp4, .original: return nil
+        case .jpeg:
+            guard case .jpeg(let quality) = quality else { return nil }
+            self = .jpeg(quality)
+        case .mp4, .smaller, .original: return nil
         }
     }
 

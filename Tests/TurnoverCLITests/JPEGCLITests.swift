@@ -37,8 +37,8 @@ import TurnoverTestSupport
     @Test(arguments: [
         (["--to", "jpeg", "--quality", "huge"], "unknown quality 'huge' (use best, high or small)"),
         (["--to", "jpeg", "--quality=85"], "unknown quality '85' (use best, high or small)"),
-        (["--to", "jpeg", "--quality"], "--quality needs best, high or small"),
-        (["--to", "png", "--quality", "small"], "--quality only applies to jpeg"),
+        (["--to", "jpeg", "--quality"], "--quality needs a quality"),
+        (["--to", "png", "--quality", "small"], "--quality only applies to jpeg and smaller"),
     ])
     func aBadQualityIsAUsageError(arguments: [String], message: String) async throws {
         try folder.add(.heicRotated, as: "photo.heic")

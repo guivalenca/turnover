@@ -22,7 +22,7 @@ public struct RingModel: Sendable {
         /// ⇧ went down or up.
         case shift(down: Bool)
         /// ⌥ went down or up. Send it whenever it changes during a drag, and its state at drag
-        /// start: held while the ring is open, it fans JPEG out into its qualities.
+        /// start: held while the ring is open, it fans JPEG and a smaller MP4 out into their qualities.
         case option(down: Bool)
         /// What the dragged files can be converted to, or the same offers with newer estimates.
         /// Send it as soon as the files are known (at drag start if the drag pasteboard can be
@@ -79,10 +79,12 @@ public struct RingModel: Sendable {
     /// The pointer resting on a format that resting adds, in a mixed ring; nil otherwise.
     public internal(set) var rest: Rest?
 
-    /// ⌥ is held over the open ring and JPEG is offered: JPEG is fanned out into its qualities.
+    /// The formats with qualities (JPEG, a smaller MP4) are fanned out into them: ⌥ is held over
+    /// the open ring, or a smaller MP4 is all there is to choose.
     public var isFannedOut: Bool {
-        guard phase == .open, optionDown, let offers else { return false }
-        return offers.targets.contains { $0.format == .jpeg }
+        guard phase == .open, let offers else { return false }
+        if offers.targets.map(\.format) == [.smaller] { return true }
+        return optionDown && offers.targets.contains { !$0.format.qualities.isEmpty }
     }
 
     /// The entry a drop would convert to: the one whose arc the pointer is in, if the pointer is
@@ -101,7 +103,14 @@ public struct RingModel: Sendable {
     public var hub: Hub? {
         guard phase == .open, let offers else { return nil }
         guard let entry = highlighted, let choice = entry.choices.first else {
-            if isFannedOut {
+            let fannedOut = isFannedOut ? offers.targets.filter { !$0.format.qualities.isEmpty } : []
+            if fannedOut.count == 1, let smaller = fannedOut.first, smaller.format == .smaller {
+                // What the qualities are of: "Smaller", "1 video".
+                let detail = Self.files(smaller.files.count, of: smaller.kind)
+                return Hub(title: smaller.format.shortName, detail: detail, text: Self.line(smaller.format.shortName, detail))
+            }
+            // Both at once (a mixed ring): the file count, as with neither.
+            if fannedOut.count == 1 {
                 return Hub(title: OutputFormat.jpeg.name,
                            detail: String(localized: "quality", bundle: .ringModel,
                                           comment: "The hub's small line under “JPEG” while ⌥ fans out JPEG's qualities."),
@@ -125,16 +134,21 @@ public struct RingModel: Sendable {
         // Several formats (one added, say): their names and how many files they convert.
         let dropped = choices(droppingOn: entry)
         if dropped.count > 1 {
-            let title = dropped.map(\.format.name).joined(separator: " + ")
+            let title = dropped.map(\.format.shortName).joined(separator: " + ")
             let detail = Self.files(dropped.map(\.files.count).reduce(0, +), of: nil)
             return Hub(title: title, detail: detail, text: Self.line(title, detail))
+        }
+        // A smaller MP4's quality: "Medium", "~12 MB".
+        if case .video(let quality) = entry.quality {
+            let detail = entry.estimate?.label ?? Self.files(choice.files.count, of: choice.kind)
+            return Hub(title: quality.name, detail: detail, text: Self.line(quality.name, detail))
         }
         // One format: its size or time, or how many files it converts until that is known.
         var detail = entry.estimate?.label ?? Self.files(choice.files.count, of: choice.kind)
         // A JPEG quality: "JPEG", "Best · 5.2 MB".
         if let quality = entry.quality { detail = Self.line(quality.name, detail) }
         // Original: the image's own format rather than "Original", "WebP" over "212 KB".
-        let title = choice.format == .original ? offers.original?.typeName ?? choice.format.name : choice.format.name
+        let title = choice.format == .original ? offers.original?.typeName ?? choice.format.name : choice.format.shortName
         return Hub(title: title, detail: detail, text: Self.line(title, detail))
     }
 
